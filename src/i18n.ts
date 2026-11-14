@@ -289,6 +289,11 @@ const pt: Record<string, string> = {
   'Average speed': 'Velocidade média',
   'Distance units': 'Unidades de distância',
   'Temperature units': 'Unidades de temperatura',
+  'Moving points on the map': 'Mover pontos no mapa',
+  'Drag with a magnifier': 'Arrastar com lupa',
+  'Tap, then move the map': 'Tocar e mover o mapa',
+  Cancel: 'Cancelar',
+  Confirm: 'Confirmar',
   Outbound: 'Ida',
   Return: 'Volta',
   'Automatic (km)': 'Automático (km)',
@@ -639,6 +644,10 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     (a, b) => `Clima amostrado em ${a} de ${b} paradas.`,
   ],
   [/^Point (\d+)$/, (n) => `Ponto ${n}`],
+  [
+    /^Move the map to place point (\d+)$/,
+    (n) => `Mova o mapa para posicionar o ponto ${n}`,
+  ],
   [
     /^(\d+) more samples? here(, none worse)?$/,
     (n, none) =>
