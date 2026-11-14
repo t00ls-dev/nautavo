@@ -677,6 +677,7 @@ test('average speed: keyboard steps, units, kept on the device and never taken f
   await expect(page.locator('#average-speed-value')).toHaveText('20');
   // Fine steps at low speeds, coarser above, up to 120 km/h.
   await page.locator('#average-speed').focus();
+  await expect(page.locator('#average-speed')).toBeFocused();
   await page.locator('#average-speed').press('Home');
   await expect(page.locator('#average-speed-value')).toHaveText('1');
   await page.locator('#average-speed').press('ArrowRight');
@@ -693,9 +694,17 @@ test('average speed: keyboard steps, units, kept on the device and never taken f
   await expect(page.locator('#average-speed-value')).toHaveText('70');
   await expect(page.locator('#speed-range')).toHaveText('1–75 mph');
   await expect(page.locator('#average-speed')).toHaveAttribute('step', '1');
-  await page.locator('#average-speed').focus();
-  await page.locator('#average-speed').press('End');
-  await expect(page.locator('#average-speed-value')).toHaveText('75');
+  // Settings hands focus back as it closes, which can take the slider's
+  // focus after it was given; press End again until the slider gets it.
+  const slider = page.locator('#average-speed');
+  await expect(async () => {
+    await slider.focus();
+    await expect(slider).toBeFocused();
+    await slider.press('End');
+    await expect(page.locator('#average-speed-value')).toHaveText('75', {
+      timeout: 1000,
+    });
+  }).toPass();
   await expect(page.locator('#summary')).toContainText('21 min');
   await chooseUnits(page, { distance: 'metric' });
   await setSpeed(page, 25);
