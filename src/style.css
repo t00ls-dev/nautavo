@@ -3266,6 +3266,30 @@ dialog:modal:not(.nav-screen) {
   background: var(--color-soft);
   color: var(--color-primary-strong);
 }
+/* Automatic recalculation at start, with a way to turn it off. */
+/* Icon and text on one row, the button under the text. */
+.nav-chips .nav-auto-reroute {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 6px;
+  padding: 8px 14px 10px;
+}
+.nav-auto-reroute button {
+  grid-column: 2;
+  justify-self: start;
+}
+.nav-auto-reroute button {
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font: inherit;
+  font-weight: 600;
+}
 .nav-credits {
   position: absolute;
   z-index: 3;

@@ -533,6 +533,11 @@
             >Show the notice when navigation starts</span
           ></label
         >
+        <label class="check"
+          ><input id="auto-reroute-setting" type="checkbox" checked /><span
+            >Recalculate the route automatically while navigating</span
+          ></label
+        >
         <label for="osrm">OSRM server</label><input id="osrm" type="url" />
         <label for="valhalla">Valhalla fallback</label
         ><input id="valhalla" type="url" />
@@ -595,7 +600,19 @@
             another tab, the browser stops following you.</span
           >
         </li>
+        <li class="nav-notice-reroute">
+          <span
+            >Off the route, a way back to it is recalculated automatically when
+            online. Turn this off to follow the planned track exactly, as in an
+            event.</span
+          >
+        </li>
       </ul>
+      <label class="check"
+        ><input id="nav-notice-reroute" type="checkbox" checked /><span
+          >Recalculate the route automatically</span
+        ></label
+      >
       <label class="check nav-notice-hide"
         ><input id="nav-notice-hide" type="checkbox" /><span
           >Don't show this notice again</span
@@ -679,6 +696,15 @@
           </p>
           <p id="nav-compass" class="nav-chip" hidden>
             <span>Compass imprecise. Move the phone in a figure 8.</span>
+          </p>
+          <p
+            id="nav-auto-reroute"
+            class="nav-chip ok nav-auto-reroute"
+            hidden
+            role="status"
+          >
+            <span>Automatic recalculation on</span
+            ><button id="nav-auto-reroute-off" type="button">Turn off</button>
           </p>
           <p id="nav-rerouted" class="nav-chip ok" hidden role="status">
             <span>Route recalculated</span>

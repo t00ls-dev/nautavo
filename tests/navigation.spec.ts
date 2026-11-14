@@ -766,6 +766,84 @@ test.describe('phone navigation', () => {
     await context.setOffline(false);
   });
 
+  test('with automatic recalculation off, only the button asks', async ({
+    page,
+    context,
+  }) => {
+    await setup(page);
+    const asked = await mockReroute(page);
+    await page.locator('#navigate').click();
+    const auto = page.getByLabel('Recalculate the route automatically', {
+      exact: true,
+    });
+    await expect(auto).toBeChecked();
+    await auto.uncheck();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    await expect(page.locator('#nav-auto-reroute')).toBeHidden();
+    for (let i = 0; i < 7; i++) {
+      await offRoute(context, i * 0.00001);
+      await page.waitForTimeout(3000);
+    }
+    await expect(page.locator('#nav-road')).toHaveText('Back to route');
+    expect(asked).toHaveLength(0);
+    await page.getByRole('button', { name: 'Recalculate route' }).click();
+    await expect(page.locator('#nav-road')).toHaveText('Rua de Volta');
+    expect(asked).toHaveLength(1);
+    // Remembered on the device, and shown in Settings.
+    await page.locator('#nav-stop').click();
+    expect(
+      await page.evaluate(() => localStorage.getItem('auto-reroute')),
+    ).toBe('off');
+    await page.locator('#open-settings').click();
+    const setting = page.getByLabel(
+      'Recalculate the route automatically while navigating',
+    );
+    await expect(setting).not.toBeChecked();
+    await setting.check();
+    expect(
+      await page.evaluate(() => localStorage.getItem('auto-reroute')),
+    ).toBeNull();
+  });
+
+  test('without the notice, a chip says recalculation is automatic', async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.addInitScript(() =>
+      localStorage.setItem('navigation-notice', 'off'),
+    );
+    await setup(page);
+    const asked = await mockReroute(page);
+    await page.locator('#navigate').click();
+    const chip = page.locator('#nav-auto-reroute');
+    await expect(chip.locator('span')).toHaveText('Automatic recalculation on');
+    expect(await fits(page)).toEqual([]);
+    // Each start says it again while it stays on.
+    await page.locator('#nav-stop').click();
+    await page.locator('#language').selectOption('pt');
+    await page.locator('#navigate').click();
+    await expect(chip.locator('span')).toHaveText('Recálculo automático ativo');
+    expect(await fits(page)).toEqual([]);
+    await chip.getByRole('button', { name: 'Desativar' }).click();
+    await expect(chip).toBeHidden();
+    expect(
+      await page.evaluate(() => localStorage.getItem('auto-reroute')),
+    ).toBe('off');
+    for (let i = 0; i < 7; i++) {
+      await offRoute(context, i * 0.00001);
+      await page.waitForTimeout(3000);
+    }
+    await expect(page.locator('#nav-road')).toHaveText('Volte à rota');
+    expect(asked).toHaveLength(0);
+    // Off, the next navigation shows no chip.
+    await page.locator('#nav-stop').click();
+    await page.locator('#navigate').click();
+    await expect(page.locator('#nav-screen')).toBeVisible();
+    await expect(chip).toBeHidden();
+  });
+
   test('the recalculation texts fit at 320 px in Portuguese', async ({
     page,
     context,

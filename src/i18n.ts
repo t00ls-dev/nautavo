@@ -68,6 +68,13 @@ const pt: Record<string, string> = {
   "Don't show this notice again": 'Não exibir mais este aviso',
   'Show the notice when navigation starts':
     'Mostrar o aviso ao iniciar a navegação',
+  'Off the route, a way back to it is recalculated automatically when online. Turn this off to follow the planned track exactly, as in an event.':
+    'Fora da rota, um caminho de volta é recalculado automaticamente quando há conexão. Desative para seguir exatamente o trajeto planejado, como numa prova.',
+  'Recalculate the route automatically': 'Recalcular a rota automaticamente',
+  'Recalculate the route automatically while navigating':
+    'Recalcular a rota automaticamente ao navegar',
+  'Automatic recalculation on': 'Recálculo automático ativo',
+  'Turn off': 'Desativar',
   Then: 'Depois',
   'You have arrived': 'Você chegou',
   'Weak GPS signal': 'Sinal de GPS fraco',
