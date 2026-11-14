@@ -38,6 +38,8 @@ import {
   type SampleWeather,
 } from './navigation-weather';
 import { weatherDescription } from './i18n';
+import { arrivalSpeedKmh, createSpeedMeter } from './navigation-speed';
+import { speedFromKmh } from './travel-time';
 import {
   METERS_PER_SECOND,
   replayAdvance,
@@ -322,7 +324,9 @@ export function setupNavigation(deps: {
     plannedIndex: TrackIndex | null = null,
     plannedProgress = 0,
     /** What the weather chip and list show, to redraw only on a change. */
-    weatherShown = '';
+    weatherShown = '',
+    /** Current speed and the trip's average for the arrival (#32, #136). */
+    meter = createSpeedMeter();
   /** The traveler's clock: simulated while replaying. */
   const now = () =>
     replaying && replayIndex
@@ -764,6 +768,56 @@ export function setupNavigation(deps: {
     announce(r, arrived, !!rejoin);
     renderBar(r);
     renderWeather();
+    renderSpeed();
+    renderReplayClock();
+  }
+  /**
+   * The speed the arrival follows: the trip's own average once it has lasted
+   * a while (#32); a replay travels at the configured average speed.
+   */
+  function arrivalSpeed(): number {
+    return replaying
+      ? deps.speedKmh()
+      : arrivalSpeedKmh(meter, Date.now(), deps.speedKmh());
+  }
+  /** The current speed badge (#136); a replay shows its own speed. */
+  function renderSpeed() {
+    const metersPerSecond = replaying
+      ? replayFrame
+        ? deps.speedKmh() / 3.6
+        : 0
+      : last
+        ? meter.current()
+        : null;
+    const badge = $('nav-speed');
+    badge.hidden = metersPerSecond === null;
+    if (metersPerSecond === null) return;
+    const imperial = units() === 'imperial';
+    const value = String(
+      Math.round(speedFromKmh(metersPerSecond * 3.6, units())),
+    );
+    const unit = imperial ? 'mph' : 'km/h';
+    if (badge.dataset.value !== value || badge.dataset.unit !== unit) {
+      badge.dataset.value = value;
+      badge.dataset.unit = unit;
+      $('nav-speed-value').textContent = value;
+      $('nav-speed-unit').textContent = unit;
+      badge.setAttribute('aria-label', `${value} ${unit}`);
+    }
+  }
+  /** The replay label with the trip's clock: "Replay · 14:32". */
+  function renderReplayClock() {
+    if (!replaying) return;
+    const text = `Replay · ${new Date(now()).toLocaleTimeString(deps.locale(), {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+    const label = $('nav-replay-chip').querySelector('span')!;
+    // English text: the page translator turns it into the chosen language.
+    if (label.dataset.text !== text) {
+      label.dataset.text = text;
+      label.textContent = text;
+    }
   }
   /** Rounded temperature with a degree sign, in the chosen units. */
   function shortTemperature(celsius: number | null) {
@@ -803,17 +857,9 @@ export function setupNavigation(deps: {
   function renderWeather() {
     const forecast = deps.weather();
     const planned = deps.route();
-    if (replaying) plannedProgress = replayDistance;
-    else if (last && plannedIndex) {
-      const position = locateOnTrack(plannedIndex, last.coord, {
-        progress: plannedProgress,
-        backtrack: 50,
-      });
-      if (position) plannedProgress = position.distance;
-    }
     const along =
       forecast && planned && forecast.route === planned
-        ? weatherAlong(forecast, plannedProgress, now(), deps.speedKmh())
+        ? weatherAlong(forecast, plannedProgress, now(), arrivalSpeed())
         : null;
     const here = along?.here ?? null;
     const locale = deps.locale();
@@ -946,7 +992,7 @@ export function setupNavigation(deps: {
   function renderBar(r: NavigationReadout | null) {
     if (!tracker) return;
     const remaining = r ? r.remaining : tracker.total;
-    const seconds = travelTimeSeconds(remaining, deps.speedKmh());
+    const seconds = travelTimeSeconds(remaining, arrivalSpeed());
     $('nav-time').textContent = r ? navigationDurationLabel(seconds) : '—';
     const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
       deps.locale(),
@@ -1032,6 +1078,23 @@ export function setupNavigation(deps: {
         ((time - previous.time) / 1000);
     previous = { coord: last.coord, time };
     moving = isMoving(speed, moving);
+    // Progress on the planned route: weather samples and the trip's average
+    // are measured on it, so both hold after a recalculation.
+    if (replaying) plannedProgress = replayDistance;
+    else if (plannedIndex) {
+      const position = locateOnTrack(plannedIndex, last.coord, {
+        progress: plannedProgress,
+        backtrack: 50,
+      });
+      if (position) plannedProgress = position.distance;
+      meter.update({
+        time,
+        progress: plannedProgress,
+        speed,
+        accuracy: last.accuracy,
+        moving,
+      });
+    }
     const offRoute =
       !readout || readout.offTrack > Math.max(OFF_ROUTE_HEADING, last.accuracy);
     // A replay gives its own heading, looking further ahead than the tracker.
@@ -1194,6 +1257,7 @@ export function setupNavigation(deps: {
     if (!route) return;
     plannedIndex = indexTrack(route.segments);
     plannedProgress = 0;
+    meter = createSpeedMeter();
     weatherShown = '';
     weatherOpen(false);
     session++;

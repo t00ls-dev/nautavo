@@ -600,6 +600,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     (description, temperature, rain) =>
       `Tempo aqui: ${pt[description] ?? description}, ${temperature}, chuva ${rain}%`,
   ],
+  [/^Replay · (.+)$/, (clock) => `Reprodução · ${clock}`],
   [/^About (-?[\d.,]+ (?:m|ft))$/, (value) => `Cerca de ${value}`],
   [
     /^Min (.+) · Max (.+) · Avg (.+)$/,

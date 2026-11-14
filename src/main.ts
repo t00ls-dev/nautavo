@@ -22,6 +22,8 @@ import {
   travelTimeSeconds,
   speedInputBounds,
   snapSpeed,
+  speedNotches,
+  convertSpeedUnits,
   storedSpeedKmh,
   rememberSpeedKmh,
 } from './travel-time';
@@ -258,7 +260,9 @@ function showManeuver(coord: Coord) {
   }).addTo(maneuverLayer);
 }
 /** The traveler's average speed (km/h): a device preference, changed only by the user. */
-let speedKmh = storedSpeedKmh();
+let speedKmh = storedSpeedKmh(distanceUnits());
+/** Distance units the speed was last shown in, for converting it on a change. */
+let previousUnits = distanceUnits();
 const weather = setupWeather(
   map,
   () => state,
@@ -401,23 +405,19 @@ function settings() {
   weather.syncInputs();
   const input = $<HTMLInputElement>('average-speed');
   const bounds = speedInputBounds(distanceUnits());
+  const notches = speedNotches(distanceUnits());
   const value = snapSpeed(
     speedFromKmh(speedKmh, distanceUnits()),
     distanceUnits(),
   );
-  // The first notch represents 1; subsequent notches are 5, 10, 15…
+  // The slider moves through the notches: fine at low speeds, coarser above.
   input.min = '0';
-  input.max = String(bounds.max);
-  input.step = '5';
-  input.value = value === 1 ? '0' : String(value);
+  input.max = String(notches.length - 1);
+  input.step = '1';
+  input.value = String(notches.indexOf(value));
   input.setAttribute('aria-valuemin', '1');
   input.setAttribute('aria-valuemax', String(bounds.max));
-  input.setAttribute('aria-valuenow', String(value));
-  input.setAttribute(
-    'aria-valuetext',
-    `${value} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'}`,
-  );
-  $('average-speed-value').textContent = String(value);
+  showSpeed(value);
   $('speed-range').textContent =
     `1–${bounds.max} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'}`;
   $('speed-unit').textContent = distanceUnits() === 'imperial' ? 'mph' : 'km/h';
@@ -1371,8 +1371,10 @@ $<HTMLSelectElement>('distance-units').onchange = () => {
     $<HTMLSelectElement>('distance-units').value as DistanceChoice,
   );
   const units = distanceUnits();
-  // Switching units keeps the speed on a notch of the new scale.
-  speedKmh = speedToKmh(snapSpeed(speedFromKmh(speedKmh, units), units), units);
+  // Switching units keeps the speed on a notch of the new scale (the default
+  // of one system becomes the other's).
+  speedKmh = convertSpeedUnits(speedKmh, previousUnits, units);
+  previousUnits = units;
   rememberSpeedKmh(speedKmh);
   settings();
   if (current) renderRoute(current);
@@ -1608,20 +1610,23 @@ function updateSpeedEstimate() {
   if (current) renderRoute(current);
   status(current ? 'Route ready.' : 'Set your start and destination.');
 }
-$<HTMLInputElement>('average-speed').oninput = () => {
-  const value = snapSpeed(
-    Number($<HTMLInputElement>('average-speed').value),
-    distanceUnits(),
-  );
-  speedKmh = speedToKmh(value, distanceUnits());
-  rememberSpeedKmh(speedKmh);
-  $('average-speed-value').textContent = String(value);
+/** The chosen speed in the slider's value, readout and accessible text. */
+function showSpeed(value: number) {
   const input = $<HTMLInputElement>('average-speed');
   input.setAttribute('aria-valuenow', String(value));
   input.setAttribute(
     'aria-valuetext',
     `${value} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'}`,
   );
+  $('average-speed-value').textContent = String(value);
+}
+$<HTMLInputElement>('average-speed').oninput = () => {
+  const notches = speedNotches(distanceUnits());
+  const index = Number($<HTMLInputElement>('average-speed').value);
+  const value = notches[Math.max(0, Math.min(notches.length - 1, index))];
+  speedKmh = speedToKmh(value, distanceUnits());
+  rememberSpeedKmh(speedKmh);
+  showSpeed(value);
   updateSpeedEstimate();
 };
 function updateSaveButton() {

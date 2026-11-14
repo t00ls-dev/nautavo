@@ -225,16 +225,16 @@
                   class="range-input"
                   type="range"
                   min="0"
-                  max="200"
-                  step="5"
-                  value="60"
+                  max="51"
+                  step="1"
+                  value="19"
                   aria-label="Average speed"
                   aria-describedby="speed-range"
                 /><output id="average-speed-value" for="average-speed"
-                  >60</output
+                  >20</output
                 ><span id="speed-unit">km/h</span>
               </div>
-              <p id="speed-range" class="hint">1–200 km/h</p>
+              <p id="speed-range" class="hint">1–120 km/h</p>
             </div>
             <div class="route-options">
               <label class="check"
@@ -740,6 +740,10 @@
           type="button"
           hidden
         ></button>
+        <p id="nav-speed" class="nav-speed" hidden>
+          <span id="nav-speed-value" class="nav-speed-value"></span
+          ><span id="nav-speed-unit" class="nav-speed-unit">km/h</span>
+        </p>
         <button
           id="nav-resume"
           class="nav-resume"
