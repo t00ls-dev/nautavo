@@ -6,8 +6,8 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 
 ## Features
 
-- **Plan:** set start, destination and stops with addresses, coordinates, map clicks or your location.
-- **Edit:** move points precisely (a magnifier while dragging on touch screens, or a fixed pin over the moving map, chosen in Settings) and reorder them, reverse the route, add a return trip, undo changes and lock the route against accidental edits.
+- **Plan:** set start, destination and stops with addresses, coordinates, map clicks on desktop or your location.
+- **Edit:** move points precisely (a magnifier while dragging on touch screens, or a fixed pin over the moving map, chosen in Settings) and reorder them by dragging, reverse the route, add a return trip, undo changes and lock the route against accidental edits.
 - **Review:** distance, estimated duration, road references and an itinerary with turn directions, in kilometers or miles (detected from the browser, changeable in Settings), estimated from your own average speed (remembered on this device), plus sunrise, sunset and sections in the dark for a departure time, an elevation profile with altitude statistics and the climbs along the route, the road surface, paved or unpaved, with its unpaved stretches, and a virtual playback that travels the route.
 - **GPX, FIT and TCX:** import GPX, FIT and TCX files up to 10 MB, also as `.gz` or `.zip` (only geometry, names, course points and recorded elevation are read, locally) and export GPX 1.1 with complete track segments and named waypoints.
 - **Navigate:** on a phone, follow the route on screen with your live position, the next turn and the one after it, the remaining distance and time and the arrival time, on a map that turns with your direction of travel, or with the compass when you stop; zoom, drag or turn the map to look around and Re-center to follow again; off the route, a straight-line hint points back to it.

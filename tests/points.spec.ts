@@ -103,24 +103,13 @@ for (const mobile of [false, true]) {
       await expect(page.locator('#download')).toBeDisabled();
       await expect(page.locator('.route-marker')).toHaveCount(1);
     });
-    test('map gestures fill start and destination', async ({ page }) => {
+    test('desktop map clicks fill start and destination', async ({ page }) => {
+      test.skip(mobile, 'Phones set points by typing or moving markers.');
       await setup(page);
-      if (mobile) {
-        await holdMap(page);
-        await page
-          .locator('#point-menu')
-          .getByRole('menuitem', { name: 'Set as start', exact: true })
-          .click();
-      } else await page.locator('#map').click({ position: { x: 130, y: 95 } });
+      await page.locator('#map').click({ position: { x: 130, y: 95 } });
       await expect(page.locator('#location-0')).not.toHaveValue('');
       await expect(page.locator('#location-1')).toHaveValue('');
-      if (mobile) {
-        await holdMap(page, 210, 280);
-        await page
-          .locator('#point-menu')
-          .getByRole('menuitem', { name: 'Set as destination' })
-          .click();
-      } else await page.locator('#map').click({ position: { x: 210, y: 140 } });
+      await page.locator('#map').click({ position: { x: 210, y: 140 } });
       await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
       await expect(page.locator('.route-marker')).toHaveCount(2);
     });
@@ -152,7 +141,7 @@ for (const mobile of [false, true]) {
         page.getByRole('button', { name: 'Remove point 2' }),
       ).toBeDisabled();
       await expect(
-        page.getByRole('button', { name: 'Move point 2 up' }),
+        page.getByRole('button', { name: 'Move point 2', exact: true }),
       ).toBeDisabled();
       await expect(page.locator('#import')).toBeDisabled();
       await expect(page.locator('#apply-json')).toBeDisabled();

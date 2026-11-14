@@ -31,6 +31,7 @@
   --shadow-control: 0 1px 4px #1b29344d;
   --shadow-raised: 0 4px 20px #1b293433;
   --control: 44px;
+  --point-row: 48px;
   /* Names used by older rules below. */
   --paper: var(--color-surface);
   --surface: var(--color-surface);
@@ -509,39 +510,48 @@ header button.icon-control {
 #points {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin: 6px -8px 4px;
+  gap: 8px;
+  margin: 6px 0 4px;
   padding: 0;
   list-style: none;
 }
 /* Reserve the start and destination rows rendered by the script, so the panel
    below does not shift on load (tests/panel.spec.ts measures it). */
 #points:empty {
-  min-height: 204px;
+  min-height: 104px;
 }
+/* Number, field with its grip, remove: one row per point, joined by dots. */
 #points li {
+  position: relative;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr) 40px;
+  column-gap: 8px;
   align-items: start;
-  padding: 4px 6px 6px 2px;
-  border: 2px solid transparent;
-  border-radius: var(--radius-large);
 }
-#points li.selected {
-  border-color: var(--color-primary);
-  background: var(--color-soft);
+#points li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 42px;
+  bottom: -14px;
+  left: 14px;
+  width: 4px;
+  background: radial-gradient(circle, #9aa6ae 1.5px, transparent 2px) center
+    top / 4px 6.5px repeat-y;
+  pointer-events: none;
 }
 .point-number {
   position: relative;
   z-index: 0;
-  width: 44px;
-  height: 44px;
-  margin-top: 20px;
+  width: 32px;
+  min-width: 32px;
+  height: var(--point-row);
   padding: 0;
   border: 0;
   background: none;
   color: var(--color-primary);
+  font-size: 14px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .point-number:hover {
   background: none;
@@ -550,9 +560,14 @@ header button.icon-control {
   content: '';
   position: absolute;
   z-index: -1;
-  inset: 7px;
+  top: calc(50% - 14px);
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border: 2px solid var(--color-primary);
   border-radius: 50%;
-  background: var(--color-soft);
+  background: #fff;
 }
 .selected .point-number {
   color: #fff;
@@ -563,81 +578,87 @@ header button.icon-control {
 .point-fields {
   min-width: 0;
 }
-.point-fields label {
-  margin: 0 0 2px;
-  font-size: 13px;
-  font-weight: 550;
-  line-height: 18px;
-  color: var(--color-text-muted);
-}
-.point-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
+/* The role (start, stop, destination) stays in the field's accessible name. */
+.point-fields > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .point-location-form {
   position: relative;
-  flex: 1 1 100%;
   min-width: 0;
 }
 .point-location-form input {
-  height: var(--control);
+  height: var(--point-row);
+  padding-right: 44px;
+  border-radius: var(--radius-large);
+  text-overflow: ellipsis;
 }
-.point-actions {
-  display: flex;
-  flex: 1 1 100%;
-  min-width: 0;
-  align-items: center;
-  gap: 2px;
-}
-#points li:not(.selected) .point-actions {
-  display: none;
-}
-.point-actions button {
-  width: var(--control);
-  height: var(--control);
+.point-grip,
+.point-remove {
+  height: var(--point-row);
   padding: 0;
   border-color: transparent;
   background: none;
+  color: #56636c;
+}
+.point-grip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  color: #8a959d;
+  cursor: grab;
+  touch-action: none;
+}
+.point-grip:hover:not(:disabled),
+.point-remove:hover:not(:disabled) {
+  background: none;
   color: var(--color-text);
 }
-.point-actions button:hover {
-  background: #dcebe3;
+.point-remove {
+  width: 40px;
+  min-width: 40px;
 }
-.point-actions button {
-  flex: none;
-}
-.point-actions button:first-child {
-  flex: 0 1 auto;
-  width: auto;
-  min-width: 0;
-  margin-right: auto;
-  padding: 0 8px;
-  color: var(--color-primary);
-}
-.point-actions button:first-child .button-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* The narrowest phones show only the pin; the name stays in aria-label and title. */
-@media (max-width: 359px) {
-  .point-actions button:first-child {
-    width: var(--control);
-    padding: 0;
-  }
-  .point-actions button:first-child .button-label {
-    display: none;
-  }
-}
-.point-actions button:last-child:not(:disabled) {
-  color: var(--color-danger);
-}
-.point-actions button:disabled {
+.point-grip:disabled,
+.point-remove:disabled {
   border-color: transparent;
   background: none;
-  color: #87949d;
+  color: #b5bec4;
+}
+.point-grip:disabled {
+  cursor: default;
+}
+/* While a row is dragged, the others make room and the dots hide. */
+#points.reordering li {
+  transition: transform 150ms ease;
+}
+#points.reordering li::after {
+  visibility: hidden;
+}
+#points li.dragging {
+  z-index: 2;
+  transition: none;
+}
+#points li.dragging input {
+  border-color: var(--color-primary);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+}
+#points li.dragging .point-grip {
+  color: var(--color-primary);
+  cursor: grabbing;
+}
+.reordering-points {
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  #points.reordering li {
+    transition: none;
+  }
 }
 .point-results {
   display: grid;
@@ -660,11 +681,32 @@ header button.icon-control {
   outline-offset: -3px;
   background: var(--color-soft);
 }
+/* Add stop, Reverse and Round trip: one row of equal tiles styled like the
+   phone's Calculate route, on the list's edges: icon above the label, which
+   may wrap, centered at the same height in every tile. */
 .inline-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-left: -6px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 0;
+}
+.inline-actions > button,
+.inline-actions > button:disabled {
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 4px;
+  border-radius: var(--radius-large);
+  background: var(--color-soft);
+  font-size: 14px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+.inline-actions > button:hover:not(:disabled) {
+  background: #dcebe3;
 }
 
 /* Trip options: departure, speed, units and road preference. */
@@ -1051,6 +1093,26 @@ div.step-item {
     flex: 0 0 auto;
     order: 3;
   }
+  /* Download GPX keeps its label on one line in the sidebar's width; the
+     other export actions are square icon buttons, named by aria-label and
+     title, as in the phone's action bar. */
+  #download {
+    white-space: nowrap;
+  }
+  #share,
+  #share-gpx,
+  .secondary-actions .file-button {
+    flex: 0 0 auto;
+    justify-content: center;
+    width: 52px;
+    padding: 0;
+  }
+  #share .button-label,
+  #share-gpx .button-label,
+  .secondary-actions .file-button .label-short,
+  .secondary-actions .file-button .label-long {
+    display: none;
+  }
 }
 
 /* Add to home screen in More actions: phones only. */
@@ -1184,14 +1246,6 @@ dialog.settings::backdrop {
 .point-menu button {
   justify-content: flex-start;
   border-color: transparent;
-}
-.point-menu-separator {
-  height: 1px;
-  margin: 0 4px;
-  background: var(--color-border);
-}
-.point-menu-separator[hidden] {
-  display: none;
 }
 .planner .leaflet-top {
   top: var(--safe-top);
@@ -1509,24 +1563,6 @@ dialog.settings::backdrop {
   }
   .stats strong {
     font-size: clamp(16px, 5vw, 20px);
-  }
-  /* Point actions share one row: icon above the label, which may wrap. */
-  .inline-actions {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px;
-    margin-left: 0;
-  }
-  .inline-actions > button {
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 2px;
-    min-width: 0;
-    padding: 6px 4px;
-    font-size: 14px;
-    line-height: 1.25;
-    text-align: center;
-    white-space: normal;
   }
   .action-bar,
   .planner.panel-closed .action-bar {

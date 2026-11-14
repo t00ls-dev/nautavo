@@ -108,6 +108,7 @@ import { addressAutocomplete } from './autocomplete';
 import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
+import { moveItem, setupPointOrder } from './point-order';
 import {
   createCrosshair,
   createLoupe,
@@ -501,11 +502,13 @@ function updateSelection() {
       : selected === state.points.length - 1
         ? 'the destination'
         : `stop ${selected}`;
-  $('map-note').textContent = locked
+  // Phones set points by typing or by moving markers, so their map has no
+  // hint unless the route is locked.
+  const note = $('map-note');
+  note.hidden = !locked && matchMedia('(pointer: coarse)').matches;
+  note.textContent = locked
     ? 'Route locked. Unlock editing to change it.'
-    : matchMedia('(pointer: coarse)').matches
-      ? 'Touch and hold to choose a route point'
-      : `Set ${target} on the map`;
+    : `Set ${target} on the map`;
   $<HTMLButtonElement>('undo').disabled =
     locked || (!undoHistory.canUndo && !dirty.size);
   $<HTMLButtonElement>('calculate').disabled =
@@ -573,7 +576,14 @@ function renderPoints() {
     const input = document.createElement('input');
     input.id = `location-${i}`;
     input.value = pointValue(point);
-    input.placeholder = 'Address or lat, lon';
+    // The point's role, which the list no longer shows as a label; short
+    // enough for the field at 320 px (tests/point-order.spec.ts).
+    input.placeholder =
+      i === 0
+        ? 'Starting point'
+        : i === state.points.length - 1
+          ? 'Destination'
+          : 'Add a stop';
     input.autocomplete = 'off';
     input.setAttribute('aria-label', `Location of point ${i + 1}`);
     input.enterKeyHint = 'search';
@@ -727,48 +737,19 @@ function renderPoints() {
       }, 500);
     };
     form.append(input);
-    const controls = document.createElement('div');
-    controls.className = 'point-controls';
-    controls.append(form);
-    fields.append(label, controls, suggestions, results);
-    const actions = document.createElement('div');
-    actions.className = 'point-actions';
-    const onMap = text('button', 'Set on map') as HTMLButtonElement;
-    onMap.type = 'button';
-    iconControl(onMap, 'pin', 'Set on map');
-    onMap.onclick = () => selectPoint(i, true);
-    actions.append(onMap);
-    for (const [symbol, delta] of [
-      ['↑', -1],
-      ['↓', 1],
-    ] as const) {
-      const b = text('button', symbol) as HTMLButtonElement;
-      b.type = 'button';
-      b.setAttribute(
-        'aria-label',
-        `Move point ${i + 1} ${delta < 0 ? 'up' : 'down'}`,
-      );
-      iconControl(
-        b,
-        delta < 0 ? 'up' : 'down',
-        `Move point ${i + 1} ${delta < 0 ? 'up' : 'down'}`,
-        true,
-      );
-      b.disabled = locked || i + delta < 0 || i + delta >= state.points.length;
-      b.onclick = () => {
-        if (editBlocked()) return;
-        [state.points[i], state.points[i + delta]] = [
-          state.points[i + delta],
-          state.points[i],
-        ];
-        selected = i + delta;
-        changed();
-      };
-      actions.append(b);
-    }
+    fields.append(label, form, suggestions, results);
+    // The grip sits inside the field, at its end: drag it, or focus it and
+    // use the arrow keys (src/point-order.ts).
+    const grip = document.createElement('button');
+    grip.type = 'button';
+    grip.className = 'point-grip';
+    iconControl(grip, 'grip', `Move point ${i + 1}`, true);
+    grip.title = 'Drag or use the arrow keys to reorder';
+    grip.disabled = locked;
+    form.append(grip);
     const remove = text('button', '×') as HTMLButtonElement;
     remove.type = 'button';
-    remove.setAttribute('aria-label', `Remove point ${i + 1}`);
+    remove.className = 'point-remove';
     iconControl(remove, 'close', `Remove point ${i + 1}`, true);
     remove.disabled = locked || state.points.length <= 2;
     remove.onclick = () => {
@@ -778,9 +759,7 @@ function renderPoints() {
       selected = Math.min(selected, state.points.length - 1);
       changed();
     };
-    actions.append(remove);
-    controls.append(actions);
-    row.append(choose, fields);
+    row.append(choose, fields, remove);
     list.append(row);
   });
   list.scrollTop = scroll;
@@ -788,6 +767,18 @@ function renderPoints() {
   updateSelection();
   $<HTMLButtonElement>('add').disabled = locked || state.points.length >= 50;
 }
+setupPointOrder($('points'), {
+  enabled: () => !locked,
+  start: () => autocompleteCleanups.forEach((close) => close()),
+  moved: (from, to) => {
+    if (editBlocked()) return;
+    // The selection stays with its point.
+    const chosen = state.points[selected];
+    moveItem(state.points, from, to);
+    selected = Math.max(0, state.points.indexOf(chosen));
+    changed();
+  },
+});
 function renderMarkers() {
   // Locking, undo or removing the point ends its placement (its callback
   // draws the markers again, so this comes before clearing them).
@@ -1292,29 +1283,10 @@ function changed(preserveEditor = false, forceRouting = false) {
   }, 900);
 }
 setupPointMenu(map, {
-  choose: (kind, coord) => {
-    if (editBlocked()) return;
-    if (kind === 'stop') {
-      if (state.points.length >= 50) {
-        status('The route already has 50 points.', true);
-        return;
-      }
-      state.points.splice(state.points.length - 1, 0, {
-        name: `Stop ${state.points.length - 1}`,
-        coord,
-      });
-      selected = state.points.length - 2;
-      changed();
-    } else {
-      selected = kind === 'start' ? 0 : state.points.length - 1;
-      setPoint(state.points[selected], selected, coord, pointLabel(selected));
-    }
-  },
   click: (coord) => {
     if (!crosshair.active) setPoint(state.points[selected], selected, coord);
   },
   editable: () => !editBlocked() && !crosshair.active,
-  locked: () => locked,
   elevation: (coord) => elevation.queryPoint(coord),
   dismiss: () => elevation.closePoint(),
 });

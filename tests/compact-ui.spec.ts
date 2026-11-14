@@ -149,18 +149,60 @@ for (const width of [320, 360, 390, 430]) {
           .first()
           .locator('form')
           .boundingBox())!;
-      await expect(page.locator('.point-location-form button')).toHaveCount(0);
-      expect(input.height).toBe(44);
+      await expect(
+        page.locator('.point-location-form button:not(.point-grip)'),
+      ).toHaveCount(0);
+      expect(input.height).toBe(48);
       expect(input.width).toBeGreaterThan(100);
       expect(Math.abs(input.width - form.width)).toBeLessThanOrEqual(1);
-      const buttons = page.locator('#points li.selected .point-actions button');
-      for (const button of await buttons.all()) {
-        const box = (await button.boundingBox())!;
-        // Set on map shows its label; the others are icon buttons.
-        expect(box.width).toBeGreaterThanOrEqual(44);
-        expect(box.height).toBe(44);
-        await expect(button).toHaveAttribute('title', /.+/);
+      // Number, field, grip (inside the field) and remove share one line.
+      const row = page.locator('#points li').first();
+      const grip = (await row.locator('.point-grip').boundingBox())!,
+        remove = (await row.locator('.point-remove').boundingBox())!,
+        number = (await row.locator('.point-number').boundingBox())!;
+      expect(grip.width).toBeGreaterThanOrEqual(44);
+      expect(remove.width).toBeGreaterThanOrEqual(40);
+      for (const box of [grip, remove, number]) {
+        expect(box.height).toBe(48);
+        expect(box.y).toBeCloseTo(input.y, 0);
       }
+      expect(grip.x + grip.width).toBeLessThanOrEqual(
+        input.x + input.width + 1,
+      );
+      expect(remove.x).toBeGreaterThanOrEqual(input.x + input.width);
+      // Add stop, Reverse and Round trip: equal tiles below the list, on the
+      // same edges as the list and Calculate route.
+      const tiles = await page.evaluate(() => {
+        const box = (e: Element) => e.getBoundingClientRect();
+        // Rounded, without negative zero.
+        const px = (value: number) => Math.round(value) || 0;
+        const list = box(document.querySelector('#points')!);
+        const calculate = box(document.querySelector('#calculate')!);
+        const buttons = [
+          ...document.querySelectorAll('.inline-actions > button'),
+        ].map(box);
+        return {
+          heights: new Set(buttons.map((b) => Math.round(b.height))).size,
+          tops: new Set(buttons.map((b) => Math.round(b.top))).size,
+          left: px(buttons[0].left - list.left),
+          right: px(buttons[2].right - list.right),
+          calculate: [
+            px(calculate.left - list.left),
+            px(calculate.right - list.right),
+          ],
+          gap: px(buttons[0].top - list.bottom),
+        };
+      });
+      expect(tiles).toEqual({
+        heights: 1,
+        tops: 1,
+        left: 0,
+        right: 0,
+        calculate: [0, 0],
+        gap: 16,
+      });
+      for (const control of ['.point-grip', '.point-remove', '.point-number'])
+        await expect(row.locator(control)).toHaveAttribute('title', /.+/);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

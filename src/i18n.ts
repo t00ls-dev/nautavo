@@ -219,8 +219,7 @@ const pt: Record<string, string> = {
   '2025 imagery is for non-commercial use. For commercial use, choose EOX 2016 in Settings.':
     'As imagens de 2025 são para uso não comercial. Para uso comercial, escolha EOX 2016 em Configurações.',
   'Share GPX': 'Compartilhar GPX',
-  'Choose route point': 'Escolher ponto da rota',
-  'Set as destination': 'Definir como destino',
+  'Map point': 'Ponto do mapa',
   'Photon server': 'Servidor Photon',
   'Suggestions unavailable. Press Enter to search with Nominatim.':
     'Sugestões indisponíveis. Pressione Enter para buscar com Nominatim.',
@@ -231,8 +230,6 @@ const pt: Record<string, string> = {
   'Could not share GPX. Use Download GPX instead.':
     'Não foi possível compartilhar o GPX. Use Baixar GPX.',
   'The route already has 50 points.': 'A rota já tem 50 pontos.',
-  'Touch and hold to choose a route point':
-    'Toque e segure para escolher um ponto da rota',
   'Route panel': 'Painel da rota',
   'Map credits': 'Créditos do mapa',
   '© OpenStreetMap contributors': '© colaboradores do OpenStreetMap',
@@ -293,6 +290,8 @@ const pt: Record<string, string> = {
   'Drag with a magnifier': 'Arrastar com lupa',
   'Tap, then move the map': 'Tocar e mover o mapa',
   Cancel: 'Cancelar',
+  'Drag or use the arrow keys to reorder':
+    'Arraste ou use as setas do teclado para reordenar',
   Confirm: 'Confirmar',
   Outbound: 'Ida',
   Return: 'Volta',
@@ -327,7 +326,8 @@ const pt: Record<string, string> = {
   Points: 'Pontos',
   'Add stop': 'Adicionar parada',
   Reverse: 'Inverter',
-  'Address or lat, lon': 'Endereço ou lat, lon',
+  'Starting point': 'Ponto de partida',
+  'Add a stop': 'Adicionar parada',
   'Prefer main roads': 'Preferir vias principais',
   Settings: 'Configurações',
   'Advanced: JSON': 'Avançado: JSON',
@@ -672,10 +672,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^(\d+) points$/, (n) => `${n} pontos`],
   [/^Select point (\d+)$/, (n) => `Selecionar ponto ${n}`],
   [/^Remove point (\d+)$/, (n) => `Remover ponto ${n}`],
-  [
-    /^Move point (\d+) (up|down)$/,
-    (n, d) => `Mover ponto ${n} para ${d === 'up' ? 'cima' : 'baixo'}`,
-  ],
+  [/^Move point (\d+)$/, (n) => `Mover ponto ${n}`],
   [/^(\d+)\. (Start|Destination|Via)$/, (n, kind) => `${n}. ${pt[kind]}`],
   [
     /^This link suggests other routing servers: (.+)\. The route uses the default servers\.$/,
