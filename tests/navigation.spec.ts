@@ -570,10 +570,11 @@ test.describe('phone navigation', () => {
         Number(await page.locator('#nav-rotor').getAttribute('data-zoom'));
       await expect.poll(zoom).toBeGreaterThan(0);
       const following = await zoom();
-      // About 330 m north of the route: off it only once it lasts 5 s.
+      // About 1.3 km north of the route, so the map must step out to show
+      // the rejoin point: off it only once it lasts 5 s.
       const off = (shift: number) =>
         context.setGeolocation({
-          latitude: lat + 0.003 + shift,
+          latitude: lat + 0.012 + shift,
           longitude: lon(7),
           accuracy: 8,
         });
@@ -597,7 +598,7 @@ test.describe('phone navigation', () => {
           : 'Off the route · Back to route',
       );
       // Straight-line distance to a point ahead, rounded like maneuvers.
-      await expect(page.locator('#nav-distance')).toHaveText(/^\d+ m$/);
+      await expect(page.locator('#nav-distance')).toHaveText(/^\d+[.,]\d km$/);
       // On the map turned east-up, the route (south) is to the right and
       // ahead (east) is up: the arrow points up and to the right.
       const angle = Number(
@@ -994,4 +995,371 @@ test('wide screens keep Download GPX as the main action', async ({ page }) => {
   await expect(page.locator('#navigate')).toBeHidden();
   await expect(page.locator('#download')).toHaveClass(/primary/);
   await expect(page.locator('#download')).toContainText('Download GPX');
+});
+
+test.describe('replay on the navigation screen', () => {
+  // No location permission: replay never asks for it.
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test('replays the route with its maneuvers and no location or routing', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { watched: number };
+      w.watched = 0;
+      navigator.geolocation.watchPosition = () => {
+        w.watched++;
+        return 0;
+      };
+    });
+    await setup(page);
+    let routing = 0;
+    page.on('request', (r) => {
+      if (/\/route\/v1\/|valhalla/.test(r.url())) routing++;
+    });
+    // Travel the route opens like the other summary rows, with a note and
+    // a button to simulate navigation.
+    await page.locator('#travel-details > summary').click();
+    const travel = page.locator('#travel-route');
+    await expect(travel).toHaveText('Simulate navigation');
+    await travel.click();
+    const screen = page.getByRole('dialog', { name: 'Navigation' });
+    await expect(screen).toBeVisible();
+    // It opens paused at the start.
+    await expect(page.locator('#nav-replay-position')).toHaveValue('0');
+    await expect(screen.getByRole('button', { name: 'Play' })).toBeVisible();
+    await page.locator('#nav-replay-position').fill('300');
+    await expect(page.locator('#nav-notice')).toBeHidden();
+    await expect(page.locator('#nav-replay-chip')).toHaveText('Replay');
+    // It opens further out than live navigation, following without Re-center.
+    await expect(page.locator('#nav-resume')).toBeHidden();
+    await expect(page.locator('.nav-status')).toBeHidden();
+    // About 610 m along (30 % of 2 km): the right turn at 1 km comes next.
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    await expect(page.locator('#nav-distance')).toHaveText('400 m');
+    const position = page.locator('#nav-replay-position');
+    await position.fill('600');
+    await expect(page.locator('#nav-road')).toHaveText('Estrada do Joá');
+    // Played to the end at 10×, the destination is reached.
+    await expect(page.locator('#nav-replay-rate')).toHaveValue('1');
+    await page.locator('#nav-replay-rate').selectOption('10');
+    const play = screen.getByRole('button', { name: 'Play' });
+    await play.click();
+    await expect(page.locator('#nav-road')).toHaveText('You have arrived', {
+      timeout: 10000,
+    });
+    await expect(play).toBeVisible();
+    expect(await fits(page)).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { watched: number }).watched,
+      ),
+    ).toBe(0);
+    expect(routing).toBe(0);
+    // Replayed to the end, it begins again at the start.
+    await page.getByRole('button', { name: 'End navigation' }).click();
+    await expect(screen).toBeHidden();
+    await expect(travel).toBeFocused();
+    await travel.click();
+    await expect(page.locator('#nav-replay-position')).toHaveValue('0');
+    // Left halfway, it begins at the start again too.
+    await page.locator('#nav-replay-position').fill('450');
+    await page.getByRole('button', { name: 'End navigation' }).click();
+    await expect(travel).toHaveText('Simulate navigation');
+    await travel.click();
+    await expect(page.locator('#nav-replay-position')).toHaveValue('0');
+  });
+
+  for (const [width, language] of [
+    [320, 'pt'],
+    [320, 'en'],
+    [1280, 'pt'],
+  ] as const)
+    test(`the replay controls fit at ${width} px in ${language}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width > 1000 ? 800 : 640 });
+      await setup(page);
+      await page.locator('#language').selectOption(language);
+      await page.locator('#travel-details > summary').click();
+      // The button's label stays on one line inside it.
+      const label = page.locator('#travel-route');
+      await expect(label).toHaveText(
+        language === 'pt' ? 'Simular navegação' : 'Simulate navigation',
+      );
+      expect(
+        await label.evaluate(
+          (e) =>
+            e.scrollWidth <= e.clientWidth &&
+            e.getBoundingClientRect().height < 60,
+        ),
+      ).toBe(true);
+      await label.click();
+      await expect(page.locator('#nav-replay-chip')).toBeVisible();
+      await page.locator('#nav-replay-position').fill('400');
+      expect(await fits(page)).toEqual([]);
+    });
+});
+
+test('a playing replay turns the map smoothly on a road with small bends', async ({
+  page,
+}) => {
+  // A point every 15 m, alternating 3 m to either side, like a real road.
+  const bends = Array.from({ length: 300 }, (_, i) => [
+    lon(0) + i * 0.000146,
+    lat + (i % 2 ? 0.000027 : -0.000027),
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+  await page.route('**/route/v1/driving/**', (r) =>
+    r.fulfill({
+      json: {
+        code: 'Ok',
+        waypoints: [bends[0], bends[299]].map((location) => ({
+          location,
+          distance: 0,
+        })),
+        routes: [
+          {
+            distance: 4500,
+            duration: 300,
+            geometry: { coordinates: bends },
+            legs: [
+              {
+                steps: [
+                  {
+                    name: 'Rua Sinuosa',
+                    distance: 4500,
+                    duration: 300,
+                    maneuver: { type: 'depart', location: bends[0] },
+                  },
+                  {
+                    name: '',
+                    distance: 0,
+                    duration: 0,
+                    maneuver: { type: 'arrive', location: bends[299] },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto(base);
+  await page.locator('#language').selectOption('en');
+  await page.locator('#location-0').fill(`${bends[0][1]}, ${bends[0][0]}`);
+  await page.locator('#location-0').press('Tab');
+  await page.locator('#location-1').fill(`${bends[299][1]}, ${bends[299][0]}`);
+  await page.locator('#location-1').press('Tab');
+  await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
+  await page.locator('#travel-details > summary').click();
+  await page.locator('#travel-route').click();
+  await page
+    .getByRole('dialog', { name: 'Navigation' })
+    .getByRole('button', { name: 'Play' })
+    .click();
+  // The map's turn, read from the compass needle on every frame for 2 s.
+  const turns = await page.evaluate(
+    () =>
+      new Promise<number[]>((done) => {
+        const angles: number[] = [];
+        const begin = performance.now();
+        const read = (time: number) => {
+          const needle = document.querySelector<HTMLElement>(
+            '#nav-compass-button svg',
+          )!;
+          const turn = /rotate\((-?[\d.]+)deg\)/.exec(needle.style.transform);
+          angles.push(turn ? Number(turn[1]) : 0);
+          if (time - begin < 2000) requestAnimationFrame(read);
+          else done(angles.slice(1).map((a, i) => Math.abs(a - angles[i])));
+        };
+        requestAnimationFrame(read);
+      }),
+  );
+  // Without smoothing it swung up to 9° a frame (4° on average).
+  expect(Math.max(...turns)).toBeLessThan(2);
+});
+
+/**
+ * Replays `path` (GeoJSON order) from 30 % at 1× and returns, for each frame,
+ * the position (of 1000), the arrow's turn and the map's turn on screen.
+ */
+async function replayTurns(page: Page, path: number[][]) {
+  const last = path.length - 1;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+  await page.route('**/route/v1/driving/**', (r) =>
+    r.fulfill({
+      json: {
+        code: 'Ok',
+        waypoints: [path[0], path[last]].map((location) => ({
+          location,
+          distance: 0,
+        })),
+        routes: [
+          {
+            distance: 2000,
+            duration: 120,
+            geometry: { coordinates: path },
+            legs: [
+              {
+                steps: [
+                  {
+                    name: 'Rua Curva',
+                    distance: 2000,
+                    duration: 120,
+                    maneuver: { type: 'depart', location: path[0] },
+                  },
+                  {
+                    name: '',
+                    distance: 0,
+                    duration: 0,
+                    maneuver: { type: 'arrive', location: path[last] },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto(base);
+  await page.locator('#language').selectOption('en');
+  await page.locator('#location-0').fill(`${path[0][1]}, ${path[0][0]}`);
+  await page.locator('#location-0').press('Tab');
+  await page.locator('#location-1').fill(`${path[last][1]}, ${path[last][0]}`);
+  await page.locator('#location-1').press('Tab');
+  await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
+  await page.locator('#travel-details > summary').click();
+  await page.locator('#travel-route').click();
+  await page.locator('#nav-replay-position').fill('300');
+  await page
+    .getByRole('dialog', { name: 'Navigation' })
+    .getByRole('button', { name: 'Play' })
+    .click();
+  return page.evaluate(
+    () =>
+      new Promise<number[][]>((done) => {
+        const out: number[][] = [];
+        const turn = (selector: string) =>
+          Number(
+            /rotate\((-?[\d.]+)deg\)/.exec(
+              document.querySelector<HTMLElement>(selector)?.style.transform ??
+                '',
+            )?.[1] ?? 0,
+          );
+        const begin = performance.now();
+        const read = (time: number) => {
+          const at = Number(
+            document.querySelector<HTMLInputElement>('#nav-replay-position')!
+              .value,
+          );
+          out.push([at, turn('.nav-arrow'), turn('#nav-compass-button svg')]);
+          if (time - begin < 3500 && at < 950) requestAnimationFrame(read);
+          else done(out);
+        };
+        requestAnimationFrame(read);
+      }),
+  );
+}
+/** Degrees between two directions, 0–180. */
+const apart = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+
+test('a playing replay keeps the arrow along the road through a turn', async ({
+  page,
+}) => {
+  // 1 km east, then 1 km south, a point every 15 m.
+  const east = Array.from({ length: 68 }, (_, i) => [
+    lon(0) + i * 0.000146,
+    lat,
+  ]);
+  const corner = east[67];
+  const south = Array.from({ length: 67 }, (_, i) => [
+    corner[0],
+    lat - (i + 1) * 0.000135,
+  ]);
+  const samples = await replayTurns(page, [...east, ...south]);
+  // The road on screen points its bearing turned with the map; the arrow
+  // points the same way, away from the corner (at 500 of 1000).
+  const errors = samples
+    .filter(([at]) => Math.abs(at - 500) > 40)
+    .map(([at, arrow, map]) => apart(arrow, (at < 500 ? 90 : 180) + map));
+  expect(errors.length).toBeGreaterThan(10);
+  // It was 49° off after the turn while the map caught up.
+  expect(Math.max(...errors)).toBeLessThan(10);
+});
+
+test('a playing replay keeps the arrow along the road on a curve', async ({
+  page,
+}) => {
+  // Three quarters of a circle of 150 m, clockwise from heading east, a
+  // point every 5°: the road's direction changes all along it.
+  const radius = 150,
+    perLat = 111_320,
+    perLon = 111_320 * Math.cos((lat * Math.PI) / 180);
+  const arc = Array.from({ length: 55 }, (_, i) => {
+    const angle = (i * 5 * Math.PI) / 180;
+    return [
+      lon(0) + (radius * Math.sin(angle)) / perLon,
+      lat + (radius * Math.cos(angle)) / perLat,
+    ];
+  });
+  const total = radius * ((270 * Math.PI) / 180);
+  const samples = await replayTurns(page, arc);
+  const errors = samples.map(([at, arrow, map]) => {
+    const tangent = 90 + ((at / 1000) * total * 180) / (radius * Math.PI);
+    return apart(arrow, tangent + map);
+  });
+  expect(errors.length).toBeGreaterThan(10);
+  // A 5° segment is at most 2.5° from the circle's tangent.
+  expect(Math.max(...errors)).toBeLessThan(5);
+});
+
+test('a playing replay greys the road right behind the arrow', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  await page.locator('#travel-details > summary').click();
+  await page.locator('#travel-route').click();
+  await page.locator('#nav-replay-position').fill('100');
+  await page
+    .getByRole('dialog', { name: 'Navigation' })
+    .getByRole('button', { name: 'Play' })
+    .click();
+  /** The color on screen at a point, as [red, green, blue]. */
+  const colorAt = async (x: number, y: number) => {
+    const shot = await page.screenshot({
+      clip: { x: Math.round(x), y: Math.round(y), width: 1, height: 1 },
+    });
+    return page.evaluate(async (png) => {
+      const blob = await (await fetch(`data:image/png;base64,${png}`)).blob();
+      const canvas = new OffscreenCanvas(1, 1);
+      const context = canvas.getContext('2d')!;
+      context.drawImage(await createImageBitmap(blob), 0, 0);
+      return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+    }, shot.toString('base64'));
+  };
+  for (let i = 0; i < 5; i++) {
+    await page.waitForTimeout(250);
+    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
+    const x = arrow.x + arrow.width / 2;
+    // Just below the arrow's circle: grey (travelled), never the route's
+    // green still waiting to be redrawn.
+    const [red, green] = await colorAt(x, arrow.y + arrow.height + 6);
+    expect(green - red).toBeLessThan(30);
+    // Just above it, short of the destination: still green, the grey
+    // never runs ahead of the arrow.
+    const at = Number(await page.locator('#nav-replay-position').inputValue());
+    if (at > 900) break;
+    const [redAhead, greenAhead] = await colorAt(x, arrow.y - 6);
+    expect(greenAhead - redAhead).toBeGreaterThan(30);
+  }
 });
