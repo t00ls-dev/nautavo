@@ -46,8 +46,9 @@ test('draws one vector map, loads only the selected layer, updates credits and k
     .poll(() => watch.has('elevation-tiles-prod/terrarium'))
     .toBe(true);
   expect(watch.has('eox.at')).toBe(false);
-  // Let the terrain requests already under way finish.
-  await page.waitForLoadState('networkidle');
+  // Terrain may still be loading here on a busy machine (it is still the
+  // layer shown); that terrain stops after a switch is checked
+  // deterministically by the "leaving Topographic" tests below.
   watch.requests.length = 0;
   await page.locator('#layers-toggle').click();
   await page
@@ -65,9 +66,7 @@ test('draws one vector map, loads only the selected layer, updates credits and k
     'hidden',
   );
   await expect.poll(() => watch.has('s2cloudless-2025_3857')).toBe(true);
-  expect(watch.has('elevation-tiles') || watch.has('overlay_bright')).toBe(
-    false,
-  );
+  expect(watch.has('overlay_bright')).toBe(false);
   expect(new URL(page.url()).hash).toBe(hash);
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute(
@@ -101,48 +100,56 @@ test('draws one vector map, loads only the selected layer, updates credits and k
   await expect(page.locator('#satellite-license')).toHaveAttribute('hidden');
 });
 
-test('leaving Topographic stops its terrain requests', async ({ page }) => {
-  // The first terrain tiles load, so neighbors are asked for too; the rest
-  // are held until after the switch.
-  let started = 0,
-    finished = 0;
-  const held: Route[] = [];
-  await page.route(
-    'https://s3.amazonaws.com/elevation-tiles-prod/**',
-    async (r) => {
-      if (++started <= 6) return r.fallback();
-      held.push(r);
-    },
-  );
-  page.on('requestfinished', (r) => {
-    if (r.url().includes('elevation-tiles')) finished++;
-  });
-  await page.goto(base);
-  await expect(canvas(page)).toBeVisible();
-  await page.locator('#layers-toggle').click();
-  await page
-    .getByRole('menuitemradio', { name: 'Topographic', exact: true })
-    .click();
-  await expect.poll(() => held.length).toBeGreaterThan(4);
-  await expect.poll(() => finished).toBe(6);
-  await page.locator('#layers-toggle').click();
-  await page
-    .getByRole('menuitemradio', { name: 'Standard', exact: true })
-    .click();
-  await expect(page.locator('body')).toHaveAttribute(
-    'data-map-layer',
-    'standard',
-  );
-  const asked = started;
-  // Answers that come late for a layer no longer shown are not used.
-  for (const r of held)
-    await r.fallback().catch(() => {
-      /* Aborted with the layer. */
+for (const [layer, attribute] of [
+  ['Standard', 'standard'],
+  ['Satellite', 'satellite'],
+] as const)
+  test(`leaving Topographic for ${layer} stops its terrain requests`, async ({
+    page,
+  }) => {
+    // The first terrain tiles load, so neighbors are asked for too; the rest
+    // are held until after the switch.
+    let started = 0,
+      finished = 0;
+    const held: Route[] = [];
+    await page.route(
+      'https://s3.amazonaws.com/elevation-tiles-prod/**',
+      async (r) => {
+        if (++started <= 6) return r.fallback();
+        held.push(r);
+      },
+    );
+    page.on('requestfinished', (r) => {
+      if (r.url().includes('elevation-tiles')) finished++;
     });
-  await page.waitForTimeout(1500);
-  expect(started).toBe(asked);
-  expect(finished).toBe(6);
-});
+    await page.goto(base);
+    await expect(canvas(page)).toBeVisible();
+    await page.locator('#layers-toggle').click();
+    await page
+      .getByRole('menuitemradio', { name: 'Topographic', exact: true })
+      .click();
+    await expect.poll(() => held.length).toBeGreaterThan(4);
+    await expect.poll(() => finished).toBe(6);
+    await page.locator('#layers-toggle').click();
+    await page.getByRole('menuitemradio', { name: layer, exact: true }).click();
+    await expect(page.locator('body')).toHaveAttribute(
+      'data-map-layer',
+      attribute,
+    );
+    // Requests the browser sent before the switch can reach the test a
+    // little later on a busy machine; count from after them.
+    await page.waitForTimeout(1000);
+    const asked = started;
+    // Answers that come late for a layer no longer shown are not used, and
+    // start no new terrain request.
+    for (const r of held)
+      await r.fallback().catch(() => {
+        /* Aborted with the layer. */
+      });
+    await page.waitForTimeout(1500);
+    expect(started).toBe(asked);
+    expect(finished).toBe(6);
+  });
 test('the first load draws at half resolution, then at the screen resolution', async ({
   browser,
 }) => {
