@@ -222,14 +222,21 @@ export function createNavigationTracker(
       const point = pointAtDistance(index, at);
       return point ? { coord: point.coord, at } : null;
     },
-    update(fix: NavigationFix): NavigationReadout | null {
+    /**
+     * `at`: the along-track distance when it is known (a replay), so a road
+     * used both ways or a jump back takes that pass rather than a guess.
+     */
+    update(fix: NavigationFix, at?: number): NavigationReadout | null {
       const accuracy = Number.isFinite(fix.accuracy)
         ? Math.max(0, fix.accuracy)
         : Infinity;
-      const position = locateOnTrack(index, fix.coord, {
-        progress,
-        backtrack: Math.max(50, Math.min(500, 2 * accuracy)),
-      });
+      const position = locateOnTrack(
+        index,
+        fix.coord,
+        at === undefined
+          ? { progress, backtrack: Math.max(50, Math.min(500, 2 * accuracy)) }
+          : { progress: at, backtrack: 5 },
+      );
       if (!position) return null;
       progress = position.distance;
       const time = fix.time ?? Date.now();

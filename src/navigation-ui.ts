@@ -803,7 +803,8 @@ export function setupNavigation(deps: {
   function renderWeather() {
     const forecast = deps.weather();
     const planned = deps.route();
-    if (last && plannedIndex) {
+    if (replaying) plannedProgress = replayDistance;
+    else if (last && plannedIndex) {
       const position = locateOnTrack(plannedIndex, last.coord, {
         progress: plannedProgress,
         backtrack: 50,
@@ -1018,7 +1019,8 @@ export function setupNavigation(deps: {
       accuracy: Math.max(0, accuracy || 0),
     };
     declinationAt(last.coord);
-    readout = tracker.update(last);
+    // A replay knows its distance along the route; live fixes are located.
+    readout = tracker.update(last, replaying ? replayDistance : undefined);
     // The device's speed, or one measured between fixes when it gives none.
     const time = position.timestamp || Date.now();
     let speed: number | null = Number.isFinite(position.coords.speed)

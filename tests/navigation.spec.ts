@@ -1475,3 +1475,112 @@ test.describe('weather while navigating', () => {
       expect(await fits(page)).toEqual([]);
     });
 });
+
+test.describe('replay going back', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test('dragging back or playing again follows the replay, not the furthest point', async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.locator('#travel-details > summary').click();
+    await page.locator('#travel-route').click();
+    const road = page.locator('#nav-road'),
+      position = page.locator('#nav-replay-position');
+    await position.fill('600');
+    await expect(road).toHaveText('Estrada do Joá');
+    // Dragged back before the right turn at 1 km, it comes next again.
+    await position.fill('200');
+    await expect(road).toHaveText('Estrada das Furnas');
+    await expect(page.locator('#nav-distance')).toHaveText('600 m');
+    // At the end (as after the replay ran on in the background), play
+    // begins again from the start.
+    await position.fill('1000');
+    await expect(road).toHaveText('You have arrived');
+    await page
+      .getByRole('dialog', { name: 'Navigation' })
+      .getByRole('button', { name: 'Play' })
+      .click();
+    await expect(road).toHaveText('Estrada das Furnas');
+  });
+
+  test('on a road used both ways, going back keeps the outbound pass', async ({
+    page,
+  }) => {
+    // 1 km east and back west on the same road, a point every 100 m.
+    const east = Array.from({ length: 11 }, (_, i) => [lon(i), lat]);
+    const path = [...east, ...east.slice(0, -1).reverse()];
+    const last = path.length - 1;
+    await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+    await page.route('**/route/v1/driving/**', (r) =>
+      r.fulfill({
+        json: {
+          code: 'Ok',
+          waypoints: [path[0], path[last]].map((location) => ({
+            location,
+            distance: 0,
+          })),
+          routes: [
+            {
+              distance: 2050,
+              duration: 150,
+              geometry: { coordinates: path },
+              legs: [
+                {
+                  steps: [
+                    {
+                      name: 'Rua de Ida',
+                      distance: 1025,
+                      duration: 75,
+                      maneuver: { type: 'depart', location: path[0] },
+                    },
+                    {
+                      name: 'Rua de Volta',
+                      distance: 1025,
+                      duration: 75,
+                      maneuver: {
+                        type: 'turn',
+                        modifier: 'uturn',
+                        location: path[10],
+                      },
+                    },
+                    {
+                      name: '',
+                      distance: 0,
+                      duration: 0,
+                      maneuver: { type: 'arrive', location: path[last] },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    await page.goto(base);
+    await page.locator('#language').selectOption('en');
+    await page.locator('#location-0').fill(`${lat}, ${lon(0)}`);
+    await page.locator('#location-0').press('Tab');
+    await page.locator('#location-1').fill(`${lat}, ${lon(0) + 0.0001}`);
+    await page.locator('#location-1').press('Tab');
+    await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
+    await page.locator('#travel-details > summary').click();
+    await page.locator('#travel-route').click();
+    const road = page.locator('#nav-road'),
+      position = page.locator('#nav-replay-position');
+    const rest = page.locator('#nav-rest');
+    // On the way back, 300 m from the start: 0.3 km left.
+    await position.fill('850');
+    await expect(rest).toContainText(/^0\.3 km/);
+    // Dragged back to the way out at the same place: 1.7 km left, with the
+    // U-turn ahead.
+    await position.fill('150');
+    await expect(rest).toContainText(/^1\.7 km/);
+    await expect(road).toHaveText('Rua de Volta');
+  });
+});
