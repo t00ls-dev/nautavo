@@ -246,15 +246,22 @@ test.describe('phone summary', () => {
 
 test.describe('narrow phone', () => {
   test.use({ viewport: { width: 320, height: 640 }, hasTouch: true });
-  test('Set on map keeps its name with the pin only, and Departure sits below its label', async ({
+  test('point rows keep their controls on one line, and Departure sits below its label', async ({
     page,
   }) => {
     await page.goto(base);
-    const onMap = page
-      .locator('#points li.selected .point-actions button')
-      .first();
-    await expect(onMap).toHaveAccessibleName('Set on map');
-    await expect(onMap.locator('.button-label')).toBeHidden();
+    const row = page.locator('#points li').first();
+    await expect(row.locator('.point-number')).toHaveAttribute(
+      'title',
+      'Set on map',
+    );
+    await expect(row.locator('.point-grip')).toHaveAccessibleName(
+      'Move point 1',
+    );
+    await expect(row.locator('.point-grip .button-label')).toBeHidden();
+    const rowBox = (await row.boundingBox())!;
+    expect(rowBox.height).toBe(48);
+    expect(rowBox.x + rowBox.width).toBeLessThanOrEqual(320);
     const label = (await page.locator('label[for=departure]').boundingBox())!;
     const field = (await page.locator('#departure').boundingBox())!;
     expect(field.y).toBeGreaterThanOrEqual(label.y + label.height - 1);
@@ -500,3 +507,54 @@ test('in the browser the status strip takes no room', async ({ page }) => {
   const header = (await page.locator('header').first().boundingBox())!;
   expect(header.y).toBe(8);
 });
+
+for (const [width, language] of [
+  [760, 'en'],
+  [760, 'pt'],
+  [1280, 'en'],
+  [1280, 'pt'],
+] as const)
+  test(`sidebar actions keep their labels on one line at ${width}px in ${language}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(language === 'pt' ? `${base}?lang=pt` : base);
+    const layout = await page.evaluate(() => {
+      const box = (e: Element) => e.getBoundingClientRect();
+      const px = (value: number) => Math.round(value) || 0;
+      const list = box(document.querySelector('#points')!);
+      const tiles = [
+        ...document.querySelectorAll('.inline-actions > button'),
+      ].map(box);
+      const download = document.querySelector('#download')!;
+      const footer = [
+        '#download',
+        '#share',
+        '.secondary-actions .file-button',
+      ].map((selector) => box(document.querySelector(selector)!));
+      return {
+        tileRows: new Set(tiles.map((b) => px(b.top))).size,
+        tileHeights: new Set(tiles.map((b) => px(b.height))).size,
+        tileEdges: [
+          px(tiles[0].left - list.left),
+          px(tiles[2].right - list.right),
+        ],
+        downloadOneLine: download.scrollWidth <= download.clientWidth,
+        downloadHeight: px(box(download).height),
+        footerRows: new Set(footer.map((b) => px(b.top))).size,
+        footerInside: footer.every((b) => b.right <= list.right + 1),
+      };
+    });
+    expect(layout).toEqual({
+      tileRows: 1,
+      tileHeights: 1,
+      tileEdges: [0, 0],
+      downloadOneLine: true,
+      downloadHeight: 44,
+      footerRows: 1,
+      footerInside: true,
+    });
+    await expect(page.locator('#share')).toHaveAccessibleName(
+      language === 'pt' ? 'Copiar link' : 'Copy link',
+    );
+  });

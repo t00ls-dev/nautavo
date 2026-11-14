@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
     r.fulfill({ json: features }),
   );
 });
-test('touch tap does not add; holds choose start, stop and destination', async ({
+test('on a phone, map taps and holds never set route points', async ({
   browser,
 }) => {
   const context = await browser.newContext({
@@ -41,29 +41,20 @@ test('touch tap does not add; holds choose start, stop and destination', async (
     else await r.fulfill({ status: 204 });
   });
   await page.goto(base);
+  // No hint to set points on the map: phones type them or move markers.
+  await expect(page.locator('#map-note')).toBeHidden();
   await page.touchscreen.tap(205, 245);
   await expect(page.locator('.route-marker')).toHaveCount(0);
   // A separate gesture: a hold right after a tap is the one-finger zoom.
   await page.waitForTimeout(400);
   await holdMap(page);
-  await expect(page.locator('#point-menu')).toBeVisible();
-  await page
-    .locator('#point-menu')
-    .getByRole('menuitem', { name: 'Set as start', exact: true })
-    .tap();
-  await expect(page.locator('.route-marker')).toHaveCount(1);
-  await holdMap(page, 240, 280);
-  await page
-    .locator('#point-menu')
-    .getByRole('menuitem', { name: 'Add as stop' })
-    .tap();
-  await expect(page.locator('#points li')).toHaveCount(3);
-  await holdMap(page, 300, 245);
-  await page
-    .locator('#point-menu')
-    .getByRole('menuitem', { name: 'Set as destination' })
-    .tap();
-  await expect(page.locator('.route-marker')).toHaveCount(3);
+  const menu = page.locator('#point-menu');
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toHaveText(['Elevation here']);
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(page.locator('.route-marker')).toHaveCount(0);
+  await expect(page.locator('#points li')).toHaveCount(2);
   await context.close();
 });
 test('point menu supports desktop keyboard and Escape', async ({ page }) => {
@@ -71,10 +62,13 @@ test('point menu supports desktop keyboard and Escape', async ({ page }) => {
   await page.locator('#map').focus();
   await page.keyboard.press('Shift+F10');
   await expect(page.locator('#point-menu')).toBeVisible();
+  const elevation = page
+    .locator('#point-menu')
+    .getByRole('menuitem', { name: 'Elevation here' });
+  await expect(elevation).toBeFocused();
+  // The only item: the arrow keys keep it focused.
   await page.keyboard.press('ArrowDown');
-  await expect(
-    page.locator('#point-menu').getByRole('menuitem', { name: 'Add as stop' }),
-  ).toBeFocused();
+  await expect(elevation).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.locator('#point-menu')).toBeHidden();
 });
@@ -235,7 +229,9 @@ for (const width of [320, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(base);
-    await expect(page.locator('.point-location-form button')).toHaveCount(0);
+    await expect(
+      page.locator('.point-location-form button:not(.point-grip)'),
+    ).toHaveCount(0);
     await page.locator('#location-1').fill('Li');
     await expect(page.locator('#suggestions-1 [role=option]')).toHaveCount(0);
     await page.locator('#location-1').pressSequentially('sboa');

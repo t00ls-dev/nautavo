@@ -50,6 +50,7 @@ const paths = {
   down: '<path d="m5 14 7 7 7-7M12 21V3"/>',
   info: '<path d="M12 11v6m-1-6h1m-1 6h2"/><circle cx="12" cy="7" r=".5"/>',
   close: '<path d="m5 5 14 14M19 5 5 19"/>',
+  grip: '<path d="M4 8h16M4 12h16M4 16h16"/>',
   undo: '<path d="M3 10h11a6 6 0 0 1 0 12M3 10l5-5m-5 5 5 5"/>',
   sunrise:
     '<path d="M2 20h20M7 20a5 5 0 0 1 10 0M12 3v6M9 6l3-3 3 3M4.5 12.5 6 14M19.5 12.5 18 14"/>',

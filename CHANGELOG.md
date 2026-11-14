@@ -22,6 +22,8 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Add stop, Reverse and Round trip are tiles of the same size below the points. On wide screens, Copy link and Import are icon buttons beside Download GPX, so no label wraps in the sidebar.
+- The route points list is more compact: each point is a numbered circle joined by dots to the next, with its field and ×, and an empty field names its role (Starting point, Add a stop, Destination); hold the ≡ grip at the end of a field and drag to reorder (or focus it and use the arrow keys), the numbers following as you drag. The up and down buttons and the Set on map button below the selected point were removed; tap a point's number to show it on the map.
 - The average speed starts at 20 km/h (13 mph in miles) instead of 60 km/h, goes up to 120 km/h or 75 mph, and its slider moves 1 by 1 up to 40 km/h (25 mph). A speed you already chose is kept, and one above the new top becomes the top.
 - Travel the route replays the route on the navigation screen, in place of the cursor on the planner map: the next turn and the one after it, the distance and time left and the arrival, at 1×, 2×, 5× or 10× or by dragging a slider, always from the start. A Replay label stays at the top; on a wide window it keeps a phone's 9:16 shape, and it uses no location and sends no request besides the map.
 - The planner draws the same map as navigation, OpenFreeMap vector map data from OpenStreetMap, with names as on the street signs. Topographic adds relief shading and contour lines to it, and Satellite shows that map's labels on top of the imagery. No map source needs an account.
@@ -41,6 +43,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Removed
 
+- The map point menu no longer sets route points: Set as start, Add as stop and Set as destination were removed, and it keeps Elevation here. Type points, click the map on desktop or move a marker.
 - The Halfway point route mark, the ½ badge at the middle of the route.
 
 ### Fixed
