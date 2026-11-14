@@ -3254,6 +3254,95 @@ dialog:modal:not(.nav-screen) {
   background: var(--color-soft);
   color: var(--color-primary-strong);
 }
+/* Weather here and ahead (#155): a neutral chip that opens the samples
+   ahead below it; amber when an alert applies. */
+.nav-weather {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+}
+.nav-weather[hidden],
+.nav-weather-list[hidden] {
+  display: none;
+}
+.nav-chips .nav-weather-chip {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nav-chips .nav-weather-chip.alert {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+.nav-weather-rain {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.nav-weather-chip.alert .nav-weather-rain {
+  color: inherit;
+}
+.nav-weather-rain .button-icon {
+  width: 14px;
+  height: 14px;
+}
+.nav-weather-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-control);
+  list-style: none;
+  font-size: 14px;
+}
+/* Distance on the left; icon, temperature and rain on the right; the
+   passage time and an alert on a smaller line below. */
+.nav-weather-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  column-gap: 6px;
+  min-height: 30px;
+}
+.nav-weather-list .button-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.nav-weather-when {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nav-weather-temperature {
+  min-width: 28px;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.nav-weather-note {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.nav-weather-alert {
+  color: var(--color-warning);
+  font-weight: 600;
+}
 /* Automatic recalculation at start, with a way to turn it off. */
 /* Icon and text on one row, the button under the text. */
 .nav-chips .nav-auto-reroute {

@@ -1798,6 +1798,7 @@ const navigation = setupNavigation({
   speedKmh: () => speedKmh,
   locale: () => (state.language === 'pt' ? 'pt-BR' : 'en'),
   status,
+  weather: () => weather.routeWeather(),
 });
 // Settings always open with the values in use; unapplied edits are dropped.
 $('open-settings').addEventListener('click', () => {

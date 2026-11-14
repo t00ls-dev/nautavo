@@ -595,6 +595,11 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
       `UV ${value} · ${({ Low: 'baixo', Moderate: 'moderado', High: 'alto', 'Very high': 'muito alto', Extreme: 'extremo' } as Record<string, string>)[category]}`,
   ],
   [/^(\S+ (?:km|mi)) of (\S+ (?:km|mi))$/, (done, all) => `${done} de ${all}`],
+  [
+    /^Weather here: (.+), (\S+), rain (\S+)%$/,
+    (description, temperature, rain) =>
+      `Tempo aqui: ${pt[description] ?? description}, ${temperature}, chuva ${rain}%`,
+  ],
   [/^About (-?[\d.,]+ (?:m|ft))$/, (value) => `Cerca de ${value}`],
   [
     /^Min (.+) · Max (.+) · Avg (.+)$/,
