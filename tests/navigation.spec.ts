@@ -1497,14 +1497,14 @@ test.describe('replay going back', () => {
     await position.fill('200');
     await expect(road).toHaveText('Estrada das Furnas');
     await expect(page.locator('#nav-distance')).toHaveText('600 m');
-    // Played to the end, then again from the start.
-    await position.fill('990');
-    const play = page
+    // At the end (as after the replay ran on in the background), play
+    // begins again from the start.
+    await position.fill('1000');
+    await expect(road).toHaveText('You have arrived');
+    await page
       .getByRole('dialog', { name: 'Navigation' })
-      .getByRole('button', { name: 'Play' });
-    await play.click();
-    await expect(play).toBeVisible({ timeout: 10000 });
-    await play.click();
+      .getByRole('button', { name: 'Play' })
+      .click();
     await expect(road).toHaveText('Estrada das Furnas');
   });
 
