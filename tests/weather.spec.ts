@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { defaults, decodeState, encodeState } from '../src/core';
 import { weatherResponse } from './weather-fixture';
-import { chooseUnits } from './unit-settings';
+import { chooseUnits, setSpeed } from './unit-settings';
 import { holdMap } from './map-helpers';
 const base = 'http://127.0.0.1:5173/';
 const gpx =
@@ -1146,9 +1146,9 @@ test('selected speeds recalculate weather locally and support slow/fast travel a
   page,
 }) => {
   await setup(page, false, null);
-  // Nothing stored yet: the 60 km/h default, also for an imported GPX.
+  // Nothing stored yet: the 20 km/h default, also for an imported GPX.
   await expect(page.locator('#summary .stats-basis')).toHaveText(
-    'At 60 km/h · no stops',
+    'At 20 km/h · no stops',
   );
   await date(page);
   await fetchWeather(page);
@@ -1160,7 +1160,7 @@ test('selected speeds recalculate weather locally and support slow/fast travel a
     .locator('.weather-marker')
     .last()
     .getAttribute('aria-label');
-  await page.locator('#average-speed').fill('30');
+  await setSpeed(page, 30);
   await expect(page.locator('#summary .stats-basis')).toHaveText(
     'At 30 km/h · no stops',
   );
@@ -1168,14 +1168,14 @@ test('selected speeds recalculate weather locally and support slow/fast travel a
     'aria-label',
     before!,
   );
-  await page.locator('#average-speed').fill('5');
+  await setSpeed(page, 5);
   await expect(page.locator('#weather-status')).toContainText('exceed');
   await expect(page.locator('#weather-retry')).toBeVisible();
-  await page.locator('#average-speed').fill('200');
-  await expect(page.locator('#summary .stats-basis')).toContainText('200 km/h');
+  await setSpeed(page, 120);
+  await expect(page.locator('#summary .stats-basis')).toContainText('120 km/h');
   await expect(page.locator('#weather-result')).toBeVisible();
   await chooseUnits(page, { distance: 'imperial' });
-  await expect(page.locator('#summary .stats-basis')).toContainText('125 mph');
+  await expect(page.locator('#summary .stats-basis')).toContainText('75 mph');
   expect(calls).toBe(0);
 });
 test('changing only the weather server refreshes weather without rerouting', async ({
@@ -1957,10 +1957,10 @@ test('slower travel adds hourly samples automatically and faster travel reuses t
   expect(requests).toHaveLength(1);
   expect(requests[0].searchParams.get('latitude')!.split(',')).toHaveLength(7);
   await page.clock.install({ time: new Date('2026-11-07T10:00:00Z') });
-  await page.locator('#average-speed').fill('15');
-  await page.locator('#average-speed').fill('60');
+  await setSpeed(page, 15);
+  await setSpeed(page, 60);
   await expect(page.locator('#weather-result')).toBeVisible();
-  await page.locator('#average-speed').fill('15');
+  await setSpeed(page, 15);
   await page.clock.fastForward(6500);
   await expect(page.locator('#summary .stats-basis')).toContainText('15 km/h');
   await expect(page.locator('.weather-card')).toHaveCount(9, {
@@ -1970,7 +1970,7 @@ test('slower travel adds hourly samples automatically and faster travel reuses t
   expect(requests).toHaveLength(2);
   expect(requests[1].searchParams.get('latitude')!.split(',')).toHaveLength(6);
   await expect(page.locator('.weather-card').nth(1)).toContainText('13.9 km');
-  await page.locator('#average-speed').fill('60');
+  await setSpeed(page, 60);
   await expect(page.locator('#weather-result')).toBeVisible();
   await expect(page.locator('#summary .stats-basis')).toContainText('60 km/h');
   expect(requests).toHaveLength(2);
@@ -2209,7 +2209,7 @@ test('changing passage speed selects the wind at the new hour without another re
   await expect(page.locator('.weather-card-wind').nth(3)).toContainText(
     'Tailwind',
   );
-  await page.locator('#average-speed').fill('120');
+  await setSpeed(page, 120);
   await expect(page.locator('.weather-card-wind').nth(3)).toContainText(
     'Headwind',
   );

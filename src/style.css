@@ -3249,6 +3249,49 @@ dialog:modal:not(.nav-screen) {
 .nav-reroute:has(~ .nav-resume:not([hidden])) {
   bottom: 92px;
 }
+/* Current speed (#136): a round badge at the bottom left of the map, above
+   Re-center and Recalculate route when they show. */
+.nav-speed {
+  position: absolute;
+  z-index: 3;
+  bottom: 32px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-text);
+  line-height: 1;
+  text-align: center;
+}
+.nav-speed[hidden] {
+  display: none;
+}
+.nav-speed:has(~ .nav-resume:not([hidden])),
+.nav-speed:has(~ .nav-reroute:not([hidden])) {
+  bottom: 92px;
+}
+.nav-speed:has(~ .nav-reroute:not([hidden])):has(~ .nav-resume:not([hidden])) {
+  bottom: 152px;
+}
+.nav-speed-value {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.nav-speed-unit {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
 .nav-chip.ok {
   border-color: var(--color-primary);
   background: var(--color-soft);

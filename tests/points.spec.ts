@@ -3,7 +3,7 @@ import { defaults, encodeState, encodeStateV1 } from '../src/core';
 import { readFile } from 'node:fs/promises';
 import { Fit, le, name, recordFields, semi } from './fit-fixture';
 import { test, expect, type Page } from '@playwright/test';
-import { chooseUnits } from './unit-settings';
+import { chooseUnits, setSpeed } from './unit-settings';
 const base = 'http://127.0.0.1:5173/';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
@@ -75,11 +75,11 @@ for (const mobile of [false, true]) {
         'Time',
         'Arrival',
       ]);
-      // Our own estimate from the default 60 km/h, never the router's 49 min.
+      // Our own estimate from the default 20 km/h, never the router's 49 min.
       await expect(page.locator('#summary')).toContainText(
-        'At 60 km/h · no stops',
+        'At 20 km/h · no stops',
       );
-      await expect(page.locator('#summary')).toContainText('42 min');
+      await expect(page.locator('#summary')).toContainText('2h 6 min');
       // Route detail rows in order, below the trip options.
       expect(
         await page
@@ -652,37 +652,62 @@ test('distance units change without rerouting, changing GPX geometry or the link
   await expect(page.locator('#summary')).toContainText('42 km');
 });
 
+test('a new device starts at 13 mph in miles, the counterpart of 20 km/h', async ({
+  page,
+}) => {
+  await setup(page);
+  await chooseUnits(page, { distance: 'imperial' });
+  await fillPair(page);
+  await expect(page.locator('#average-speed-value')).toHaveText('13');
+  await expect(page.locator('#summary')).toContainText('At 13 mph · no stops');
+  // Back in km, the default is 20 km/h again.
+  await chooseUnits(page, { distance: 'metric' });
+  await expect(page.locator('#average-speed-value')).toHaveText('20');
+});
+
 test('average speed: keyboard steps, units, kept on the device and never taken from links', async ({
   page,
 }) => {
   await setup(page);
   await fillPair(page);
-  // 42 km at the default 60 km/h; the router's 49 min is not used.
-  await expect(page.locator('#summary')).toContainText('42 min');
+  // 42 km at the default 20 km/h; the router's 49 min is not used.
+  await expect(page.locator('#summary')).toContainText('2h 6 min');
   await expect(page.locator('#average-speed')).toBeEnabled();
   await expect(page.locator('#use-average-speed, #reset-speed')).toHaveCount(0);
-  await expect(page.locator('#average-speed-value')).toHaveText('60');
+  await expect(page.locator('#average-speed-value')).toHaveText('20');
+  // Fine steps at low speeds, coarser above, up to 120 km/h.
   await page.locator('#average-speed').focus();
+  await expect(page.locator('#average-speed')).toBeFocused();
   await page.locator('#average-speed').press('Home');
   await expect(page.locator('#average-speed-value')).toHaveText('1');
   await page.locator('#average-speed').press('ArrowRight');
-  await expect(page.locator('#average-speed-value')).toHaveText('5');
+  await expect(page.locator('#average-speed-value')).toHaveText('2');
   await page.locator('#average-speed').press('ArrowRight');
-  await expect(page.locator('#average-speed-value')).toHaveText('10');
+  await expect(page.locator('#average-speed-value')).toHaveText('3');
   await page.locator('#average-speed').press('End');
-  await expect(page.locator('#average-speed-value')).toHaveText('200');
-  await expect(page.locator('#speed-range')).toHaveText('1–200 km/h');
+  await expect(page.locator('#average-speed-value')).toHaveText('120');
+  await page.locator('#average-speed').press('ArrowLeft');
+  await expect(page.locator('#average-speed-value')).toHaveText('110');
+  await expect(page.locator('#speed-range')).toHaveText('1–120 km/h');
   await chooseUnits(page, { distance: 'imperial' });
-  await expect(page.locator('#average-speed-value')).toHaveText('125');
-  await expect(page.locator('#speed-range')).toHaveText('1–130 mph');
-  await expect(page.locator('#average-speed')).toHaveAttribute('step', '5');
-  await expect(page.locator('#average-speed')).toHaveAttribute('max', '130');
-  await page.locator('#average-speed').focus();
-  await page.locator('#average-speed').press('End');
-  await expect(page.locator('#average-speed-value')).toHaveText('130');
-  await expect(page.locator('#summary')).toContainText('12 min');
+  // 110 km/h is 68.4 mph: the 70 mph notch.
+  await expect(page.locator('#average-speed-value')).toHaveText('70');
+  await expect(page.locator('#speed-range')).toHaveText('1–75 mph');
+  await expect(page.locator('#average-speed')).toHaveAttribute('step', '1');
+  // Settings hands focus back as it closes, which can take the slider's
+  // focus after it was given; press End again until the slider gets it.
+  const slider = page.locator('#average-speed');
+  await expect(async () => {
+    await slider.focus();
+    await expect(slider).toBeFocused();
+    await slider.press('End');
+    await expect(page.locator('#average-speed-value')).toHaveText('75', {
+      timeout: 1000,
+    });
+  }).toPass();
+  await expect(page.locator('#summary')).toContainText('21 min');
   await chooseUnits(page, { distance: 'metric' });
-  await page.locator('#average-speed').fill('25');
+  await setSpeed(page, 25);
   await expect(page.locator('#summary')).toContainText('At 25 km/h · no stops');
   // Kept on this device across reloads, not in the link.
   await page.reload();
@@ -709,9 +734,9 @@ test('an older route link with a speed opens with its points and the device spee
     await expect(page.locator('#location-0')).toHaveValue(start);
     await expect(page.locator('#location-1')).toHaveValue(end);
     await expect(page.locator('#summary')).toContainText(
-      'At 60 km/h · no stops',
+      'At 20 km/h · no stops',
     );
-    await expect(page.locator('#summary')).toContainText('42 min');
+    await expect(page.locator('#summary')).toContainText('2h 6 min');
   }
 });
 

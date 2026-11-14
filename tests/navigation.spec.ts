@@ -126,8 +126,9 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-turn svg.mirror')).toHaveCount(1);
     await expect(page.locator('#nav-then')).toContainText('Then');
     await expect(page.locator('#nav-then-distance')).toHaveText('500 m');
-    // Our own estimate from the default 60 km/h.
-    await expect(page.locator('#nav-time')).toHaveText('1 min');
+    // Our own estimate from the default 20 km/h (1.4 km), until the trip's
+    // own average takes over.
+    await expect(page.locator('#nav-time')).toHaveText('4 min');
     await expect(page.locator('#nav-rest')).toContainText('1.4 km ·');
     await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
     await expect(page.locator('#nav-gps')).toBeHidden();
@@ -1035,7 +1036,10 @@ test.describe('replay on the navigation screen', () => {
     await expect(screen.getByRole('button', { name: 'Play' })).toBeVisible();
     await page.locator('#nav-replay-position').fill('300');
     await expect(page.locator('#nav-notice')).toBeHidden();
-    await expect(page.locator('#nav-replay-chip')).toHaveText('Replay');
+    // The label carries the trip's clock.
+    await expect(page.locator('#nav-replay-chip')).toHaveText(
+      /Replay · \d\d:\d\d/,
+    );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
     await expect(page.locator('.nav-status')).toBeHidden();
@@ -1582,5 +1586,153 @@ test.describe('replay going back', () => {
     await position.fill('150');
     await expect(rest).toContainText(/^1\.7 km/);
     await expect(road).toHaveText('Rua de Volta');
+  });
+});
+
+test.describe('speed while navigating', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    permissions: ['geolocation'],
+  });
+  const t0 = Date.parse('2026-11-14T12:00:00Z');
+  /** Navigation with fixes the test sends itself, on a fixed clock. */
+  async function navigateWithFixes(
+    page: Page,
+    before: () => Promise<void> = async () => {},
+  ) {
+    await page.clock.setFixedTime(new Date(t0));
+    await page.addInitScript(() => {
+      const w = window as unknown as {
+        sendFix: (fix: {
+          lon: number;
+          lat: number;
+          speed: number | null;
+          accuracy: number;
+          time: number;
+        }) => void;
+      };
+      let deliver: PositionCallback | null = null;
+      navigator.geolocation.watchPosition = (success) => {
+        deliver = success;
+        return 1;
+      };
+      navigator.geolocation.clearWatch = () => {};
+      w.sendFix = ({ lon, lat, speed, accuracy, time }) =>
+        deliver?.({
+          coords: {
+            latitude: lat,
+            longitude: lon,
+            accuracy,
+            speed,
+            heading: null,
+            altitude: null,
+            altitudeAccuracy: null,
+          },
+          timestamp: time,
+        } as GeolocationPosition);
+    });
+    await setup(page);
+    await before();
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-screen')).toBeVisible();
+  }
+  /** One fix `meters` along the route (0.001° is about 102 m), at `time`. */
+  const fix = async (
+    page: Page,
+    meters: number,
+    speed: number | null,
+    time: number,
+    accuracy = 5,
+  ) => {
+    await page.clock.setFixedTime(new Date(time));
+    await page.evaluate(
+      (f) =>
+        (window as unknown as { sendFix: (f: unknown) => void }).sendFix(f),
+      { lon: lon(meters / 102.4), lat, speed, accuracy, time },
+    );
+  };
+
+  test('shows the current speed, 0 when stopped and none with a weak signal', async ({
+    page,
+  }) => {
+    await navigateWithFixes(page);
+    const badge = page.locator('#nav-speed');
+    await fix(page, 100, 5, t0 + 1000);
+    await expect(badge).toBeVisible();
+    // 5 m/s is 18 km/h.
+    await expect(page.locator('#nav-speed-value')).toHaveText('18');
+    await expect(page.locator('#nav-speed-unit')).toHaveText('km/h');
+    await fix(page, 101, 0, t0 + 2000);
+    await expect(page.locator('#nav-speed-value')).toHaveText('0');
+    await fix(page, 101, 0, t0 + 3000, 80);
+    await expect(badge).toBeHidden();
+  });
+
+  test('the arrival follows the trip average, stops included', async ({
+    page,
+  }) => {
+    await navigateWithFixes(page);
+    // At first, the configured 20 km/h: 1.95 km left takes 6 min.
+    await fix(page, 100, 3, t0 + 1000);
+    await expect(page.locator('#nav-time')).toHaveText('6 min');
+    // Ten minutes covering 600 m with stops: 1 m/s (3.6 km/h) on average,
+    // though moving at 3 m/s; the remaining 1.35 km takes about 22 min.
+    for (let s = 30; s <= 600; s += 30)
+      await fix(page, 100 + s, 3, t0 + 1000 + s * 1000);
+    await expect(page.locator('#nav-time')).toHaveText(/^2[0-4] min$/);
+  });
+
+  for (const [width, language] of [
+    [320, 'pt'],
+    [320, 'en'],
+  ] as const)
+    for (const units of ['metric', 'imperial'] as const)
+      test(`the badge fits three digits at ${width} px in ${language}, ${units}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 640 });
+        await navigateWithFixes(page, async () => {
+          await chooseUnits(page, { distance: units });
+          await page.locator('#language').selectOption(language);
+        });
+        await fix(page, 100, 50, t0 + 1000);
+        // 50 m/s is 180 km/h or 112 mph.
+        await expect(page.locator('#nav-speed-value')).toHaveText(
+          units === 'metric' ? '180' : '112',
+        );
+        await expect(page.locator('#nav-speed-unit')).toHaveText(
+          units === 'metric' ? 'km/h' : 'mph',
+        );
+        expect(
+          await page.locator('#nav-speed').evaluate((e) => {
+            const box = e.getBoundingClientRect();
+            const value = e.querySelector('.nav-speed-value')!;
+            return (
+              value.getBoundingClientRect().width <= box.width - 8 &&
+              box.left >= 0 &&
+              box.right <= innerWidth
+            );
+          }),
+        ).toBe(true);
+        expect(await fits(page)).toEqual([]);
+      });
+
+  test('a replay shows its own speed and the trip clock', async ({ page }) => {
+    await setup(page);
+    await page.locator('#travel-details > summary').click();
+    await page.locator('#travel-route').click();
+    // Paused: standing still.
+    await expect(page.locator('#nav-speed-value')).toHaveText('0');
+    await page
+      .getByRole('dialog', { name: 'Navigation' })
+      .getByRole('button', { name: 'Play' })
+      .click();
+    await expect(page.locator('#nav-speed-value')).toHaveText('20');
+    await expect(page.locator('#nav-replay-chip')).toHaveText(
+      /Replay · \d\d:\d\d/,
+    );
   });
 });

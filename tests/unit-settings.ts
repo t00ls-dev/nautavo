@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { speedNotches } from '../src/travel-time';
 
 /** Chooses units in the Settings dialog, where they apply at once. */
 export async function chooseUnits(
@@ -15,4 +16,18 @@ export async function chooseUnits(
   // for it, or it can take focus from a control the test focuses next.
   await expect(page.locator('#settings-dialog')).toBeHidden();
   await expect(page.locator('#open-settings')).toBeFocused();
+}
+
+/**
+ * Sets the average speed slider to a speed: the slider moves through the
+ * notches of `speedNotches`, so its value is the notch's position.
+ */
+export async function setSpeed(
+  page: Page,
+  speed: number,
+  units: 'metric' | 'imperial' = 'metric',
+): Promise<void> {
+  const index = speedNotches(units).indexOf(speed);
+  if (index < 0) throw new Error(`${speed} is not a speed notch`);
+  await page.locator('#average-speed').fill(String(index));
 }
