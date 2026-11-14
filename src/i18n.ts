@@ -75,6 +75,10 @@ const pt: Record<string, string> = {
     'Recalcular a rota automaticamente ao navegar',
   'Automatic recalculation on': 'Recálculo automático ativo',
   'Turn off': 'Desativar',
+  Replay: 'Reprodução',
+  'See the route on the navigation screen before you leave: each turn, the distances and the arrival.':
+    'Veja a rota na tela de navegação antes de sair: cada conversão, as distâncias e a chegada.',
+  'Simulate navigation': 'Simular navegação',
   Then: 'Depois',
   'You have arrived': 'Você chegou',
   'Weak GPS signal': 'Sinal de GPS fraco',
@@ -590,13 +594,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     (value, category) =>
       `UV ${value} · ${({ Low: 'baixo', Moderate: 'moderado', High: 'alto', 'Very high': 'muito alto', Extreme: 'extremo' } as Record<string, string>)[category]}`,
   ],
-  [/^(.+) · (.+) left$/, (done, left) => `${done} · faltam ${left}`],
   [/^(\S+ (?:km|mi)) of (\S+ (?:km|mi))$/, (done, all) => `${done} de ${all}`],
-  [
-    /^(.+) · (daylight|twilight|dark)$/,
-    (time, light) =>
-      `${time} · ${({ daylight: 'dia', twilight: 'crepúsculo', dark: 'escuro' } as Record<string, string>)[light]}`,
-  ],
   [/^About (-?[\d.,]+ (?:m|ft))$/, (value) => `Cerca de ${value}`],
   [
     /^Min (.+) · Max (.+) · Avg (.+)$/,

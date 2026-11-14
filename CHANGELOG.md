@@ -19,6 +19,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Travel the route replays the route on the navigation screen, in place of the cursor on the planner map: the next turn and the one after it, the distance and time left and the arrival, at 1×, 2×, 5× or 10× or by dragging a slider, always from the start. A Replay label stays at the top; on a wide window it keeps a phone's 9:16 shape, and it uses no location and sends no request besides the map.
 - The planner draws the same map as navigation, OpenFreeMap vector map data from OpenStreetMap, with names as on the street signs. Topographic adds relief shading and contour lines to it, and Satellite shows that map's labels on top of the imagery. No map source needs an account.
 - Online, after 15 seconds off the route, navigation recalculates a way back to the planned route, at most once a minute, and Recalculate route asks right away within the same limit; only your current position, rounded to about 10 m, is sent, and the planned route does not change. Automatic recalculation can be turned off in the start notice, in Settings or from the reminder shown when navigation starts, to follow the planned track exactly, as in an event; Recalculate route still works.
 - Off the route while navigating, the card turns amber and says Back to route, with an arrow and the straight-line distance to a point on the route ahead, and the map shows a dashed line to it; it needs no connection and does not know the roads.

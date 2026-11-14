@@ -803,6 +803,13 @@ header button.icon-control {
 .saved-routes {
   border-top: 1px solid var(--color-border);
 }
+/* Travel the route: a short note and the button that starts the replay. */
+.travel-details .hint {
+  margin: 0 0 10px;
+}
+#travel-route {
+  width: 100%;
+}
 #route-details > details[open],
 #itinerary > details[open],
 .saved-routes[open] {
@@ -913,19 +920,6 @@ div.step-item {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-}
-.playback-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.playback-controls button {
-  flex: none;
-  width: var(--control);
-  padding: 0;
-}
-#playback-readout p {
-  margin: 4px 0 0;
 }
 
 /* Saved routes. */
@@ -1755,27 +1749,6 @@ dialog.settings::backdrop {
   font-weight: 550;
 }
 
-.playback-cursor {
-  background: transparent;
-  border: 0;
-}
-.playback-dot {
-  display: block;
-  width: 22px;
-  height: 22px;
-  box-sizing: border-box;
-  border: 4px solid #fff;
-  border-radius: 50%;
-  background: #126447;
-  box-shadow:
-    0 0 0 6px #12644733,
-    0 1px 4px #0006;
-}
-.leaflet-pane .playback-trace {
-  stroke: #0b72c6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
 .route-marker {
   background: none;
   border: 0;
@@ -2968,6 +2941,18 @@ dialog.nav-screen[open] {
   display: flex;
   flex-direction: column;
 }
+/* Replay on a wide window (#154): the screen keeps a phone's 9:16 shape,
+   centered at the window's height, with the rest dimmed. */
+@media (min-width: 600px) and (min-aspect-ratio: 9/16) {
+  dialog.nav-screen.replaying {
+    width: calc(100dvh * 9 / 16);
+    margin: 0 auto;
+    box-shadow: 0 0 40px #0006;
+  }
+  dialog.nav-screen.replaying::backdrop {
+    background: #1b2934;
+  }
+}
 dialog.nav-screen::backdrop {
   background: #e9ece9;
 }
@@ -3121,8 +3106,8 @@ dialog:modal:not(.nav-screen) {
 .nav-arrow {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 8px #1b293466;
@@ -3130,8 +3115,8 @@ dialog:modal:not(.nav-screen) {
 }
 .nav-arrow .button-icon {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 18px;
+  height: 18px;
   fill: currentColor;
 }
 .nav-position.weak .nav-arrow {
@@ -3351,6 +3336,33 @@ dialog:modal:not(.nav-screen) {
 }
 .nav-stop:hover {
   background: var(--color-danger-bg);
+}
+/* Replay (#154): play, position and speed instead of the GPS status. */
+.nav-replay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.nav-replay[hidden],
+.nav-screen.replaying .nav-status {
+  display: none;
+}
+.nav-replay button {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+}
+.nav-replay input {
+  flex: 1;
+  min-width: 0;
+}
+.nav-replay select {
+  flex: none;
+  min-height: 44px;
+  font-size: 16px;
 }
 .nav-status {
   display: flex;

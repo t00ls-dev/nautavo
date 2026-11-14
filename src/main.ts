@@ -87,7 +87,6 @@ import {
 import { shareFile } from './share-gpx';
 import { setupPointMenu } from './point-menu';
 import { setupQuickZoom } from './quick-zoom';
-import { setupPlayback } from './route-playback';
 import { setupNavigation } from './navigation-ui';
 import { setupHomeScreen } from './home-screen';
 import { setupElevation } from './elevation-ui';
@@ -283,10 +282,6 @@ const surface = setupSurface(map, {
   // The Surface coloring is an explicit choice that needs it too.
   wanted: () => overlays.active() === 'surface',
   onSurface: () => overlays.refresh(),
-});
-const playback = setupPlayback(map, {
-  state: () => state,
-  speedKmh: () => speedKmh,
 });
 const overlays = setupRouteOverlays(map, {
   route: () => current,
@@ -832,7 +827,6 @@ function clearSummary() {
     $(id).replaceChildren();
   renderDaylight(state, null, speedKmh);
   maneuverLayer.clearLayers();
-  playback.setRoute(null);
   elevation.setRoute(null);
   surface.setRoute(null);
   overlays.refresh();
@@ -985,7 +979,6 @@ function renderSummary(route: Route) {
   daylight.id = 'daylight-summary';
   summary.append(stats, text('p', basis, 'hint stats-basis'), daylight);
   renderDaylight(state, route, speedKmh);
-  playback.setRoute(route);
   elevation.setRoute(route);
   surface.setRoute(route);
   overlays.refresh();

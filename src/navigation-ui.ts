@@ -30,6 +30,13 @@ import {
   type NavigationReadout,
 } from './navigation';
 import { travelTimeSeconds } from './travel-time';
+import { departureOf } from './departure';
+import { indexTrack, type TrackIndex } from './track-position';
+import {
+  METERS_PER_SECOND,
+  replayAdvance,
+  replayFix,
+} from './navigation-replay';
 import { distanceLabel, shortDistanceLabel } from './units';
 import { distanceUnits } from './unit-preferences';
 
@@ -49,8 +56,16 @@ const NOTICE_KEY = 'navigation-notice';
 const AUTO_REROUTE_KEY = 'auto-reroute';
 /** How long the "Automatic recalculation on" chip stays at start, ms. */
 const AUTO_REROUTE_NOTICE = 10000;
-/** Vector tiles are 512 px: zoom 16 shows what raster zoom 17 did. */
-const ZOOM = 16;
+/**
+ * Following zoom, live and in a replay: far enough out to show a good stretch
+ * of the road ahead (vector tiles are 512 px, so 15 is raster zoom 16).
+ */
+const ZOOM = 15;
+/**
+ * Replay: meters of travel for the map to turn most of the way to a new
+ * direction. Counted in distance, not time, so faster replays do not lag.
+ */
+const REPLAY_TURN_METERS = 40;
 /** How long "Route recalculated" stays on screen, ms. */
 const REROUTED_NOTICE = 4000;
 /** Room kept between the rejoin point and the screen edges, pixels. */
@@ -277,7 +292,30 @@ export function setupNavigation(deps: {
     reroutedTimer = 0,
     tileErrors = 0,
     tileLoads = 0,
-    pivot = { x: 0, y: 0 };
+    pivot = { x: 0, y: 0 },
+    /** Replay (#154): simulated positions instead of the device's. */
+    replaying = false,
+    replayIndex: TrackIndex | null = null,
+    replayDistance = 0,
+    /** When the replayed trip leaves, ms since the epoch. */
+    replayDeparture = 0,
+    replayFrame = 0,
+    replayLast = 0,
+    /** Replay distance when the heading was last chosen, for smoothing. */
+    headingDistance = 0,
+    /** Replay: direction of the road's segment under the traveler, or null. */
+    replayBearing: number | null = null,
+    /** A travelled-line redraw is under way; the latest progress waits. */
+    travelledBusy = false,
+    travelledNext: number | null = null,
+    /** How long a travelled-line redraw takes to show, ms (smoothed). */
+    travelledDelay = 50;
+  /** The traveler's clock: simulated while replaying. */
+  const now = () =>
+    replaying && replayIndex
+      ? replayDeparture +
+        travelTimeSeconds(replayDistance, deps.speedKmh()) * 1000
+      : Date.now();
 
   const units = () => distanceUnits();
 
@@ -310,7 +348,10 @@ export function setupNavigation(deps: {
     const arrow = marker
       ?.getElement()
       ?.querySelector<HTMLElement>('.nav-arrow');
-    const angle = Math.round((heading + rotorAngle) * 10) / 10 || 0;
+    // A replay's map turns smoothly, so its arrow takes the direction of the
+    // road's own segment under the traveler rather than the map's.
+    const direction = replaying ? (replayBearing ?? heading) : heading;
+    const angle = Math.round((direction + rotorAngle) * 10) / 10 || 0;
     if (arrow) arrow.style.transform = `rotate(${angle}deg)`;
     turnRejoinArrow();
   }
@@ -344,7 +385,19 @@ export function setupNavigation(deps: {
    */
   function chooseHeading() {
     const fresh = compass !== null && Date.now() - compassAt < COMPASS_FRESH;
-    heading = !moving && fresh ? compass! : travelHeading;
+    const target = !moving && fresh ? compass! : travelHeading;
+    // A playing replay crosses many small bends a second; turning part of the
+    // way for each meter travelled keeps the map from shaking. Live fixes,
+    // paused or dragged replays turn at once.
+    if (replaying && replayFrame) {
+      const travelled = Math.abs(replayDistance - headingDistance);
+      heading = turnToward(
+        heading,
+        target,
+        1 - Math.exp(-travelled / REPLAY_TURN_METERS),
+      );
+    } else heading = target;
+    headingDistance = replayDistance;
   }
   /** Asks to calibrate only while the compass is what turns the map. */
   function calibrationNotice() {
@@ -658,7 +711,8 @@ export function setupNavigation(deps: {
       element.setAttribute('aria-hidden', 'true');
       element.innerHTML = '<span class="nav-arrow"></span>';
       element.querySelector('.nav-arrow')!.append(icon('navigate'));
-      marker = new MarkerClass({ element })
+      // Subpixel, so the arrow does not wobble against the moving map.
+      marker = new MarkerClass({ element, subpixelPositioning: true })
         .setLngLat([last.coord[1], last.coord[0]])
         .addTo(map);
     } else marker?.setLngLat([last.coord[1], last.coord[0]]);
@@ -765,7 +819,7 @@ export function setupNavigation(deps: {
     const remaining = r ? r.remaining : tracker.total;
     const seconds = travelTimeSeconds(remaining, deps.speedKmh());
     $('nav-time').textContent = r ? navigationDurationLabel(seconds) : '—';
-    const clock = new Date(Date.now() + seconds * 1000).toLocaleTimeString(
+    const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
       deps.locale(),
       { hour: '2-digit', minute: '2-digit' },
     );
@@ -778,7 +832,48 @@ export function setupNavigation(deps: {
       ? 'Waiting for GPS'
       : `${r?.weak ? t('Weak GPS') : t('GPS on')} ±${shortDistanceLabel(last.accuracy, units())}`;
     $('nav-gps').hidden = !last || !r?.weak;
-    if (r) source('travelled')?.setData(lines(tracker.travelled(r.progress)));
+    if (r) drawTravelled(Math.min(tracker.total, r.progress + replayLead()));
+  }
+  /**
+   * A playing replay moves on while the travelled line is redrawn, so the
+   * line is drawn as far ahead as the arrow goes meanwhile, never beyond the
+   * arrow's radius: the end stays under the arrow instead of behind it.
+   */
+  function replayLead(): number {
+    if (!replaying || !replayFrame || !map || !last) return 0;
+    const speed = METERS_PER_SECOND * Number(replayRate.value);
+    // Meters per CSS pixel at this zoom (512 px vector tiles).
+    const perPixel =
+      (40075016.7 * Math.cos((last.coord[0] * Math.PI) / 180)) /
+      (512 * 2 ** map.getZoom());
+    const radius = (marker?.getElement().offsetWidth ?? 28) / 2;
+    return Math.min((speed * travelledDelay) / 1000, radius * perPixel);
+  }
+  /**
+   * Redraws the travelled line up to `progress`. Each redraw goes through
+   * MapLibre's worker; while one is under way only the latest progress waits,
+   * so a playing replay keeps the line right behind the arrow without a queue.
+   */
+  function drawTravelled(progress: number) {
+    const target = source('travelled');
+    if (!target || !tracker) return;
+    if (travelledBusy) {
+      travelledNext = progress;
+      return;
+    }
+    travelledBusy = true;
+    const sent = performance.now();
+    void target
+      .setData(lines(tracker.travelled(progress)))
+      .catch(() => undefined)
+      .finally(() => {
+        travelledBusy = false;
+        travelledDelay =
+          0.7 * travelledDelay + 0.3 * (performance.now() - sent);
+        const next = travelledNext;
+        travelledNext = null;
+        if (next !== null) drawTravelled(next);
+      });
   }
 
   function onFix(position: GeolocationPosition) {
@@ -809,7 +904,10 @@ export function setupNavigation(deps: {
     moving = isMoving(speed, moving);
     const offRoute =
       !readout || readout.offTrack > Math.max(OFF_ROUTE_HEADING, last.accuracy);
-    if (
+    // A replay gives its own heading, looking further ahead than the tracker.
+    if (replaying && deviceHeading !== null && Number.isFinite(deviceHeading))
+      travelHeading = deviceHeading;
+    else if (
       !offRoute &&
       readout?.heading !== null &&
       readout?.heading !== undefined
@@ -843,6 +941,7 @@ export function setupNavigation(deps: {
    * route lives in page memory until End.
    */
   function reroute(manual: boolean) {
+    if (replaying) return;
     const r = readout;
     if (!r?.rejoin || !last || !route || !tracker) return;
     const now = Date.now(),
@@ -941,6 +1040,10 @@ export function setupNavigation(deps: {
   /** Location stops while the page is hidden and resumes when it is shown. */
   function onVisibility() {
     if (!screen.open) return;
+    if (replaying) {
+      if (document.visibilityState === 'hidden') setReplayPlaying(false);
+      return;
+    }
     if (document.visibilityState === 'hidden') stopWatching();
     else {
       startWatching();
@@ -952,13 +1055,22 @@ export function setupNavigation(deps: {
   };
   const onNetwork = () => mapNotice();
 
-  /** `remind`: the notice was skipped, so a chip says recalculation is on. */
-  function start(remind: boolean) {
+  /**
+   * `remind`: the notice was skipped, so a chip says recalculation is on.
+   * `replay`: simulated positions along the route, with no location.
+   */
+  function start(remind: boolean, replay = false) {
     route = deps.route();
     if (!route) return;
     session++;
     hideAutoChip();
-    if (remind && autoReroute) {
+    travelledBusy = false;
+    travelledNext = null;
+    replaying = replay;
+    screen.classList.toggle('replaying', replay);
+    $('nav-replay').hidden = !replay;
+    $('nav-replay-chip').hidden = !replay;
+    if (remind && autoReroute && !replay) {
       autoChip.hidden = false;
       autoChipTimer = window.setTimeout(hideAutoChip, AUTO_REROUTE_NOTICE);
     }
@@ -1010,9 +1122,12 @@ export function setupNavigation(deps: {
     layout();
     mapNotice();
     render();
-    startWatching();
-    watchCompass();
-    void keepScreenOn();
+    if (replay) replayAt(replayDistance);
+    else {
+      startWatching();
+      watchCompass();
+      void keepScreenOn();
+    }
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('resize', onResize);
     window.addEventListener('online', onNetwork);
@@ -1025,6 +1140,14 @@ export function setupNavigation(deps: {
   function cleanup() {
     // A recalculation still under way belongs to this navigation only.
     session++;
+    const wasReplay = replaying;
+    if (replaying) {
+      setReplayPlaying(false);
+      replaying = false;
+      screen.classList.remove('replaying');
+      $('nav-replay').hidden = true;
+      $('nav-replay-chip').hidden = true;
+    }
     clearTimeout(reroutedTimer);
     $('nav-rerouted').hidden = true;
     hideAutoChip();
@@ -1051,13 +1174,17 @@ export function setupNavigation(deps: {
     readout = null;
     tracker = null;
     route = null;
-    button.focus();
+    (wasReplay ? travel : button).focus();
+    replayIndex = null;
   }
   screen.addEventListener('close', cleanup);
   // Navigation is offered exactly when the route can be downloaded: a route
   // is on screen and no edit has made it stale.
   const download = $<HTMLButtonElement>('download');
-  const sync = () => (button.disabled = download.disabled || !deps.route());
+  // Travel the route (#154) replays the same route on this screen.
+  const travel = $<HTMLButtonElement>('travel-route');
+  const sync = () =>
+    (button.disabled = travel.disabled = download.disabled || !deps.route());
   new MutationObserver(sync).observe(download, {
     attributes: true,
     attributeFilter: ['disabled'],
@@ -1176,6 +1303,96 @@ export function setupNavigation(deps: {
       } else lastTap = tap;
     });
   }
+
+  // Replay (#154): the same screen fed with simulated positions.
+  const replayToggle = $<HTMLButtonElement>('nav-replay-toggle'),
+    replayRange = $<HTMLInputElement>('nav-replay-position'),
+    replayRate = $<HTMLSelectElement>('nav-replay-rate');
+  const REPLAY_STEPS = Number(replayRange.max);
+  /** Shows the simulated position at an along-track distance. */
+  function replayAt(distance: number) {
+    if (!replayIndex) return;
+    replayDistance = Math.max(0, Math.min(replayIndex.total, distance));
+    const fix = replayFix(
+      replayIndex,
+      replayDistance,
+      deps.speedKmh(),
+      replayDeparture,
+    );
+    replayRange.value = String(
+      Math.round((replayDistance / (replayIndex.total || 1)) * REPLAY_STEPS),
+    );
+    // Attribute text is not observed by the DOM translator.
+    replayRange.setAttribute(
+      'aria-valuetext',
+      t(
+        `${distanceLabel(replayDistance, units(), deps.locale())} of ${distanceLabel(replayIndex.total, units(), deps.locale())}`,
+      ),
+    );
+    if (!fix) return;
+    replayBearing = fix.bearing;
+    onFix({
+      coords: {
+        latitude: fix.coord[0],
+        longitude: fix.coord[1],
+        accuracy: 5,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: fix.heading,
+        // Paused, the traveler stands still.
+        speed: replayFrame ? fix.speed : 0,
+      },
+      timestamp: fix.time,
+    } as GeolocationPosition);
+  }
+  function setReplayPlaying(playing: boolean) {
+    cancelAnimationFrame(replayFrame);
+    replayFrame = 0;
+    const name = playing ? 'Pause' : 'Play';
+    replayToggle.replaceChildren(icon(playing ? 'pause' : 'play'));
+    replayToggle.setAttribute('aria-label', name);
+    replayToggle.title = name;
+    replayToggle.setAttribute('aria-pressed', String(playing));
+    if (!playing || !replayIndex) return;
+    if (replayDistance >= replayIndex.total) replayDistance = 0;
+    replayLast = performance.now();
+    replayFrame = requestAnimationFrame(replayTick);
+  }
+  function replayTick(time: number) {
+    if (!replayIndex || !replaying) return;
+    const next = replayAdvance(
+      replayDistance,
+      time - replayLast,
+      Number(replayRate.value),
+      replayIndex.total,
+    );
+    replayLast = time;
+    replayFrame = requestAnimationFrame(replayTick);
+    replayAt(next);
+    if (next >= replayIndex.total) setReplayPlaying(false);
+  }
+  replayToggle.onclick = () => setReplayPlaying(!replayFrame);
+  replayRange.oninput = () => {
+    if (!replayIndex) return;
+    setReplayPlaying(false);
+    replayAt((Number(replayRange.value) / REPLAY_STEPS) * replayIndex.total);
+  };
+  setReplayPlaying(false);
+  /** Replays the route on this screen, paused at the start. */
+  travel.onclick = () => {
+    const planned = deps.route();
+    if (!planned) return;
+    replayIndex = indexTrack(planned.segments);
+    if (!replayIndex.edges.length) {
+      replayIndex = null;
+      return;
+    }
+    const leaving = Date.parse(departureOf(deps.state()) ?? '');
+    replayDeparture = Number.isFinite(leaving) ? leaving : Date.now();
+    replayDistance = 0;
+    start(false, true);
+    setReplayPlaying(false);
+  };
 
   return {
     /** Settings opened: show the stored notice choice. */
