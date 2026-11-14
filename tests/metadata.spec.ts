@@ -207,3 +207,37 @@ test("the panel footer and the help page link to What's new in the chosen langua
     './changelog.html?lang=pt#v2=abc',
   );
 });
+
+test('the Help and What’s new headers fit on one line from 320 px', async ({
+  page,
+}) => {
+  await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+  const problems: string[] = [];
+  for (const path of ['help.html', 'changelog.html'])
+    for (const lang of ['en', 'pt'])
+      for (const width of [320, 360, 390, 430]) {
+        await page.setViewportSize({ width, height: 700 });
+        await page.goto(`${base}${path}?lang=${lang}`);
+        await expect(page.locator('#back')).toBeVisible();
+        const found = await page.evaluate(() => {
+          const out: string[] = [];
+          const header = document.querySelector('header')!;
+          if (document.documentElement.scrollWidth > innerWidth)
+            out.push('page scrolls sideways');
+          for (const e of header.querySelectorAll<HTMLElement>(
+            '.brand, .language-control, #back',
+          )) {
+            const box = e.getBoundingClientRect();
+            if (box.right > innerWidth + 0.5)
+              out.push(`${e.className || e.id} leaves the screen`);
+            if (e.scrollWidth > e.clientWidth + 1)
+              out.push(`${e.className || e.id} is clipped`);
+          }
+          const back = document.getElementById('back')!;
+          if (back.getBoundingClientRect().height > 48) out.push('#back wraps');
+          return out;
+        });
+        problems.push(...found.map((p) => `${path} ${lang} ${width}: ${p}`));
+      }
+  expect(problems).toEqual([]);
+});
