@@ -94,6 +94,22 @@ describe('navigation tracker', () => {
     expect(r.next?.step.name).toBe('Third road');
     expect(r.after?.step.kind).toBe('arrive');
   });
+  it('takes the pass at a known distance on a road used both ways', () => {
+    // 1 km east and back on the same road.
+    const both = route({
+      segments: [[...east(0, 10), ...east(0, 9).reverse()]],
+      steps: [],
+      distance: 20 * M,
+    });
+    const tracker = createNavigationTracker(both);
+    // 300 m from the start on the way back, then on the way out.
+    expect(
+      tracker.update({ coord: [0, 0.003], accuracy: 5 }, 17 * M)!.progress,
+    ).toBeCloseTo(17 * M, 0);
+    expect(
+      tracker.update({ coord: [0, 0.003], accuracy: 5 }, 3 * M)!.progress,
+    ).toBeCloseTo(3 * M, 0);
+  });
   it('arrives near the end of the route, not just near its line', () => {
     const tracker = createNavigationTracker(route());
     expect(tracker.update({ coord: [0, 0.0199], accuracy: 5 })!.arrived).toBe(
