@@ -1705,8 +1705,9 @@ dialog.settings::backdrop {
 .help-page #back {
   white-space: nowrap;
 }
-/* The narrowest phones keep the logo and drop the brand text. */
-@media (max-width: 359px) {
+/* Narrow phones keep the logo and drop the brand text, so the language and
+   Back to map (Voltar ao mapa) fit on one line. */
+@media (max-width: 379px) {
   .help-page .brand {
     font-size: 0;
   }
@@ -1723,6 +1724,8 @@ dialog.settings::backdrop {
 }
 .help-page p,
 .help-page li {
+  /* Long URLs and terms such as one-request/second break at 320 px. */
+  overflow-wrap: break-word;
   font-size: 16px;
   line-height: 1.7;
   color: #334754;
