@@ -51,6 +51,7 @@ import {
   watchConnection,
 } from './offline';
 import L from 'leaflet';
+import type { Map as VectorMap } from 'maplibre-gl';
 import 'leaflet/dist/leaflet.css';
 import './style.css';
 import {
@@ -107,6 +108,13 @@ import { addressAutocomplete } from './autocomplete';
 import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
+import {
+  createCrosshair,
+  createLoupe,
+  placementMode,
+  rememberPlacementMode,
+  type PlacementMode,
+} from './point-placement';
 import { setupMapControls } from './map-controls';
 import { compactLayout, setupPanel } from './panel';
 import { icon, iconControl } from './icons';
@@ -243,6 +251,40 @@ map.on('zoomend', () => {
 const zoom = L.control.zoom({ position: 'bottomright' }).addTo(map);
 const markers = L.layerGroup().addTo(map),
   line = L.featureGroup().addTo(map);
+// Moving a point precisely under the finger (Settings): a loupe while a
+// marker is dragged by touch, or a fixed marker over a panning map.
+let vectorMap: () => VectorMap | null = () => null;
+const loupe = createLoupe(
+  map,
+  () => vectorMap(),
+  () => current?.segments ?? [],
+);
+const crosshair = createCrosshair(map);
+/** The point being placed with the crosshair, drawn by it, not as a marker. */
+let adjusting: Point | null = null;
+let touchDrag = false;
+map
+  .getContainer()
+  .addEventListener(
+    'pointerdown',
+    (event) => (touchDrag = event.pointerType !== 'mouse'),
+    { capture: true, passive: true },
+  );
+function adjustPoint(point: Point) {
+  const i = state.points.indexOf(point);
+  if (i < 0 || !point.coord || editBlocked()) return;
+  if (!$('route-panel').hidden && compactLayout()) $('panel-toggle').click();
+  adjusting = point;
+  renderMarkers();
+  crosshair.start(point.coord, i + 1, (coord) => {
+    adjusting = null;
+    const index = state.points.indexOf(point);
+    if (coord && index >= 0 && !editBlocked()) {
+      selected = index;
+      setPoint(point, index, coord);
+    } else renderMarkers();
+  });
+}
 // Maneuver chosen in the itinerary, shown until the next map click or route.
 map.createPane('maneuver').style.zIndex = '587';
 const maneuverLayer = L.layerGroup().addTo(map);
@@ -747,11 +789,19 @@ function renderPoints() {
   $<HTMLButtonElement>('add').disabled = locked || state.points.length >= 50;
 }
 function renderMarkers() {
+  // Locking, undo or removing the point ends its placement (its callback
+  // draws the markers again, so this comes before clearing them).
+  if (
+    crosshair.active &&
+    (locked || !adjusting || !state.points.includes(adjusting))
+  )
+    crosshair.cancel();
   markers.clearLayers();
+  const mode = placementMode();
   state.points.forEach((p, i) => {
-    if (!p.coord || dirty.has(p)) return;
+    if (!p.coord || dirty.has(p) || p === adjusting) return;
     const m = L.marker(p.coord, {
-      draggable: !locked,
+      draggable: !locked && mode !== 'crosshair',
       icon: L.divIcon({
         className: `route-marker ${i === selected ? 'active' : ''}`,
         html: `<span><b>${i + 1}</b></span>`,
@@ -760,8 +810,19 @@ function renderMarkers() {
       }),
     }).addTo(markers);
     m.bindTooltip(text('span', t(p.name)));
-    m.on('click', () => selectPoint(i));
+    m.on('click', () => {
+      selectPoint(i);
+      if (mode === 'crosshair' && !locked) adjustPoint(p);
+    });
+    if (mode === 'loupe') {
+      const show = () => {
+        if (touchDrag) loupe.move(m.getLatLng());
+      };
+      m.on('dragstart', show);
+      m.on('drag', show);
+    }
     m.on('dragend', () => {
+      loupe.hide();
       const c = m.getLatLng();
       selected = i;
       setPoint(p, i, [c.lat, c.lng]);
@@ -1249,8 +1310,10 @@ setupPointMenu(map, {
       setPoint(state.points[selected], selected, coord, pointLabel(selected));
     }
   },
-  click: (coord) => setPoint(state.points[selected], selected, coord),
-  editable: () => !editBlocked(),
+  click: (coord) => {
+    if (!crosshair.active) setPoint(state.points[selected], selected, coord);
+  },
+  editable: () => !editBlocked() && !crosshair.active,
   locked: () => locked,
   elevation: (coord) => elevation.queryPoint(coord),
   dismiss: () => elevation.closePoint(),
@@ -1362,6 +1425,7 @@ function unitSelects() {
     'Celsius',
     'Fahrenheit',
   ]);
+  label('point-placement', ['Drag with a magnifier', 'Tap, then move the map']);
   $<HTMLSelectElement>('distance-units').value = chosenDistanceUnits();
   $<HTMLSelectElement>('temperature-units').value = chosenTemperatureUnits();
 }
@@ -1827,7 +1891,14 @@ setupMapView(map, {
   },
 });
 
-setupMapLayers(map);
+vectorMap = setupMapLayers(map).vectorMap;
+const placementSelect = $<HTMLSelectElement>('point-placement');
+placementSelect.value = placementMode();
+placementSelect.onchange = () => {
+  rememberPlacementMode(placementSelect.value as PlacementMode);
+  crosshair.cancel();
+  renderMarkers();
+};
 
 setupMapControls(map, zoom);
 

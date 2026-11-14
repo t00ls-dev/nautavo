@@ -264,4 +264,5 @@ export function setupMapLayers(map: L.Map) {
     requestAnimationFrame(() => setTimeout(() => void start()));
   if (document.readyState === 'complete') afterPaint();
   else window.addEventListener('load', afterPaint, { once: true });
+  return { vectorMap: () => glMap };
 }
