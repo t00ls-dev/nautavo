@@ -45,6 +45,10 @@ import { distanceUnits } from './unit-preferences';
 
 /** Device preference: 'off' after "Don't show this notice again". */
 const NOTICE_KEY = 'navigation-notice';
+/** Device preference: 'off' when the traveler turns automatic recalculation off. */
+const AUTO_REROUTE_KEY = 'auto-reroute';
+/** How long the "Automatic recalculation on" chip stays at start, ms. */
+const AUTO_REROUTE_NOTICE = 10000;
 /** Vector tiles are 512 px: zoom 16 shows what raster zoom 17 did. */
 const ZOOM = 16;
 /** How long "Route recalculated" stays on screen, ms. */
@@ -110,6 +114,21 @@ function noticeWanted(): boolean {
     return true;
   }
 }
+function autoRerouteWanted(): boolean {
+  try {
+    return localStorage.getItem(AUTO_REROUTE_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+function rememberAutoReroute(on: boolean): void {
+  try {
+    if (on) localStorage.removeItem(AUTO_REROUTE_KEY);
+    else localStorage.setItem(AUTO_REROUTE_KEY, 'off');
+  } catch {
+    /* Optional preference; this page still follows the choice. */
+  }
+}
 function rememberNotice(show: boolean): void {
   try {
     if (show) localStorage.removeItem(NOTICE_KEY);
@@ -167,6 +186,7 @@ export function setupNavigation(deps: {
   $('nav-notice')
     .querySelector('li:not(.nav-notice-warning)')!
     .prepend(icon('weather-sun'));
+  $('nav-notice').querySelector('.nav-notice-reroute')!.prepend(icon('route'));
   $('nav-gps').prepend(icon('alert'));
   $('nav-no-map').prepend(icon('info'));
   $('nav-no-gl').prepend(icon('info'));
@@ -184,6 +204,32 @@ export function setupNavigation(deps: {
   credits.setCredits(vectorCredits);
   setting.checked = noticeWanted();
   setting.onchange = () => rememberNotice(setting.checked);
+  // Automatic recalculation, on unless the traveler turns it off: in the
+  // start notice, in Settings or from the chip shown at start when the notice
+  // is hidden, so travelers on a fixed course can follow it exactly.
+  const autoNotice = $<HTMLInputElement>('nav-notice-reroute'),
+    autoSetting = $<HTMLInputElement>('auto-reroute-setting'),
+    autoChip = $('nav-auto-reroute');
+  let autoReroute = autoRerouteWanted(),
+    autoChipTimer = 0;
+  const setAutoReroute = (on: boolean) => {
+    autoReroute = on;
+    rememberAutoReroute(on);
+    autoNotice.checked = autoSetting.checked = on;
+    if (!on) hideAutoChip();
+  };
+  function hideAutoChip() {
+    clearTimeout(autoChipTimer);
+    autoChip.hidden = true;
+  }
+  autoNotice.checked = autoSetting.checked = autoReroute;
+  autoNotice.onchange = () => setAutoReroute(autoNotice.checked);
+  autoSetting.onchange = () => setAutoReroute(autoSetting.checked);
+  $('nav-auto-reroute-off').onclick = () => {
+    setAutoReroute(false);
+    screen.focus({ preventScroll: true });
+  };
+  autoChip.prepend(icon('route'));
 
   let route: Route | null = null,
     tracker: ReturnType<typeof createNavigationTracker> | null = null,
@@ -804,7 +850,7 @@ export function setupNavigation(deps: {
     if (
       manual
         ? !schedule.manual(now, online)
-        : !schedule.auto(now, r.offSince, online)
+        : !autoReroute || !schedule.auto(now, r.offSince, online)
     )
       return;
     const target = tracker.rerouteTarget(r.rejoin);
@@ -906,10 +952,16 @@ export function setupNavigation(deps: {
   };
   const onNetwork = () => mapNotice();
 
-  function start() {
+  /** `remind`: the notice was skipped, so a chip says recalculation is on. */
+  function start(remind: boolean) {
     route = deps.route();
     if (!route) return;
     session++;
+    hideAutoChip();
+    if (remind && autoReroute) {
+      autoChip.hidden = false;
+      autoChipTimer = window.setTimeout(hideAutoChip, AUTO_REROUTE_NOTICE);
+    }
     schedule = createRerouteSchedule();
     rerouting = 'idle';
     course = null;
@@ -975,6 +1027,7 @@ export function setupNavigation(deps: {
     session++;
     clearTimeout(reroutedTimer);
     $('nav-rerouted').hidden = true;
+    hideAutoChip();
     document.documentElement.classList.remove('navigating');
     stopWatching();
     orientationEvents.forEach((name) =>
@@ -1022,8 +1075,9 @@ export function setupNavigation(deps: {
     }
     if (noticeWanted()) {
       hide.checked = false;
+      autoNotice.checked = autoReroute;
       notice.showModal();
-    } else start();
+    } else start(true);
   };
   $('nav-notice-start').onclick = () => {
     if (hide.checked) {
@@ -1031,7 +1085,7 @@ export function setupNavigation(deps: {
       setting.checked = false;
     }
     notice.close();
-    start();
+    start(false);
   };
   $('nav-stop').onclick = stop;
   /**
