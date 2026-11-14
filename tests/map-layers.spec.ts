@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASEMAP_STYLE, mockBasemap } from './map-helpers';
 import { readFile } from 'node:fs/promises';
 const base = 'http://127.0.0.1:5173/';
@@ -101,6 +101,48 @@ test('draws one vector map, loads only the selected layer, updates credits and k
   await expect(page.locator('#satellite-license')).toHaveAttribute('hidden');
 });
 
+test('leaving Topographic stops its terrain requests', async ({ page }) => {
+  // The first terrain tiles load, so neighbors are asked for too; the rest
+  // are held until after the switch.
+  let started = 0,
+    finished = 0;
+  const held: Route[] = [];
+  await page.route(
+    'https://s3.amazonaws.com/elevation-tiles-prod/**',
+    async (r) => {
+      if (++started <= 6) return r.fallback();
+      held.push(r);
+    },
+  );
+  page.on('requestfinished', (r) => {
+    if (r.url().includes('elevation-tiles')) finished++;
+  });
+  await page.goto(base);
+  await expect(canvas(page)).toBeVisible();
+  await page.locator('#layers-toggle').click();
+  await page
+    .getByRole('menuitemradio', { name: 'Topographic', exact: true })
+    .click();
+  await expect.poll(() => held.length).toBeGreaterThan(4);
+  await expect.poll(() => finished).toBe(6);
+  await page.locator('#layers-toggle').click();
+  await page
+    .getByRole('menuitemradio', { name: 'Standard', exact: true })
+    .click();
+  await expect(page.locator('body')).toHaveAttribute(
+    'data-map-layer',
+    'standard',
+  );
+  const asked = started;
+  // Answers that come late for a layer no longer shown are not used.
+  for (const r of held)
+    await r.fallback().catch(() => {
+      /* Aborted with the layer. */
+    });
+  await page.waitForTimeout(1500);
+  expect(started).toBe(asked);
+  expect(finished).toBe(6);
+});
 test('the first load draws at half resolution, then at the screen resolution', async ({
   browser,
 }) => {
