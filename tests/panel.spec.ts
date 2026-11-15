@@ -498,6 +498,62 @@ for (const path of ['', 'help.html'])
     }
   });
 
+for (const width of [320, 390, 430])
+  for (const standalone of [false, true])
+    test(`the full sheet stops below the header under a 59 px top inset at ${width} px (${standalone ? 'home-screen app' : 'web view'})`, async ({
+      page,
+      context,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((standalone) => {
+        if (standalone)
+          Object.defineProperty(navigator, 'standalone', { value: true });
+      }, standalone);
+      // A web view drawn under the status bar of a Dynamic Island iPhone.
+      const session = await context.newCDPSession(page);
+      await session.send('Emulation.setSafeAreaInsetsOverride', {
+        insets: { top: 59, bottom: 34 },
+      });
+      await page.goto(base);
+      const header = page.locator('header').first();
+      const gap = async () => {
+        const box = (await header.boundingBox())!;
+        return (
+          (await page.locator('#sheet').boundingBox())!.y - box.y - box.height
+        );
+      };
+      await page.locator('#panel-toggle').focus();
+      await page.keyboard.press('ArrowUp');
+      await expect(page.locator('body')).toHaveClass(/sheet-full/);
+      await expect.poll(gap).toBeCloseTo(8, 0);
+      const full = await sheetHeight(page);
+      // Dragging up past the top stops at the same height.
+      await page.keyboard.press('ArrowDown');
+      await expect(page.locator('body')).not.toHaveClass(/sheet-full/);
+      // Start on the handle once the sheet has settled at half height.
+      await page
+        .locator('#sheet')
+        .evaluate((sheet) =>
+          Promise.all(sheet.getAnimations().map((a) => a.finished)),
+        );
+      const touch = (
+        type: 'touchStart' | 'touchMove' | 'touchEnd',
+        y?: number,
+      ) =>
+        session.send('Input.dispatchTouchEvent', {
+          type,
+          touchPoints: y === undefined ? [] : [{ x: width / 2, y }],
+        });
+      const from = (await page.locator('#panel-toggle').boundingBox())!.y + 10;
+      await touch('touchStart', from);
+      for (let step = 1; step <= 8; step++)
+        await touch('touchMove', from - (from * step) / 8);
+      expect(await sheetHeight(page)).toBe(full);
+      await touch('touchEnd');
+      await expect(page.locator('body')).toHaveClass(/sheet-full/);
+      await expect.poll(() => sheetHeight(page)).toBe(full);
+    });
+
 test('in the browser the status strip takes no room', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(base);
