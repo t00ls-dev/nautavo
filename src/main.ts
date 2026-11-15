@@ -109,12 +109,7 @@ import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
 import { moveItem, setupPointOrder } from './point-order';
-import {
-  approximatePoint,
-  getPosition,
-  locationError,
-  positionView,
-} from './location';
+import { gpsPoint, getPosition, locationError, positionView } from './location';
 import {
   createCrosshair,
   createLoupe,
@@ -305,7 +300,7 @@ function adjustPoint(point: Point, fromField = false) {
 }
 /**
  * My location in a point's field: one position on this explicit choice,
- * rounded to about 100 m like Use my location, never stored apart from the
+ * at full precision, never stored apart from the
  * route point it sets.
  */
 function useMyLocation(point: Point) {
@@ -321,7 +316,7 @@ function useMyLocation(point: Point) {
       const index = state.points.indexOf(point);
       // A later edit wins over a late position.
       if (index < 0 || revision !== before || editBlocked()) return;
-      const coord = approximatePoint(positionView(position).center);
+      const coord = gpsPoint(positionView(position).center);
       setPoint(point, index, coord, pointLabel(index));
       map.panTo(coord);
     })
@@ -1924,18 +1919,6 @@ $('open-settings').addEventListener('click', () => {
 });
 setupMapView(map, {
   hasRoute: () => state.points.some((p) => p.coord !== null),
-  addPoint: (coord, asStart) => {
-    if (editBlocked()) return;
-    if (asStart) setPoint(state.points[0], 0, coord, 'Start');
-    else if (state.points.length < 50) {
-      state.points.splice(state.points.length - 1, 0, {
-        name: `Stop ${state.points.length - 1}`,
-        coord,
-      });
-      selected = state.points.length - 2;
-      changed();
-    }
-  },
 });
 
 vectorMap = setupMapLayers(map).vectorMap;
@@ -1953,14 +1936,7 @@ function setLocked(value: boolean) {
   locked = value;
   $('lock').setAttribute('aria-pressed', String(locked));
   $('lock-notice').hidden = !locked;
-  for (const id of [
-    'reverse',
-    'roundtrip',
-    'apply-json',
-    'use-link-servers',
-    'location-start',
-    'location-stop',
-  ])
+  for (const id of ['reverse', 'roundtrip', 'apply-json', 'use-link-servers'])
     $<HTMLButtonElement>(id).disabled = locked;
   $<HTMLInputElement>('import').disabled = locked;
   document
