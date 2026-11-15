@@ -314,3 +314,33 @@ test('a loop with stops that comes back near itself shows no overlapping markers
     expect(counted + map.visible.length).toBe(map.total);
   }
 });
+
+test('on a turned map weather markers cluster again and stay upright', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await open(page, 'en');
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        plannerMap: { gl(): { setBearing(b: number): void } };
+      }
+    ).plannerMap
+      .gl()
+      .setBearing(70),
+  );
+  await mapIdle(page);
+  const map = await layout(page);
+  for (const [i, a] of map.visible.entries())
+    for (const b of map.visible.slice(i + 1))
+      for (const pa of a.parts)
+        for (const pb of b.parts) expect(hit(pa, pb)).toBe(false);
+  const counted = map.visible.reduce((sum, m) => sum + (m.count?.n ?? 0), 0);
+  expect(counted + map.visible.length).toBe(map.total);
+  // Markers are not turned with the map.
+  const turned = await page
+    .locator('.maplibregl-marker.weather-marker')
+    .first()
+    .evaluate((e) => getComputedStyle(e).transform);
+  expect(turned).not.toMatch(/matrix\((?!1, 0, 0, 1)/);
+});

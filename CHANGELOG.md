@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- Turn the planner map with two fingers, as the navigation map already turns (a pinch with a small twist only zooms), or on a computer with a right or Ctrl drag. A compass below the map tools shows on a turned map and puts north up again; labels and markers stay upright, and Fit route keeps the turn.
 - A point's field opens a menu with My location (your exact position) and Choose on map (move the map under a fixed marker and Confirm); place suggestions show their name, the rest of the address and the distance from the point before or after.
 - Moving a point on the map is precise on touch screens: while you drag a marker, a magnifier above your finger shows the exact spot under it. In Settings, Moving points on the map can instead be Tap, then move the map: tap a marker, move the map under a fixed marker and Confirm.
 - Speed while navigating: a round badge shows your current speed (0 when stopped), and the time left and the arrival start from your average speed and move to the trip's own average, stops included, over the first 10 minutes. Simulate navigation shows the trip's clock next to Replay.
