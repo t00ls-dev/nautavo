@@ -105,9 +105,7 @@ test('Choose on map places an empty point under the crosshair', async ({
   await expect(page.locator('#location-1')).toHaveValue(
     /^-?\d+\.\d{6}, -?\d+\.\d{6}$/,
   );
-  await expect(page.locator('.leaflet-marker-icon.route-marker')).toHaveCount(
-    2,
-  );
+  await expect(page.locator('.maplibregl-marker.route-marker')).toHaveCount(2);
 });
 
 test('My location sets the point to the exact position', async ({

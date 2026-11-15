@@ -1,4 +1,4 @@
-import L from 'leaflet';
+import { isolate, type PlannerMap } from './planner-map';
 import { icon } from './icons';
 import {
   mapCredits,
@@ -98,21 +98,19 @@ export function creditsDialog(options: {
   return { elements: [container, dialog], setCredits };
 }
 
-export function setupMapCredits(map: L.Map) {
+export function setupMapCredits(map: PlannerMap) {
   const { elements, setCredits } = creditsDialog({
     id: 'map-credits-dialog',
     name: 'map-credits',
     fallback: () => document.getElementById('panel-toggle'),
   });
   for (const element of elements) {
-    L.DomEvent.disableClickPropagation(element);
-    L.DomEvent.disableScrollPropagation(element);
-    map.getContainer().append(element);
+    isolate(element);
+    map.container.append(element);
   }
   return (layer: BaseLayer, vintage: SatelliteVintage, labels: boolean) =>
     setCredits(
       [
-        { text: 'Leaflet', url: 'https://leafletjs.com/' },
         ...mapCredits(layer, vintage, labels),
         { text: 'Weather data by Open-Meteo', url: 'https://open-meteo.com/' },
         {

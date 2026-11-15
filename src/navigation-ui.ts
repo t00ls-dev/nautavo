@@ -1,11 +1,10 @@
-import L from 'leaflet';
 import type {
   GeoJSONSource,
   Map as VectorMap,
   Marker as VectorMarker,
   StyleSpecification,
 } from 'maplibre-gl';
-import type { Coord, Route, State, Step } from './core';
+import { meters, type Coord, type Route, type State, type Step } from './core';
 import { decimalYear, magneticDeclination } from './declination';
 import { byId as $ } from './dom';
 import { t } from './i18n';
@@ -1074,8 +1073,7 @@ export function setupNavigation(deps: {
       : null;
     if (speed === null && previous && time - previous.time >= 500)
       speed =
-        L.latLng(previous.coord).distanceTo(L.latLng(last.coord)) /
-        ((time - previous.time) / 1000);
+        meters(previous.coord, last.coord) / ((time - previous.time) / 1000);
     previous = { coord: last.coord, time };
     moving = isMoving(speed, moving);
     // Progress on the planned route: weather samples and the trip's average

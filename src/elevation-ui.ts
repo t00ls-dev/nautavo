@@ -1,4 +1,11 @@
-import L from 'leaflet';
+import {
+  highlightLayers,
+  lineFeature,
+  MapPopup,
+  RANK,
+  type MapMarker,
+  type PlannerMap,
+} from './planner-map';
 import { detectClimbs, hardestClimb, type Climb } from './climbs';
 import type { Coord, Route, State } from './core';
 import { departureOf } from './departure';
@@ -52,7 +59,7 @@ const SETTLE_MS = 2000;
 const SAME_SUMMIT = 500;
 
 export function setupElevation(
-  map: L.Map,
+  map: PlannerMap,
   deps: {
     state: () => State;
     endpoint: () => string;
@@ -71,15 +78,29 @@ export function setupElevation(
     stats = $('elevation-stats'),
     status = $('elevation-status'),
     retry = $<HTMLButtonElement>('elevation-retry');
-  map.createPane('elevation-cursor').style.zIndex = '586';
-  const cursorLayer = L.layerGroup().addTo(map);
+  /** Markers of one kind, removed together. */
+  const group = () => {
+    const items: MapMarker[] = [];
+    return {
+      add: (marker: MapMarker) => items.push(marker),
+      clearLayers: () => items.splice(0).forEach((m) => m.remove()),
+    };
+  };
+  const cursorLayer = group();
   // The climb chosen in the list, highlighted on the map and in the chart.
-  map.createPane('climb').style.zIndex = '585';
-  const climbLayer = L.layerGroup().addTo(map);
+  const setClimbLine = map.overlay('rg-climb', RANK.highlight, () =>
+    highlightLayers('rg-climb-line'),
+  );
+  const climbMarks = group();
+  const climbLayer = {
+    clearLayers() {
+      setClimbLine([]);
+      climbMarks.clearLayers();
+    },
+  };
   // Highest and lowest points of the profile, while the row is open: labels
   // below the route (route point pins stand above it), over the chosen climb.
-  map.createPane('elevation-extremes').style.zIndex = '588';
-  const extremesLayer = L.layerGroup().addTo(map);
+  const extremesLayer = group();
   let selected = -1,
     settle: ReturnType<typeof setTimeout> | undefined,
     cancelWait = () => {},
@@ -310,12 +331,14 @@ export function setupElevation(
       const point = pointAtDistance(index, nearest.at);
       cursorLayer.clearLayers();
       if (point)
-        L.circleMarker(point.coord as Coord, {
-          pane: 'elevation-cursor',
-          radius: 6,
-          className: 'elevation-cursor',
-          interactive: false,
-        }).addTo(cursorLayer);
+        cursorLayer.add(
+          map.marker(point.coord as Coord, {
+            className: 'elevation-cursor',
+            size: [16, 16],
+            anchor: [8, 8],
+            z: 2,
+          }),
+        );
     };
     frame.onpointerleave = hide;
 
@@ -374,17 +397,15 @@ export function setupElevation(
       const text = document.createElement('span');
       text.textContent = elevationLabel(point.ele, units(), locale());
       chip.append(icon('summit'), text);
-      L.marker(at.coord, {
-        pane: 'elevation-extremes',
-        interactive: false,
-        keyboard: false,
-        icon: L.divIcon({
+      extremesLayer.add(
+        map.marker(at.coord, {
           className: 'elevation-extreme-marker',
-          html: chip.outerHTML,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0],
+          html: chip,
+          size: [0, 0],
+          anchor: [0, 0],
+          z: 4,
         }),
-      }).addTo(extremesLayer);
+      );
     }
   }
 
@@ -398,17 +419,11 @@ export function setupElevation(
     | { kind: 'value'; value: number }
     | { kind: 'none' }
     | { kind: 'message'; text: string };
-  const popup = L.popup({
-    className: 'elevation-point-popup',
-    closeButton: false,
-    closeOnClick: false,
-    autoPanPadding: [16, 16],
-    maxWidth: 260,
-  });
+  const popup = new MapPopup(map, 'elevation-point-popup');
   let pointController: AbortController | undefined,
     pointResult: PointResult = { kind: 'loading' },
     cancelPointWait = () => {};
-  const pointOpen = () => map.hasLayer(popup);
+  const pointOpen = () => popup.open;
 
   function renderPoint() {
     if (!pointOpen()) return;
@@ -423,8 +438,8 @@ export function setupElevation(
     close.className = 'elevation-point-close';
     iconControl(close, 'close', 'Close', true);
     close.onclick = () => {
-      map.closePopup(popup);
-      map.getContainer().focus();
+      popup.close();
+      map.focus();
     };
     header.append(title, close);
     const value = document.createElement('p');
@@ -483,9 +498,8 @@ export function setupElevation(
             renderPoint();
             // Announced once, not every second.
             if (!first)
-              popup
-                .getElement()
-                ?.querySelector('[role=status]')
+              popup.element
+                .querySelector('[role=status]')
                 ?.setAttribute('aria-busy', 'true');
             first = false;
           },
@@ -514,12 +528,11 @@ export function setupElevation(
     renderPoint();
   }
 
-  map.on('popupclose', (event) => {
-    if (event.popup !== popup) return;
+  popup.onClose = () => {
     pointController?.abort();
     pointController = undefined;
     cancelPointWait();
-  });
+  };
 
   /** Climbs in route order; one is marked as the hardest by score. */
   function climbList(climbs: Climb[]): HTMLElement {
@@ -609,38 +622,37 @@ export function setupElevation(
   ) {
     climbLayer.clearLayers();
     if (!climb || !details.open) return;
-    for (const part of trackSlice(index, climb.start, climb.end))
-      L.polyline(part, {
-        pane: 'climb',
-        className: 'climb-line',
-        interactive: false,
-      }).addTo(climbLayer);
+    setClimbLine(
+      trackSlice(index, climb.start, climb.end).map((part) =>
+        lineFeature(part),
+      ),
+    );
     const start = pointAtDistance(index, climb.start),
       summit = pointAtDistance(index, climb.end);
     if (start)
-      L.circleMarker(start.coord, {
-        pane: 'climb',
-        radius: 6,
-        className: 'climb-start',
-        interactive: false,
-      }).addTo(climbLayer);
+      climbMarks.add(
+        map.marker(start.coord, {
+          className: 'climb-start',
+          size: [16, 16],
+          anchor: [8, 8],
+          z: 1,
+        }),
+      );
     // The highest point's label already marks a summit there: one mark only.
     const highest = profile && elevationExtremes(profile)?.highest;
     const labeled =
       !!highest && Math.abs(highest.at - climb.end) <= SAME_SUMMIT;
     if (summit && !labeled) {
       const svg = icon('summit');
-      L.marker(summit.coord, {
-        pane: 'climb',
-        interactive: false,
-        keyboard: false,
-        icon: L.divIcon({
+      climbMarks.add(
+        map.marker(summit.coord, {
           className: 'climb-summit',
-          html: svg.outerHTML,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          html: svg,
+          size: [26, 26],
+          anchor: [13, 13],
+          z: 1,
         }),
-      }).addTo(climbLayer);
+      );
     }
   }
 
@@ -655,7 +667,7 @@ export function setupElevation(
     if (!parts.length) return;
     if (!$('route-panel').hidden && matchMedia('(max-width: 759px)').matches)
       $('panel-toggle').click();
-    map.fitBounds(L.latLngBounds(parts.flat()), { padding: [40, 40] });
+    map.fit(parts.flat(), { padding: 40 });
   }
 
   details.addEventListener('toggle', () => {
@@ -708,13 +720,13 @@ export function setupElevation(
     /** Elevation of one map point, from the point menu. */
     queryPoint(coord: Coord) {
       cancelPointWait();
-      popup.setLatLng(coord).openOn(map);
+      popup.show(coord);
       void askPoint(coord, true);
     },
     /** Closes the point elevation popup; true when it was open. */
     closePoint(): boolean {
       if (!pointOpen()) return false;
-      map.closePopup(popup);
+      popup.close();
       return true;
     },
     /** The smoothed profile of the current route and its source, when loaded. */

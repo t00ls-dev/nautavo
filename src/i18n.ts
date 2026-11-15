@@ -90,8 +90,8 @@ const pt: Record<string, string> = {
   'North up': 'Norte para cima',
   'Compass imprecise. Move the phone in a figure 8.':
     'Bússola imprecisa. Movimente o celular em forma de 8.',
-  'This browser cannot draw the map. The route still shows.':
-    'Este navegador não consegue desenhar o mapa. A rota continua visível.',
+  'This browser cannot draw the map. The panel still plans and exports the route.':
+    'Este navegador não consegue desenhar o mapa. O painel continua planejando e exportando a rota.',
   'The map could not be loaded. The route still shows.':
     'Não foi possível carregar o mapa. A rota continua visível.',
   'Terrain Tiles by Mapzen on AWS Open Data':
@@ -499,9 +499,9 @@ const pt: Record<string, string> = {
     'Do OpenStreetMap via Valhalla. Vias sem pavimento mapeado contam como pavimentadas; os trechos sem asfalto são os mapeados. Confira antes de sair.',
   'Valhalla usage limit reached. Try again later.':
     'Limite de uso do Valhalla atingido. Tente mais tarde.',
-  Paved: 'Pavimentada',
+  Paved: 'Asfalto',
   Unpaved: 'Sem asfalto',
-  Unknown: 'Desconhecido',
+  Unknown: 'Sem dados',
   'No elevation data here.': 'Sem dados de elevação aqui.',
   'Elevation data: Copernicus DEM GLO-90 via Open-Meteo':
     'Dados de elevação: Copernicus DEM GLO-90 via Open-Meteo',

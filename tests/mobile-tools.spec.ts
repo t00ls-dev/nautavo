@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { holdMap, mockBasemap, BASEMAP_STYLE } from './map-helpers';
+import { holdMap, mockBasemap, BASEMAP_STYLE, mapCanvas } from './map-helpers';
 const base = 'http://127.0.0.1:5173/';
 const features = {
   features: [
@@ -59,7 +59,7 @@ test('on a phone, map taps and holds never set route points', async ({
 });
 test('point menu supports desktop keyboard and Escape', async ({ page }) => {
   await page.goto(base);
-  await page.locator('#map').focus();
+  await mapCanvas(page).focus();
   await page.keyboard.press('Shift+F10');
   await expect(page.locator('#point-menu')).toBeVisible();
   const elevation = page
@@ -136,7 +136,7 @@ test('old autocomplete request is aborted and cannot replace newer suggestions',
   ).toHaveCount(2);
   await expect.poll(() => aborted).toBe(true);
 });
-test('full geometry survives visual simplification and share uses the same GPX and custom filename', async ({
+test('full geometry survives drawing and share uses the same GPX and custom filename', async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -166,8 +166,6 @@ test('full geometry survives visual simplification and share uses the same GPX a
   });
   await expect(page.locator('#download')).toBeEnabled();
   await page.locator('#route-name').fill('Custom file');
-  const path = await page.locator('.route-line').getAttribute('d');
-  expect((path!.match(/[ML]/g) ?? []).length).toBeLessThan(100);
   await page.locator('#share-gpx').click();
   await expect
     .poll(() =>
@@ -196,7 +194,7 @@ test('full geometry survives visual simplification and share uses the same GPX a
     ]);
   expect(points(xml)).toEqual(coords);
   expect(points(shared.xml)).toEqual(coords);
-  await page.locator('.leaflet-control-zoom-in').click();
+  await page.locator('.map-zoom-in').click();
   const [after] = await Promise.all([
     page.waitForEvent('download'),
     page.locator('#download').click(),
@@ -331,16 +329,7 @@ test('long press on the map cannot start a native text selection, but the panel 
     mapText: true,
     panelText: false,
   });
-  // Tile images never receive the finger (no iOS image callout), and page
-  // selection is off only while a finger is on the map.
-  expect(
-    await page.evaluate(() => {
-      const tile = document.createElement('img');
-      tile.className = 'leaflet-tile';
-      document.querySelector('.leaflet-tile-pane')!.append(tile);
-      return getComputedStyle(tile).pointerEvents;
-    }),
-  ).toBe('none');
+  // Page selection is off only while a finger is on the map.
   const box = (await page.locator('#map').boundingBox())!;
   const session = await context.newCDPSession(page);
   await session.send('Input.dispatchTouchEvent', {
@@ -390,58 +379,33 @@ test('one-finger zoom: double tap and drag down zooms in, up zooms out, without 
       type,
       touchPoints: type === 'touchEnd' ? [] : [{ x, y: ty }],
     });
-  // Map layers removed while dragging: none, as during a pinch, so the map
-  // never blinks (a view reset would rebuild the vector map).
-  const removedTiles = () =>
-    page.evaluate(() => (window as unknown as { removed: number }).removed);
   const quickZoom = async (dy: number) => {
     await touch('touchStart');
     await touch('touchEnd');
     await page.waitForTimeout(80);
     await touch('touchStart');
-    await page.evaluate(() => {
-      const w = window as unknown as { removed: number };
-      w.removed = 0;
-      new MutationObserver((records) => {
-        for (const record of records)
-          for (const node of record.removedNodes)
-            if ((node as Element).classList?.contains('leaflet-gl-layer'))
-              w.removed++;
-      }).observe(document.getElementById('map')!, {
-        childList: true,
-        subtree: true,
-      });
-    });
     for (let step = 1; step <= 10; step++) {
       await touch('touchMove', y + (dy * step) / 10);
       await page.waitForTimeout(30);
     }
     await page.waitForTimeout(600); // Longer than the point menu's long press.
-    expect(await removedTiles()).toBe(0);
     await touch('touchEnd');
     await page.waitForTimeout(400);
   };
-  const before = Math.max(...zooms);
-  zooms.length = 0;
-  await quickZoom(220);
-  await expect
-    .poll(() => Math.max(...zooms))
-    .toBeGreaterThanOrEqual(before + 2);
-  await expect(page.locator('#point-menu')).toBeHidden();
-  const zoomedIn = Math.max(...zooms);
-  zooms.length = 0;
-  await quickZoom(-220);
-  await expect
-    .poll(() => (zooms.length ? Math.min(...zooms) : Infinity))
-    .toBeLessThanOrEqual(zoomedIn - 2);
-  await expect(page.locator('#point-menu')).toBeHidden();
-  // Leaflet's zoom, from its animation proxy scaled by 2^(zoom - 1).
   const zoom = () =>
-    page
-      .locator('.leaflet-proxy')
-      .evaluate(
-        (el) => Math.log2(new DOMMatrix(getComputedStyle(el).transform).a) + 1,
-      );
+    page.evaluate(() =>
+      (
+        window as unknown as { plannerMap: { getZoom(): number } }
+      ).plannerMap.getZoom(),
+    );
+  const before = await zoom();
+  await quickZoom(300);
+  await expect.poll(zoom).toBeGreaterThanOrEqual(before + 2);
+  await expect(page.locator('#point-menu')).toBeHidden();
+  const zoomedIn = await zoom();
+  await quickZoom(-300);
+  await expect.poll(zoom).toBeLessThanOrEqual(zoomedIn - 2);
+  await expect(page.locator('#point-menu')).toBeHidden();
   const start = await zoom();
   // Tap, then hold still: still the zoom gesture, never the point menu.
   await touch('touchStart');

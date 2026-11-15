@@ -1,9 +1,8 @@
-import L from 'leaflet';
 import { meters, type Coord, type Route } from './core';
 import { byId as $ } from './dom';
-import { icon } from './icons';
 import { indexTrack, pointAtDistance, type TrackIndex } from './track-position';
-import type { Range } from './route-overlays';
+import { PASS_OFFSET, sliceByRanges, type Range } from './route-overlays';
+import { lineFeature, RANK, type PlannerMap } from './planner-map';
 
 /**
  * Route marks: direction arrows, separate parallel lines where the route uses
@@ -167,52 +166,52 @@ export function splitByRepeat(ranges: Range[], repeated: Range[]): Range[] {
   return out;
 }
 
-export interface Pixel {
-  x: number;
-  y: number;
-}
+/** Distance between direction arrows on screen (CSS pixels). */
+const ARROW_SPACING = 90;
+const ARROW = 'route-arrow';
+
 /**
- * Offsets a path to the right of its own direction by `pixels` in screen
- * space (y down), so opposite passes of the same road land on opposite sides.
+ * The route as drawn: one piece per stretch, those travelled twice in
+ * opposite directions flagged, so they draw as offset parallel lines.
  */
-export function offsetPath(
-  coords: Coord[],
-  project: (c: Coord) => Pixel,
-  unproject: (p: Pixel) => Coord,
-  pixels: number,
-): Coord[] {
-  const points = coords.map(project);
-  const normal = (a: Pixel, b: Pixel): Pixel | null => {
-    const dx = b.x - a.x,
-      dy = b.y - a.y,
-      length = Math.hypot(dx, dy);
-    return length ? { x: -dy / length, y: dx / length } : null;
+export function routePieces(
+  route: Route,
+): { repeated: boolean; coords: Coord[] }[] {
+  const repeated = repeatsFor(route);
+  if (!repeated.length)
+    return route.segments.map((coords) => ({ repeated: false, coords }));
+  const total = route.segments.reduce(
+    (sum, s) => sum + s.slice(1).reduce((n, c, i) => n + meters(s[i], c), 0),
+    0,
+  );
+  return sliceByRanges(
+    route.segments,
+    splitByRepeat([{ from: 0, to: total, kind: 'route' }], repeated),
+  ).map(({ repeated, coords }) => ({ repeated, coords }));
+}
+
+/** A white chevron pointing along the line (right), with a dark halo. */
+function arrowImage(): ImageData {
+  const size = 28;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.lineCap = ctx.lineJoin = 'round';
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(11, 7);
+    ctx.lineTo(18, 14);
+    ctx.lineTo(11, 21);
+    ctx.stroke();
   };
-  return points.map((p, i) => {
-    const before = i > 0 ? normal(points[i - 1], p) : null,
-      after = i < points.length - 1 ? normal(p, points[i + 1]) : null;
-    let n =
-      before && after
-        ? { x: before.x + after.x, y: before.y + after.y }
-        : (before ?? after);
-    const length = n ? Math.hypot(n.x, n.y) : 0;
-    if (!n || !length) return coords[i];
-    n = { x: n.x / length, y: n.y / length };
-    return unproject({ x: p.x + n.x * pixels, y: p.y + n.y * pixels });
-  });
+  ctx.strokeStyle = '#0b2f27';
+  ctx.lineWidth = 7;
+  path();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3.5;
+  path();
+  return ctx.getImageData(0, 0, size, size);
 }
-
-/** Evenly spaced along-track distances, starting half a step in. */
-export function arrowStops(total: number, spacing: number): number[] {
-  if (!(total > 0) || !(spacing > 0)) return [];
-  const stops: number[] = [];
-  for (let at = spacing / 2; at < total; at += spacing) stops.push(at);
-  return stops;
-}
-
-const ARROW_PIXELS = 90,
-  MAX_ARROWS = 300,
-  OFFSET = 4;
 const isOn = (key: string, fallback: boolean) => {
   try {
     const value = localStorage.getItem(key);
@@ -223,19 +222,41 @@ const isOn = (key: string, fallback: boolean) => {
 };
 
 export function setupRouteMarks(
-  map: L.Map,
+  map: PlannerMap,
   deps: { route: () => Route | null },
 ) {
-  const layer = L.layerGroup().addTo(map);
-  map.createPane('route-marks').style.zIndex = '460';
+  map.image(ARROW, arrowImage);
+  // Arrows along the route line, on the offset pass lines where it is
+  // travelled both ways; MapLibre spaces them and keeps them on screen.
+  const setLines = map.overlay('rg-marks', RANK.marks, () => [
+    {
+      id: 'rg-arrows',
+      type: 'symbol',
+      layout: {
+        'symbol-placement': 'line',
+        'symbol-spacing': ARROW_SPACING,
+        'icon-image': ARROW,
+        'icon-size': 1,
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-rotation-alignment': 'map',
+        'icon-offset': [
+          'case',
+          ['get', 'repeated'],
+          ['literal', [0, PASS_OFFSET]],
+          ['literal', [0, 0]],
+        ],
+      },
+    },
+  ]);
   const settings = {
     arrows: isOn('route-arrows', true),
     weather: isOn('weather-markers', true),
   };
-  // Weather icons live in their own pane; hiding it keeps the cards and the
-  // forecast, and takes the markers out of focus and screen readers too.
+  // Hiding weather icons keeps the cards and the forecast, and takes the
+  // markers out of focus and screen readers too.
   const showWeather = () =>
-    map.getContainer().classList.toggle('hide-weather', !settings.weather);
+    map.container.classList.toggle('hide-weather', !settings.weather);
   showWeather();
 
   const group = document.createElement('div');
@@ -278,73 +299,14 @@ export function setupRouteMarks(
   $('layers-menu').append(group);
 
   function draw() {
-    layer.clearLayers();
     const route = deps.route();
-    if (!route) return;
-    const index = indexTrack(route.segments);
-    if (!index.edges.length) return;
-    const repeated = repeatsFor(route);
-    if (settings.arrows) {
-      const center = map.getCenter();
-      const metersPerPixel =
-        (40075016.686 * Math.cos((center.lat * Math.PI) / 180)) /
-        (256 * 2 ** map.getZoom());
-      const bounds = map.getBounds().pad(0.2);
-      let count = 0;
-      for (const at of arrowStops(index.total, ARROW_PIXELS * metersPerPixel)) {
-        const point = pointAtDistance(index, at)!;
-        if (!bounds.contains(point.coord) || point.bearing === null) continue;
-        if (++count > MAX_ARROWS) break;
-        let coord = point.coord;
-        if (repeated.some((r) => at >= r.from && at < r.to)) {
-          // Same side as the offset pass line: right of the travel direction.
-          const radians = (point.bearing * Math.PI) / 180;
-          const p = map.latLngToLayerPoint(coord);
-          const moved = map.layerPointToLatLng(
-            L.point(
-              p.x + Math.cos(radians) * OFFSET,
-              p.y + Math.sin(radians) * OFFSET,
-            ),
-          );
-          coord = [moved.lat, moved.lng];
-        }
-        L.marker(coord, {
-          pane: 'route-marks',
-          interactive: false,
-          keyboard: false,
-          icon: L.divIcon({
-            className: 'route-arrow',
-            html: `<span style="transform: rotate(${point.bearing}deg)">${icon('chevron').outerHTML}</span>`,
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
-          }),
-        })
-          .addTo(layer)
-          .getElement()
-          ?.setAttribute('aria-hidden', 'true');
-      }
-    }
+    setLines(
+      route && settings.arrows
+        ? routePieces(route).map(({ repeated, coords }) =>
+            lineFeature(coords, { repeated }),
+          )
+        : [],
+    );
   }
-  map.on('zoomend moveend', draw);
   return { refresh: draw };
-}
-
-/** Repeated stretches of `route.segments` drawn as offset parallel lines. */
-export function offsetSlices(
-  map: L.Map,
-  slices: { repeated: boolean; coords: Coord[] }[],
-): Coord[][] {
-  return slices.map((slice) =>
-    slice.repeated
-      ? offsetPath(
-          slice.coords,
-          (c) => map.latLngToLayerPoint(c),
-          (p) => {
-            const ll = map.layerPointToLatLng(L.point(p.x, p.y));
-            return [ll.lat, ll.lng];
-          },
-          OFFSET,
-        )
-      : slice.coords,
-  );
 }

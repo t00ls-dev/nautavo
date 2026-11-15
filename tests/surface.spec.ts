@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import { defaults, encodeState, meters, type Coord } from '../src/core';
 import { decodePolyline } from '../src/services';
 import { chooseUnits } from './unit-settings';
+import { coloringKinds, overlayCount } from './map-helpers';
 
 const base = 'http://127.0.0.1:5173/';
 
@@ -108,7 +109,7 @@ test('surface is asked only when opened, totals and stretches translate and conv
   await expect(sections).toHaveText(/^km 33\.\d · 2[12](\.\d)? km · Unpaved$/);
   await sections.first().click();
   await expect(sections.first()).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('path.surface-line')).toHaveCount(1);
+  await expect.poll(() => overlayCount(page, 'rg-surface')).toBe(1);
   await expect(page.locator('#surface')).toContainText(
     'Roads without a mapped surface count as paved',
   );
@@ -120,7 +121,7 @@ test('surface is asked only when opened, totals and stretches translate and conv
   await expect(page.locator('#surface > summary')).toHaveText('Pavimento');
   // Closing hides the stretch on the map; reopening uses the answer kept.
   await page.locator('#surface > summary').click();
-  await expect(page.locator('path.surface-line')).toHaveCount(0);
+  await expect.poll(() => overlayCount(page, 'rg-surface')).toBe(0);
   await page.locator('#surface > summary').click();
   await expect(totals).toHaveCount(2);
   expect(requests).toHaveLength(1);
@@ -133,12 +134,8 @@ test('the Surface coloring asks on its own choice and shows only the surfaces pr
   const requests = await mockTrace(page);
   await page.locator('#layers-toggle').click();
   await page.locator('[data-coloring="surface"]').click();
-  await expect(
-    page.locator('path.route-coloring-unpaved').first(),
-  ).toBeAttached();
-  await expect(
-    page.locator('path.route-coloring-paved').first(),
-  ).toBeAttached();
+  await expect.poll(() => coloringKinds(page)).toContain('unpaved');
+  await expect.poll(() => coloringKinds(page)).toContain('paved');
   await expect(page.locator('.route-legend > span')).toHaveText([
     'Paved',
     'Unpaved',
@@ -236,3 +233,50 @@ for (const width of [320, 360, 390, 430, 1280])
       );
       for (const count of lines) expect(count).toBe(1);
     });
+
+for (const width of [320, 390])
+  test(`three surface kinds stay beside the credits, on one line from 390 px, at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.addInitScript(() =>
+      localStorage.setItem('route-coloring', 'surface'),
+    );
+    await setup(page, 4);
+    // A failed piece: paved, unpaved and unknown on the map.
+    await mockTrace(page, (r, i) =>
+      i === 1
+        ? r.fulfill({ status: 503 })
+        : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
+    );
+    // The legend shows on the map once the sheet is lowered.
+    await page.locator('#panel-toggle').click();
+    const legend = page.locator('.route-legend');
+    await expect(legend.locator(':scope > span')).toHaveCount(3, {
+      timeout: 15000,
+    });
+    for (const language of ['pt', 'en']) {
+      await page.locator('#language').selectOption(language);
+      await expect(legend).toContainText(
+        language === 'pt' ? 'Sem dados' : 'Unknown',
+      );
+      const layout = await legend.evaluate((box) => {
+        const own = box.getBoundingClientRect();
+        const credits = document
+          .querySelector('.map-credits')!
+          .getBoundingClientRect();
+        return {
+          lines: new Set(
+            [...box.children].map((c) =>
+              Math.round(c.getBoundingClientRect().top),
+            ),
+          ).size,
+          right: own.right,
+          credits: credits.left,
+        };
+      });
+      expect(layout.right).toBeLessThanOrEqual(layout.credits);
+      // The narrowest phones wrap these three; from 390 px they fit.
+      if (width >= 390) expect(layout.lines).toBe(1);
+    }
+  });

@@ -1,4 +1,9 @@
-import L from 'leaflet';
+import {
+  highlightLayers,
+  lineFeature,
+  RANK,
+  type PlannerMap,
+} from './planner-map';
 import type { Coord, Route, State } from './core';
 import { byId as $ } from './dom';
 import {
@@ -30,7 +35,7 @@ import { distanceUnits } from './unit-preferences';
 const SETTLE_MS = 2000;
 
 export function setupSurface(
-  map: L.Map,
+  map: PlannerMap,
   deps: {
     state: () => State;
     /** Another explicit user choice needs the surface (the Surface coloring). */
@@ -43,8 +48,9 @@ export function setupSurface(
     status = $('surface-status'),
     retry = $<HTMLButtonElement>('surface-retry'),
     content = $('surface-result');
-  map.createPane('surface').style.zIndex = '585';
-  const highlight = L.layerGroup().addTo(map);
+  const setHighlight = map.overlay('rg-surface', RANK.highlight, () =>
+    highlightLayers('rg-surface-line'),
+  );
   let route: Route | null = null,
     ranges: SurfaceRange[] | null = null,
     partial = false,
@@ -216,18 +222,15 @@ export function setupSurface(
   }
 
   function showSection(section: SurfaceRange | null) {
-    highlight.clearLayers();
-    if (!section || !route || !details.open) return;
-    for (const part of trackSlice(
-      indexTrack(route.segments),
-      section.from,
-      section.to,
-    ))
-      L.polyline(part, {
-        pane: 'surface',
-        className: 'surface-line',
-        interactive: false,
-      }).addTo(highlight);
+    if (!section || !route || !details.open) {
+      setHighlight([]);
+      return;
+    }
+    setHighlight(
+      trackSlice(indexTrack(route.segments), section.from, section.to).map(
+        (part) => lineFeature(part),
+      ),
+    );
   }
 
   /** Fits the map to a stretch; on phones the panel makes room for the map. */
@@ -241,7 +244,7 @@ export function setupSurface(
     if (!parts.length) return;
     if (!$('route-panel').hidden && matchMedia('(max-width: 759px)').matches)
       $('panel-toggle').click();
-    map.fitBounds(L.latLngBounds(parts.flat()), { padding: [40, 40] });
+    map.fit(parts.flat(), { padding: 40 });
   }
 
   details.addEventListener('toggle', () => {
@@ -250,7 +253,7 @@ export function setupSurface(
       void load();
     } else {
       if (!needed()) clearTimeout(settle);
-      highlight.clearLayers();
+      setHighlight([]);
     }
   });
   retry.onclick = () => void load();
@@ -266,7 +269,7 @@ export function setupSurface(
       revision++;
       message('');
       content.replaceChildren();
-      highlight.clearLayers();
+      setHighlight([]);
       clearTimeout(settle);
       deps.onSurface?.();
       if (route && needed()) {

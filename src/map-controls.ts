@@ -1,6 +1,43 @@
-import L from 'leaflet';
 import { icon, iconControl } from './icons';
-export function setupMapControls(map: L.Map, zoom: L.Control.Zoom) {
+import { isolate, type PlannerMap } from './planner-map';
+
+/** A corner of the map holding controls, above the map's own layers. */
+export function mapCorner(
+  map: PlannerMap,
+  position: 'top-right' | 'bottom-left',
+): HTMLElement {
+  const id = `map-corner-${position}`;
+  let corner = document.getElementById(id);
+  if (!corner) {
+    corner = document.createElement('div');
+    corner.id = id;
+    corner.className = `map-corner map-${position}`;
+    map.container.append(corner);
+  }
+  return corner;
+}
+
+/** Zoom buttons for pointers without pinch (hidden on phones). */
+function zoomControl(map: PlannerMap): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'map-zoom map-control';
+  for (const [kind, label, symbol] of [
+    ['in', 'Zoom in', '+'],
+    ['out', 'Zoom out', '−'],
+  ] as const) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `map-zoom-${kind}`;
+    button.textContent = symbol;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.onclick = () => (kind === 'in' ? map.zoomIn() : map.zoomOut());
+    box.append(button);
+  }
+  return box;
+}
+
+export function setupMapControls(map: PlannerMap) {
   const get = (id: string) => document.getElementById(id)!;
   iconControl(get('locate'), 'locate', 'Use my location');
   iconControl(get('layers-toggle'), 'layers', 'Map layers');
@@ -11,7 +48,7 @@ export function setupMapControls(map: L.Map, zoom: L.Control.Zoom) {
   iconControl(get('lock'), 'unlock', 'Lock editing');
   get('lock').prepend(icon('lock'));
   const container = document.createElement('div');
-  container.className = 'map-action-control';
+  container.className = 'map-action-control map-control';
   // Two groups: the map view, then the route.
   const group = (...items: HTMLElement[]) => {
     const element = document.createElement('div');
@@ -28,18 +65,13 @@ export function setupMapControls(map: L.Map, zoom: L.Control.Zoom) {
     group(get('fit'), get('lock'), get('undo')),
   );
   document.querySelector('.map-tools')?.remove();
-  const control = new L.Control({ position: 'topright' });
-  control.onAdd = () => {
-    L.DomEvent.disableClickPropagation(container);
-    L.DomEvent.disableScrollPropagation(container);
-    return container;
-  };
-  control.addTo(map);
-  zoom.setPosition('topright');
-  get('map').setAttribute('aria-describedby', 'map-note');
-  const layout = () => {
-    map.invalidateSize({ pan: false });
-  };
-  window.addEventListener('resize', layout);
-  layout();
+  const zoom = zoomControl(map);
+  isolate(container);
+  isolate(zoom);
+  mapCorner(map, 'top-right').append(container, zoom);
+  // The canvas takes keyboard focus; the hint describes it.
+  map.ready((gl) =>
+    gl.getCanvas().setAttribute('aria-describedby', 'map-note'),
+  );
+  window.addEventListener('resize', () => map.resize());
 }

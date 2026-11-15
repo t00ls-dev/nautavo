@@ -1,7 +1,7 @@
-import L from 'leaflet';
 import { meters, type Coord, type Route } from './core';
 import { byId as $ } from './dom';
-import { simplifyTrack } from './simplify';
+import { mapCorner } from './map-controls';
+import { lineFeature, RANK, type PlannerMap } from './planner-map';
 import { icon, type IconName } from './icons';
 
 /**
@@ -104,20 +104,46 @@ export function sliceByRanges(
 
 const STORAGE_KEY = 'route-coloring';
 
+/** A kind's color, from the stylesheet that also colors the legend. */
+function coloringColor(kind: string): string {
+  const probe = document.createElement('i');
+  probe.className = `route-coloring-${kind}`;
+  probe.hidden = true;
+  document.body.append(probe);
+  const color = getComputedStyle(probe)
+    .getPropertyValue('--route-coloring')
+    .trim();
+  probe.remove();
+  return color || '#7d8890';
+}
+/** Right of the travel direction on stretches used both ways (as route-marks). */
+export const PASS_OFFSET = 4;
+
 export function setupRouteOverlays(
-  map: L.Map,
+  map: PlannerMap,
   deps: {
     route: () => Route | null;
     /** Optional out-and-back handling from route-marks, kept as a dependency. */
     repeats?: {
       of: (route: Route) => Range[];
       split: (ranges: Range[], repeated: Range[]) => Range[];
-      offset: (slices: { repeated: boolean; coords: Coord[] }[]) => Coord[][];
     };
   },
 ) {
-  map.createPane('route-overlay').style.zIndex = '450';
-  const layer = L.layerGroup().addTo(map);
+  // Above the route line, below marks and highlighted stretches.
+  const setLines = map.overlay('rg-coloring', RANK.coloring, () => [
+    {
+      id: 'rg-coloring',
+      type: 'line',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': ['get', 'color'],
+        // Out-and-back stretches follow the thinner parallel pass lines.
+        'line-width': ['case', ['get', 'repeated'], 3, 4],
+        'line-offset': ['case', ['get', 'repeated'], PASS_OFFSET, 0],
+      },
+    },
+  ]);
   const colorings: Coloring[] = [];
   let active = 'none';
   try {
@@ -137,19 +163,18 @@ export function setupRouteOverlays(
   group.append(heading);
   menu.append(group);
 
-  const legend = new L.Control({ position: 'bottomleft' });
   const legendBox = document.createElement('div');
-  legendBox.className = 'route-legend';
+  legendBox.className = 'route-legend map-control';
   legendBox.hidden = true;
-  legend.onAdd = () => legendBox;
-  legend.addTo(map);
+  mapCorner(map, 'bottom-left').append(legendBox);
   // The legend wraps its items before reaching the credits button at the
-  // bottom right (44 px plus margins), on every map width.
+  // bottom right: 10 px margins on both sides, the 44 px button and 10 px
+  // between them.
   const fitLegend = () => {
-    legendBox.style.maxWidth = `${Math.max(120, map.getSize().x - 84)}px`;
+    legendBox.style.maxWidth = `${Math.max(120, map.size().x - 74)}px`;
   };
   fitLegend();
-  map.on('resize', fitLegend);
+  new ResizeObserver(fitLegend).observe(map.container);
 
   function option(id: string, label: string) {
     const button = document.createElement('button');
@@ -177,29 +202,30 @@ export function setupRouteOverlays(
   option('none', 'None');
 
   function draw() {
-    layer.clearLayers();
     legendBox.hidden = true;
     const route = deps.route();
     const coloring = colorings.find((c) => c.id === active);
-    if (!route || !coloring || coloring.unavailable()) return;
+    if (!route || !coloring || coloring.unavailable()) {
+      setLines([]);
+      return;
+    }
     const slices = sliceByRanges(
       route.segments,
       deps.repeats
         ? deps.repeats.split(coloring.ranges(route), deps.repeats.of(route))
         : coloring.ranges(route),
     );
-    const paths = deps.repeats?.offset(slices) ?? slices.map((s) => s.coords);
-    slices.forEach(({ kind, repeated }, i) => {
-      const visual = simplifyTrack(paths[i], (c) => map.project(c), 0.75, []);
-      L.polyline(visual, {
-        pane: 'route-overlay',
-        className: `route-coloring route-coloring-${kind}`,
-        interactive: false,
-        // Out-and-back stretches follow the thinner parallel pass lines.
-        weight: repeated ? 3 : 4,
-        smoothFactor: 0,
-      }).addTo(layer);
-    });
+    const colors = new Map<string, string>();
+    setLines(
+      slices.map(({ kind, repeated, coords }) => {
+        if (!colors.has(kind)) colors.set(kind, coloringColor(kind));
+        return lineFeature(coords, {
+          kind,
+          repeated,
+          color: colors.get(kind),
+        });
+      }),
+    );
     const swatch = (kind: string) => {
       const mark = document.createElement('i');
       mark.className = `route-legend-swatch route-coloring-${kind}`;
@@ -266,7 +292,6 @@ export function setupRouteOverlays(
       });
     draw();
   }
-  map.on('zoomend', draw);
 
   return {
     register(coloring: Coloring) {
