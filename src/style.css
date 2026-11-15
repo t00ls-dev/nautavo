@@ -1469,6 +1469,33 @@ dialog.settings::backdrop {
 #satellite-license {
   margin: 0 4px;
 }
+/* The compass, only on a turned map; its needle points to the map's north. */
+.map-compass {
+  display: grid;
+  place-items: center;
+  width: var(--control);
+  height: var(--control);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-control);
+}
+.map-compass[hidden] {
+  display: none;
+}
+.map-compass .button-icon {
+  width: 28px;
+  height: 28px;
+  stroke: none;
+}
+.map-compass .needle-north {
+  fill: var(--color-danger);
+}
+.map-compass .needle-south {
+  fill: #8795a1;
+}
 .map-zoom {
   display: grid;
   border-radius: 10px;

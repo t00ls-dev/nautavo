@@ -274,8 +274,9 @@ export class PlannerMap {
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
       attributionControl: false,
-      // North up for now; turning the map comes with its compass (#133).
-      dragRotate: false,
+      // Two fingers turn the map past MapLibre's rotation threshold, so a
+      // pinch with a small twist only zooms; on a desktop, a right or Ctrl
+      // drag turns it. It never tilts.
       pitchWithRotate: false,
       touchPitch: false,
       maxPitch: 0,
@@ -284,8 +285,6 @@ export class PlannerMap {
       // MapLibre's default 'same-origin' credentials send nothing cross-origin.
       ...options,
     });
-    map.touchZoomRotate.disableRotation();
-    map.keyboard.disableRotation();
     this.map = map;
     map.on('style.load', () => this.restore());
     for (const marker of this.markers) marker.attach(ml, map);

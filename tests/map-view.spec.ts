@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mapReady, mockBasemap } from './map-helpers';
+import { mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, decodeState } from '../src/core';
 const base = 'http://127.0.0.1:5173/';
 const ipUrl = 'https://ipwho.is/**';
@@ -496,9 +496,11 @@ test('the dot follows, the button re-centers a panned map and then turns locatio
     .poll(async () => Math.max(...(await center()).map(Math.abs)))
     .toBeLessThan(3);
   // A pan leaves the dot behind; the next fix does not pull the map back.
+  // The pan starts once the map has finished following the last fix.
+  await mapIdle(page);
   await page.mouse.move(map.x + 300, map.y + 300);
   await page.mouse.down();
-  await page.mouse.move(map.x + 450, map.y + 380, { steps: 5 });
+  await page.mouse.move(map.x + 450, map.y + 380, { steps: 10 });
   await page.mouse.up();
   await expect(page.locator('#locate')).toHaveClass(/free/);
   await fix(48.1245, 11.7665, 20);
