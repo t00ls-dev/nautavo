@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Coord } from '../src/core';
-import {
-  arrowStops,
-  offsetPath,
-  passOf,
-  repeatedRanges,
-  splitByRepeat,
-} from '../src/route-marks';
+import { passOf, repeatedRanges, splitByRepeat } from '../src/route-marks';
 import { indexTrack, pointAtDistance } from '../src/track-position';
 
 // About 111.2 m per 0.001°; tracks along the equator or the prime meridian.
@@ -67,34 +61,6 @@ describe('repeated stretches', () => {
 });
 
 describe('drawing helpers', () => {
-  const identity = {
-    project: ([y, x]: Coord) => ({ x, y }),
-    unproject: ({ x, y }: { x: number; y: number }): Coord => [y, x],
-  };
-
-  it('offsets opposite passes to opposite sides (right of travel, y down)', () => {
-    const east = offsetPath(
-      [
-        [0, 0],
-        [0, 10],
-      ],
-      identity.project,
-      identity.unproject,
-      4,
-    );
-    const west = offsetPath(
-      [
-        [0, 10],
-        [0, 0],
-      ],
-      identity.project,
-      identity.unproject,
-      4,
-    );
-    expect(east.map(([y]) => y)).toEqual([4, 4]);
-    expect(west.map(([y]) => y)).toEqual([-4, -4]);
-  });
-
   it('splits coloring ranges at repeated boundaries', () => {
     expect(
       splitByRepeat(
@@ -106,12 +72,6 @@ describe('drawing helpers', () => {
       { from: 30, to: 60, kind: 'day', repeated: true },
       { from: 60, to: 100, kind: 'day', repeated: false },
     ]);
-  });
-
-  it('spaces arrow stops evenly from half a step in', () => {
-    expect(arrowStops(1000, 400)).toEqual([200, 600]);
-    expect(arrowStops(0, 100)).toEqual([]);
-    expect(arrowStops(100, 0)).toEqual([]);
   });
 });
 

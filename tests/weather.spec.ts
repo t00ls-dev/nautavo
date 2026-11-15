@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { defaults, decodeState, encodeState } from '../src/core';
 import { weatherResponse } from './weather-fixture';
 import { chooseUnits, setSpeed } from './unit-settings';
-import { holdMap } from './map-helpers';
+import { coloringKinds, holdMap, overlayCount } from './map-helpers';
 const base = 'http://127.0.0.1:5173/';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
@@ -139,9 +139,7 @@ for (const mobile of [false, true])
     await expect(firstCard).toHaveAttribute('aria-current', 'true');
     await expect(page.locator('#weather-section')).toHaveAttribute('open', '');
     await expect(page.locator('#route-panel')).toBeVisible();
-    await expect(page.locator('.weather-tooltip,.leaflet-popup')).toHaveCount(
-      0,
-    );
+    await expect(page.locator('.weather-tooltip,.map-popup')).toHaveCount(0);
     await page.locator('#language').selectOption('pt');
     await expect(page.locator('#weather-details').first()).toContainText(
       'Chuva forte',
@@ -228,7 +226,7 @@ test('route coloring by daylight needs a departure, colors dark stretches, persi
   await expect(page.locator('#coloring-heading')).toHaveText('Route coloring');
   await expect(daylight).toHaveAttribute('aria-disabled', 'true');
   await expect(daylight).toContainText('Choose a departure date');
-  await expect(page.locator('path.route-coloring')).toHaveCount(0);
+  await expect.poll(() => overlayCount(page, 'rg-coloring')).toBe(0);
   await page.keyboard.press('Escape');
   // About 1 h 51 min at 60 km/h from 16:30 UTC; the equator gets dark near 18:06.
   await date(page, '2026-11-08T16:30');
@@ -236,10 +234,8 @@ test('route coloring by daylight needs a departure, colors dark stretches, persi
   await expect(daylight).toHaveAttribute('aria-disabled', 'false');
   await daylight.click();
   await expect(daylight).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('path.route-coloring-day').first()).toBeAttached();
-  await expect(
-    page.locator('path.route-coloring-night').first(),
-  ).toBeAttached();
+  await expect.poll(() => coloringKinds(page)).toContain('day');
+  await expect.poll(() => coloringKinds(page)).toContain('night');
   await expect(page.locator('.route-legend')).toHaveText(
     /Day\s*Twilight\s*Dark/,
   );
@@ -250,9 +246,7 @@ test('route coloring by daylight needs a departure, colors dark stretches, persi
   await expect(page.locator('#download')).toBeEnabled();
   // Reopening the link routes once, as always; coloring adds no request.
   routes = 0;
-  await expect(
-    page.locator('path.route-coloring-night').first(),
-  ).toBeAttached();
+  await expect.poll(() => coloringKinds(page)).toContain('night');
   await page.locator('#language').selectOption('pt');
   await expect(page.locator('.route-legend')).toHaveText(
     /Dia\s*Crepúsculo\s*Escuro/,
@@ -260,10 +254,42 @@ test('route coloring by daylight needs a departure, colors dark stretches, persi
   await page.locator('#layers-toggle').click();
   await expect(page.locator('#coloring-heading')).toHaveText('Colorir a rota');
   await page.locator('[data-coloring=none]').click();
-  await expect(page.locator('path.route-coloring')).toHaveCount(0);
+  await expect.poll(() => overlayCount(page, 'rg-coloring')).toBe(0);
   await expect(page.locator('.route-legend')).toBeHidden();
   expect(routes).toBe(0);
 });
+for (const width of [320, 360, 390, 430])
+  test(`the daylight legend stays on one line beside the credits at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.addInitScript(() =>
+      localStorage.setItem('route-coloring', 'daylight'),
+    );
+    await setup(page, true);
+    await date(page, '2026-11-08T16:30');
+    // On phones the legend shows on the map once the sheet is lowered.
+    await page.locator('#panel-toggle').click();
+    const legend = page.locator('.route-legend');
+    for (const language of ['pt', 'en']) {
+      await page.locator('#language').selectOption(language);
+      await expect(legend).toBeVisible();
+      const layout = await legend.evaluate((box) => {
+        const items = [...box.children].map((c) => c.getBoundingClientRect());
+        const credits = document
+          .querySelector('.map-credits')!
+          .getBoundingClientRect();
+        return {
+          tops: items.map((r) => Math.round(r.top)),
+          right: box.getBoundingClientRect().right,
+          credits: credits.left,
+        };
+      });
+      expect(layout.tops).toHaveLength(3);
+      expect(new Set(layout.tops).size).toBe(1);
+      expect(layout.right).toBeLessThanOrEqual(layout.credits);
+    }
+  });
 test('elevation is requested only when opened, shows stats and the map cursor, and converts units without refetching', async ({
   page,
 }) => {
@@ -305,7 +331,7 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
   const count = requests.length;
   const chart = (await page.locator('.elevation-frame').boundingBox())!;
   await page.mouse.move(chart.x + chart.width / 2, chart.y + chart.height / 2);
-  await expect(page.locator('path.elevation-cursor')).toHaveCount(1);
+  await expect(page.locator('div.elevation-cursor')).toHaveCount(1);
   // Halfway along a steady climb from 0 to 1,000 m: about 500 m gained so far.
   await expect(page.locator('.elevation-readout')).toContainText(
     /Gain so far (4|5)\d\d m · Loss so far 0 m/,
@@ -528,9 +554,7 @@ test('the Grade coloring requests elevation on its own choice and draws every cl
   await page.locator('#layers-toggle').click();
   await page.locator('[data-coloring="grade"]').click();
   for (const kind of ['steep-down', 'down', 'flat', 'up', 'steep-up'])
-    await expect(
-      page.locator(`path.route-coloring-${kind}`).first(),
-    ).toBeAttached();
+    await expect.poll(() => coloringKinds(page)).toContain(kind);
   // A continuous color scale with a slope icon at each end and the signed
   // limits centred on the boundaries; the five ranges for screen readers.
   await expect(page.locator('.route-legend .icon-slope-down')).toHaveCount(1);
@@ -585,9 +609,9 @@ test('the Grade coloring requests elevation on its own choice and draws every cl
   const count = requests.length;
   // Other colorings and coming back reuse the profile: no new request.
   await page.locator('[data-coloring="none"]').click();
-  await expect(page.locator('path.route-coloring-up')).toHaveCount(0);
+  await expect.poll(() => coloringKinds(page)).not.toContain('up');
   await page.locator('[data-coloring="grade"]').click();
-  await expect(page.locator('path.route-coloring-up').first()).toBeAttached();
+  await expect.poll(() => coloringKinds(page)).toContain('up');
   await page.keyboard.press('Escape');
   await page.locator('#language').selectOption('pt');
   await expect(page.locator('.route-legend .sr-only').last()).toHaveText(
@@ -619,9 +643,7 @@ test('the Grade coloring uses recorded GPX elevation without any request', async
   await expect(page.locator('#route-name')).toHaveValue('Hills');
   await page.locator('#layers-toggle').click();
   await page.locator('[data-coloring="grade"]').click();
-  await expect(
-    page.locator('path.route-coloring-steep-up').first(),
-  ).toBeAttached();
+  await expect.poll(() => coloringKinds(page)).toContain('steep-up');
   expect(requests).toBe(0);
 });
 
@@ -652,9 +674,7 @@ for (const width of [320, 360, 390, 430, 1280])
         const map = document.getElementById('map')!.getBoundingClientRect();
         // Map tools and the credits button must stay uncovered.
         const tools = [
-          ...document.querySelectorAll(
-            '.leaflet-right .leaflet-control, .map-credits',
-          ),
+          ...document.querySelectorAll('.map-top-right > *, .map-credits'),
         ].map((c) => c.getBoundingClientRect());
         const b = box.getBoundingClientRect();
         const overlaps = (r: DOMRect) =>
@@ -756,11 +776,11 @@ test('climbs are listed, shaded in the chart and shown on the map', async ({
     /^km 4[45]\.\d · [56](\.\d)? km · \+(49\d|500) m · (9|8\.\d|9\.\d)% · max (9|1\d)(\.\d)?% · \d\d:\d\d( [AP]M)?Hardest$/,
   );
   await expect(page.locator('rect.elevation-climb')).toHaveCount(1);
-  await expect(page.locator('path.climb-line')).toHaveCount(0);
+  await expect.poll(() => overlayCount(page, 'rg-climb')).toBe(0);
   await climbs.first().click();
   await expect(climbs.first()).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('rect.elevation-climb.selected')).toHaveCount(1);
-  await expect(page.locator('path.climb-line')).toHaveCount(1);
+  await expect.poll(() => overlayCount(page, 'rg-climb')).toBe(1);
   // The climb's summit is the route's highest point: one mark there, the
   // label below the route, so route point pins above it never cover it.
   await expect(page.locator('.climb-summit')).toHaveCount(0);
@@ -785,7 +805,7 @@ test('climbs are listed, shaded in the chart and shown on the map', async ({
   await expect(climbs.first().locator('.sr-only')).toHaveText('Mais difícil');
   // Closing Elevation removes the highlight from the map.
   await page.locator('#elevation > summary').click();
-  await expect(page.locator('path.climb-line')).toHaveCount(0);
+  await expect.poll(() => overlayCount(page, 'rg-climb')).toBe(0);
 });
 test('a climb whose summit is not the highest point keeps its summit mark', async ({
   page,
@@ -1916,9 +1936,9 @@ for (const native of [false, true]) {
     // The pointer stays where the marker was; once the layout leaves full
     // screen a route pin may sit under it and show its own hover tooltip.
     await page.mouse.move(1, 1);
-    await expect(page.locator('.leaflet-tooltip,.leaflet-popup')).toHaveCount(
-      0,
-    );
+    await expect(
+      page.locator('.marker-tooltip:visible,.map-popup'),
+    ).toHaveCount(0);
     await expect
       .poll(async () => {
         const card = (await target.boundingBox())!,

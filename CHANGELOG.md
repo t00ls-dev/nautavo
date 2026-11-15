@@ -23,6 +23,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- The planner map is drawn by MapLibre GL JS alone, like the navigation map, instead of inside Leaflet: one map engine, with the route, colorings and arrows drawn by the map itself. A double tap and drag zooms with one finger as before. A browser without WebGL now shows a notice instead of the map, and the panel still plans, calculates and exports the route.
 - Use my location shows a blue dot that follows your position on the map, with a circle for its margin of error and a grey dot when the position stops updating; the map follows it until you move the map, the button re-centers and a further press turns it off. The card with Set as start and Add as stop was removed: My location in a point's field sets a route point.
 - Add stop, Reverse and Round trip are tiles of the same size below the points. On wide screens, Copy link and Import are icon buttons beside Download GPX, so no label wraps in the sidebar.
 - The route points list is more compact: each point is a numbered circle joined by dots to the next, with its field and ×, and an empty field names its role (Starting point, Add a stop, Destination); hold the ≡ grip at the end of a field and drag to reorder (or focus it and use the arrow keys), the numbers following as you drag. The up and down buttons and the Set on map button below the selected point were removed; tap a point's number to show it on the map.
@@ -50,6 +51,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- On phones, the map opens on your location (when already allowed) or region above the route panel instead of under it, and the Daylight legend keeps Day, Twilight and Dark on one line on 320 px screens.
 - On narrow phones, the top of Help and What's new fits the screen: the language shows as EN or PT, Back to map no longer runs off the edge and long addresses in the text wrap, so the page no longer scrolls sideways.
 - After an update, the app no longer opens with plain text and no icons; opened again from the home screen, it switches to the new version by itself, without removing and adding the icon.
 - Opened from an icon on the iPhone home screen, the map no longer shows faded behind the clock and battery: they sit on a white strip and the controls, dialogs, navigation, Help and What's new start below it; the buttons at the bottom sit right above the home indicator. Add the icon again to get it.

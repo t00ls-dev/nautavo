@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mockBasemap } from './map-helpers';
+import { mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, decodeState } from '../src/core';
 const base = 'http://127.0.0.1:5173/';
 const ipUrl = 'https://ipwho.is/**';
@@ -284,7 +284,7 @@ for (const mobile of [false, true]) {
         page.evaluate(() => {
           const map = document.getElementById('map')!.getBoundingClientRect();
           const canvas = document
-            .querySelector('#map .leaflet-gl-layer canvas')
+            .querySelector('#map canvas.maplibregl-canvas')
             ?.getBoundingClientRect();
           return (
             !!canvas &&
@@ -323,7 +323,7 @@ for (const mobile of [false, true]) {
     await expect(page.locator('#locate')).toHaveAccessibleName(
       'Use my location',
     );
-    const zoom = await page.locator('.leaflet-control-zoom-in').boundingBox();
+    const zoom = await page.locator('.map-zoom-in').boundingBox();
     expect(zoom!.width).toBeGreaterThanOrEqual(44);
     expect(zoom!.height).toBeGreaterThanOrEqual(44);
   });
@@ -373,6 +373,7 @@ test('late IP result cannot override a manually chosen map view', async ({
     });
   });
   await page.goto(base);
+  await mapReady(page);
   await page.locator('#map').click({ position: { x: 170, y: 200 } });
   const value = await page.locator('#location-0').inputValue();
   release();
@@ -574,3 +575,41 @@ for (const width of [320, 390, 1280])
       ).toBe(true);
     }
   });
+
+test('with location already allowed, the map opens on the device above the sheet, without IP', async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(position);
+  let ip = 0;
+  page.on('request', (r) => {
+    if (r.url().includes('ipwho.is')) ip++;
+  });
+  await page.goto(base);
+  await mapReady(page);
+  const sheet = (await page.locator('#sheet').boundingBox())!;
+  await expect
+    .poll(() =>
+      page.evaluate(
+        ([lat, lon]) =>
+          (
+            window as unknown as {
+              plannerMap: {
+                project(c: [number, number]): { x: number; y: number } | null;
+              };
+            }
+          ).plannerMap.project([lat, lon]),
+        [position.latitude, position.longitude],
+      ),
+    )
+    .toEqual({
+      x: expect.closeTo(195, 0),
+      y: expect.closeTo(sheet.y / 2, 0),
+    });
+  expect(ip).toBe(0);
+  // The device's position only frames the map: no dot, no route point.
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  await expect(page.locator('#location-0')).toHaveValue('');
+});

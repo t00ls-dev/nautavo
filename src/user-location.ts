@@ -1,4 +1,4 @@
-import L from 'leaflet';
+import { metersPerPixel, type MapMarker, type PlannerMap } from './planner-map';
 import type { Coord } from './core';
 import { locationError, positionView } from './location';
 import { byId as element } from './dom';
@@ -16,12 +16,12 @@ const NOTICE_TIME = 8_000;
  * only: never in links, storage or requests, and the watch stops while the
  * page is hidden.
  */
-export function setupUserLocation(map: L.Map, interact: () => void): void {
+export function setupUserLocation(map: PlannerMap, interact: () => void): void {
   const button = element<HTMLButtonElement>('locate');
   const notice = element('location-notice');
-  const layer = L.layerGroup().addTo(map);
-  let accuracy: L.Circle | null = null;
-  let dot: L.CircleMarker | null = null;
+  let accuracy: MapMarker | null = null;
+  let dot: MapMarker | null = null;
+  let radius = 0;
   let watch: number | null = null;
   let active = false;
   let following = false;
@@ -46,9 +46,9 @@ export function setupUserLocation(map: L.Map, interact: () => void): void {
   };
   const markStale = () => {
     clearTimeout(staleTimer);
-    dot?.getElement()?.classList.remove('stale');
+    dot?.element.classList.remove('stale');
     staleTimer = window.setTimeout(
-      () => dot?.getElement()?.classList.add('stale'),
+      () => dot?.element.classList.add('stale'),
       STALE_AFTER,
     );
   };
@@ -61,8 +61,9 @@ export function setupUserLocation(map: L.Map, interact: () => void): void {
     clearTimeout(staleTimer);
     active = following = false;
     last = null;
+    accuracy?.remove();
+    dot?.remove();
     accuracy = dot = null;
-    layer.clearLayers();
     render();
   };
   const update = (position: GeolocationPosition) => {
@@ -74,33 +75,31 @@ export function setupUserLocation(map: L.Map, interact: () => void): void {
     }
     const first = !last;
     last = { ...view, time: Date.now() };
-    const radius = position.coords.accuracy;
+    radius = position.coords.accuracy;
     if (!dot || !accuracy) {
-      accuracy = L.circle(view.center, {
-        radius,
-        className: 'location-accuracy',
-        color: '#1765a5',
-        weight: 1,
-        fillOpacity: 0.12,
-        interactive: false,
-      }).addTo(layer);
-      dot = L.circleMarker(view.center, {
-        radius: 8,
+      // The margin of error: a circle of the reported accuracy, in meters.
+      accuracy = map.marker(view.center, {
+        className: 'location-accuracy-marker',
+        html: '<span class="location-accuracy"></span>',
+        size: [0, 0],
+        anchor: [0, 0],
+        z: 1,
+      });
+      dot = map.marker(view.center, {
         className: 'location-dot',
-        color: '#fff',
-        weight: 3,
-        fillColor: '#1765a5',
-        fillOpacity: 1,
-        interactive: false,
-      }).addTo(layer);
+        size: [22, 22],
+        anchor: [11, 11],
+        z: 2,
+      });
     } else {
-      accuracy.setLatLng(view.center).setRadius(radius);
-      dot.setLatLng(view.center);
+      accuracy.setCoord(view.center);
+      dot.setCoord(view.center);
     }
+    sizeAccuracy();
     markStale();
     if (first) {
       show(null);
-      map.setView(view.center, view.zoom, { animate: false });
+      map.setView(view.center, view.zoom);
     } else if (following) map.panTo(view.center);
     render();
   };
@@ -129,10 +128,7 @@ export function setupUserLocation(map: L.Map, interact: () => void): void {
       element('panel-toggle').click();
     if (active) {
       following = true;
-      if (last)
-        map.setView(last.center, Math.max(map.getZoom(), last.zoom), {
-          animate: false,
-        });
+      if (last) map.setView(last.center, Math.max(map.getZoom(), last.zoom));
       render();
       return;
     }
@@ -153,8 +149,20 @@ export function setupUserLocation(map: L.Map, interact: () => void): void {
     render();
     startWatch();
   };
+  /** The circle's diameter in pixels at the current zoom (capped). */
+  function sizeAccuracy() {
+    if (!accuracy || !last) return;
+    const pixels = Math.min(
+      8000,
+      (2 * radius) / metersPerPixel(last.center[0], map.getZoom()),
+    );
+    const circle = accuracy.element.firstElementChild as HTMLElement;
+    circle.style.width = circle.style.height = `${pixels}px`;
+  }
+  map.on('zoom', sizeAccuracy);
   // A pan by the traveler leaves the dot where it is; the button re-centers.
-  map.on('dragstart', () => {
+  map.on('dragstart', (event: { originalEvent?: Event }) => {
+    if (!event.originalEvent) return;
     if (!following) return;
     following = false;
     render();

@@ -50,9 +50,6 @@ import {
   registerServiceWorker,
   watchConnection,
 } from './offline';
-import L from 'leaflet';
-import type { Map as VectorMap } from 'maplibre-gl';
-import 'leaflet/dist/leaflet.css';
 import './style.css';
 import {
   defaults,
@@ -80,7 +77,6 @@ import {
   osrmMatch,
   searchAddress,
 } from './services';
-import { simplifyTrack } from './simplify';
 import {
   isImportedRoute,
   legsAt,
@@ -89,20 +85,21 @@ import {
 } from './track-legs';
 import { shareFile } from './share-gpx';
 import { setupPointMenu } from './point-menu';
-import { setupQuickZoom } from './quick-zoom';
 import { setupNavigation } from './navigation-ui';
 import { setupHomeScreen } from './home-screen';
 import { setupElevation } from './elevation-ui';
 import { setupSurface } from './surface-ui';
 import { SURFACE_KINDS } from './surface';
 import { gradeRanges } from './elevation';
-import { setupRouteOverlays, sliceByRanges } from './route-overlays';
+import { setupRouteOverlays } from './route-overlays';
 import {
-  offsetSlices,
   repeatsFor,
+  routePieces,
   setupRouteMarks,
   splitByRepeat,
 } from './route-marks';
+import { lineFeature, PlannerMap, RANK, type MapMarker } from './planner-map';
+import { PASS_OFFSET } from './route-overlays';
 import { routeDaylight } from './daylight';
 import { addressAutocomplete } from './autocomplete';
 import { setupMapView } from './map-view';
@@ -236,42 +233,60 @@ const localView = defaultView(
   Intl.DateTimeFormat().resolvedOptions().timeZone,
   navigator.languages,
 );
-const map = L.map('map', {
-  zoomControl: false,
-  attributionControl: false,
-  // The vector map has no zoom range of its own for Leaflet to read.
-  minZoom: 1,
-  maxZoom: 19,
-}).setView(localView.center, localView.zoom);
-let zooming = false;
-map.on('zoomstart', () => {
-  zooming = true;
+const map = new PlannerMap($('map'), localView.center, localView.zoom);
+if (import.meta.env.DEV)
+  (window as unknown as { plannerMap: PlannerMap }).plannerMap = map;
+/** Route point markers on the map. */
+let markers: MapMarker[] = [];
+/** The route line: a white casing under the route color, per base map. */
+const ROUTE_COLORS: Record<string, string> = {
+  standard: '#12796e',
+  topographic: '#174cbd',
+  satellite: '#b61f64',
+};
+const setRouteLine = map.overlay('rg-route', RANK.route, () => {
+  // Out-and-back stretches are thinner lines offset to the right of travel.
+  const pass = (repeated: number, normal: number) =>
+    ['case', ['get', 'repeated'], repeated, normal] as unknown as number;
+  return [
+    {
+      id: 'rg-route-casing',
+      type: 'line',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': '#fff',
+        'line-opacity': 0.95,
+        'line-width': pass(6, 8),
+        'line-offset': pass(PASS_OFFSET, 0),
+      },
+    },
+    {
+      id: 'rg-route-line',
+      type: 'line',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color':
+          ROUTE_COLORS[document.body.dataset.mapLayer ?? 'standard'] ??
+          ROUTE_COLORS.standard,
+        'line-width': pass(3, 4),
+        'line-offset': pass(PASS_OFFSET, 0),
+      },
+    },
+  ];
 });
-map.on('zoomend', () => {
-  zooming = false;
-});
-const zoom = L.control.zoom({ position: 'bottomright' }).addTo(map);
-const markers = L.layerGroup().addTo(map),
-  line = L.featureGroup().addTo(map);
+const line = { clearLayers: () => setRouteLine([]) };
 // Moving a point precisely under the finger (Settings): a loupe while a
 // marker is dragged by touch, or a fixed marker over a panning map.
-let vectorMap: () => VectorMap | null = () => null;
-const loupe = createLoupe(
-  map,
-  () => vectorMap(),
-  () => current?.segments ?? [],
-);
+const loupe = createLoupe(map);
 const crosshair = createCrosshair(map);
 /** The point being placed with the crosshair, drawn by it, not as a marker. */
 let adjusting: Point | null = null;
 let touchDrag = false;
-map
-  .getContainer()
-  .addEventListener(
-    'pointerdown',
-    (event) => (touchDrag = event.pointerType !== 'mouse'),
-    { capture: true, passive: true },
-  );
+map.container.addEventListener(
+  'pointerdown',
+  (event) => (touchDrag = event.pointerType !== 'mouse'),
+  { capture: true, passive: true },
+);
 /**
  * Places `point` with the crosshair: from its marker (Settings) or from Choose
  * on map in its field, which starts at the map center when the point is empty
@@ -283,7 +298,7 @@ function adjustPoint(point: Point, fromField = false) {
     point.coord && !dirty.has(point)
       ? point.coord
       : fromField
-        ? [map.getCenter().lat, map.getCenter().lng]
+        ? map.getCenter()
         : null;
   if (i < 0 || !start || editBlocked()) return;
   if (!$('route-panel').hidden && compactLayout()) $('panel-toggle').click();
@@ -344,20 +359,25 @@ function suggestionDistance(point: Point, coord: Coord): string | null {
     : null;
 }
 // Maneuver chosen in the itinerary, shown until the next map click or route.
-map.createPane('maneuver').style.zIndex = '587';
-const maneuverLayer = L.layerGroup().addTo(map);
+let maneuver: MapMarker | null = null;
+const maneuverLayer = {
+  clearLayers() {
+    maneuver?.remove();
+    maneuver = null;
+  },
+};
 map.on('click', () => maneuverLayer.clearLayers());
 function showManeuver(coord: Coord) {
   if (!$('route-panel').hidden && compactLayout()) $('panel-toggle').click();
   map.stop();
-  map.setView(coord, Math.max(map.getZoom(), 17), { animate: false });
+  map.setView(coord, Math.max(map.getZoom(), 16));
   maneuverLayer.clearLayers();
-  L.circleMarker(coord, {
-    pane: 'maneuver',
-    radius: 9,
+  maneuver = map.marker(coord, {
     className: 'maneuver-marker',
-    interactive: false,
-  }).addTo(maneuverLayer);
+    size: [24, 24],
+    anchor: [12, 12],
+    z: 3,
+  });
 }
 /** The traveler's average speed (km/h): a device preference, changed only by the user. */
 let speedKmh = storedSpeedKmh(distanceUnits());
@@ -392,7 +412,6 @@ const overlays = setupRouteOverlays(map, {
   repeats: {
     of: repeatsFor,
     split: splitByRepeat,
-    offset: (slices) => offsetSlices(map, slices),
   },
 });
 const marks = setupRouteMarks(map, {
@@ -456,15 +475,8 @@ $('departure').addEventListener('change', () => {
   if (current) renderSummary(current);
   else renderDaylight(state, null, speedKmh);
 });
-new ResizeObserver(() => map.invalidateSize()).observe($('map'));
+new ResizeObserver(() => map.resize()).observe($('map'));
 function fit() {
-  if (zooming) {
-    const version = revision;
-    map.once('zoomend', () => {
-      if (version === revision) fit();
-    });
-    return;
-  }
   const pts =
     current?.segments.flat() ??
     state.points.flatMap((p) => (p.coord ? [p.coord] : []));
@@ -474,11 +486,9 @@ function fit() {
     const bottom = compact
       ? $('sheet').getBoundingClientRect().height + 30
       : 70;
-    map.fitBounds(L.latLngBounds(pts), {
-      paddingTopLeft: [45, compact ? 125 : 60],
-      paddingBottomRight: [76, bottom],
-      maxZoom: 15,
-      animate: false,
+    map.fit(pts, {
+      padding: { left: 45, top: compact ? 125 : 60, right: 76, bottom },
+      maxZoom: 14,
     });
   }
 }
@@ -657,7 +667,7 @@ function renderPoints() {
     suggestions.setAttribute('aria-label', `Results for point ${i + 1}`);
     const closeSuggestions = addressAutocomplete(input, suggestions, {
       base: () => photonUrl,
-      center: () => [map.getCenter().lat, map.getCenter().lng],
+      center: () => map.getCenter(),
       valid: () => state.points[i] === point && input.isConnected,
       choose: (result) => {
         if (editBlocked()) return;
@@ -857,90 +867,65 @@ function renderMarkers() {
     (locked || !adjusting || !state.points.includes(adjusting))
   )
     crosshair.cancel();
-  markers.clearLayers();
+  for (const m of markers) m.remove();
+  markers = [];
   const mode = placementMode();
   state.points.forEach((p, i) => {
     if (!p.coord || dirty.has(p) || p === adjusting) return;
-    const m = L.marker(p.coord, {
+    const head = document.createElement('span');
+    head.append(text('b', String(i + 1)));
+    // The point's name on hover and focus, as a tooltip.
+    const tip = text('div', t(p.name));
+    tip.className = 'marker-tooltip';
+    const m = map.marker(p.coord, {
+      className: `route-marker ${i === selected ? 'active' : ''}`,
+      html: head,
+      size: [30, 38],
+      anchor: [15, 36],
       draggable: !locked && mode !== 'crosshair',
-      icon: L.divIcon({
-        className: `route-marker ${i === selected ? 'active' : ''}`,
-        html: `<span><b>${i + 1}</b></span>`,
-        iconSize: [30, 38],
-        iconAnchor: [15, 36],
-      }),
-    }).addTo(markers);
-    m.bindTooltip(text('span', t(p.name)));
-    m.on('click', () => {
+      interactive: true,
+      z: 6,
+    });
+    m.element.append(tip);
+    m.element.setAttribute('aria-label', t(p.name));
+    markers.push(m);
+    // A drag ends with a click on the marker; that click is not a selection.
+    let dragged = false;
+    m.element.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (dragged) {
+        dragged = false;
+        return;
+      }
       selectPoint(i);
       if (mode === 'crosshair' && !locked) adjustPoint(p);
     });
-    if (mode === 'loupe') {
-      const show = () => {
-        if (touchDrag) loupe.move(m.getLatLng());
-      };
-      m.on('dragstart', show);
-      m.on('drag', show);
-    }
+    m.on('dragstart', () => {
+      dragged = true;
+      if (mode === 'loupe' && touchDrag) loupe.move(m.getCoord());
+    });
+    if (mode === 'loupe')
+      m.on('drag', () => {
+        if (touchDrag) loupe.move(m.getCoord());
+      });
     m.on('dragend', () => {
       loupe.hide();
-      const c = m.getLatLng();
       selected = i;
-      setPoint(p, i, [c.lat, c.lng]);
+      setPoint(p, i, m.getCoord());
+      // The click that may follow a mouse drag comes at once, if at all.
+      setTimeout(() => (dragged = false), 0);
     });
   });
 }
 function drawRoute(route: Route) {
-  line.clearLayers();
-  const anchors =
-    route.snapped ?? state.points.flatMap((p) => (p.coord ? [p.coord] : []));
-  const repeated = repeatsFor(route);
   // Stretches travelled twice in opposite directions become two parallel
   // lines, each offset to the right of its own direction (visual only).
-  const pieces = repeated.length
-    ? (() => {
-        const total = route.segments.reduce(
-          (sum, s) =>
-            sum + s.slice(1).reduce((n, c, i) => n + meters(s[i], c), 0),
-          0,
-        );
-        const slices = sliceByRanges(
-          route.segments,
-          splitByRepeat([{ from: 0, to: total, kind: 'route' }], repeated),
-        );
-        const coords = offsetSlices(map, slices);
-        return slices.map((s, i) => ({
-          repeated: s.repeated,
-          coords: coords[i],
-        }));
-      })()
-    : route.segments.map((coords) => ({ repeated: false, coords }));
-  pieces.forEach(({ repeated: pass, coords }) => {
-    const visual = simplifyTrack(
-      coords,
-      (coord) => map.project(coord),
-      0.75,
-      anchors,
-    );
-    L.polyline(visual, {
-      color: '#fff',
-      weight: pass ? 6 : 8,
-      opacity: 0.95,
-      smoothFactor: 0,
-      className: 'route-casing',
-    }).addTo(line);
-    L.polyline(visual, {
-      color: '#12796e',
-      weight: pass ? 3 : 4,
-      opacity: 1,
-      smoothFactor: 0,
-      className: pass ? 'route-line route-line-pass' : 'route-line',
-    }).addTo(line);
-  });
+  setRouteLine(
+    routePieces(route).map(({ repeated, coords }) =>
+      lineFeature(coords, { repeated }),
+    ),
+  );
 }
-map.on('zoomend', () => {
-  if (current) drawRoute(current);
-});
 function clearSummary() {
   $('summary').hidden = true;
   $('route-details').hidden = true;
@@ -1360,8 +1345,6 @@ setupPointMenu(map, {
   elevation: (coord) => elevation.queryPoint(coord),
   dismiss: () => elevation.closePoint(),
 });
-// After the point menu, so its long press exists when a quick zoom cancels it.
-setupQuickZoom(map);
 $('calculate').onclick = () => {
   if (editBlocked()) return;
   if (dirty.size || state.points.some((p) => !p.coord)) {
@@ -1921,7 +1904,7 @@ setupMapView(map, {
   hasRoute: () => state.points.some((p) => p.coord !== null),
 });
 
-vectorMap = setupMapLayers(map).vectorMap;
+setupMapLayers(map);
 const placementSelect = $<HTMLSelectElement>('point-placement');
 placementSelect.value = placementMode();
 placementSelect.onchange = () => {
@@ -1930,7 +1913,7 @@ placementSelect.onchange = () => {
   renderMarkers();
 };
 
-setupMapControls(map, zoom);
+setupMapControls(map);
 
 function setLocked(value: boolean) {
   locked = value;

@@ -197,6 +197,14 @@
           <h3 data-kind="Changed">Changed</h3>
           <ul>
             <li>
+              The planner map is drawn by MapLibre GL JS alone, like the
+              navigation map, instead of inside Leaflet: one map engine, with
+              the route, colorings and arrows drawn by the map itself. A double
+              tap and drag zooms with one finger as before. A browser without
+              WebGL now shows a notice instead of the map, and the panel still
+              plans, calculates and exports the route.
+            </li>
+            <li>
               Use my location shows a blue dot that follows your position on the
               map, with a circle for its margin of error and a grey dot when the
               position stops updating; the map follows it until you move the
@@ -328,6 +336,12 @@
           </ul>
           <h3 data-kind="Fixed">Fixed</h3>
           <ul>
+            <li>
+              On phones, the map opens on your location (when already allowed)
+              or region above the route panel instead of under it, and the
+              Daylight legend keeps Day, Twilight and Dark on one line on 320 px
+              screens.
+            </li>
             <li>
               On narrow phones, the top of Help and What's new fits the screen:
               the language shows as EN or PT, Back to map no longer runs off the
@@ -619,6 +633,15 @@
           <h3 data-kind="Changed">Alterado</h3>
           <ul>
             <li>
+              O mapa do planejador é desenhado só pelo MapLibre GL JS, como o
+              mapa da navegação, em vez de dentro do Leaflet: um único motor de
+              mapa, com a rota, as colorações e as setas desenhadas pelo próprio
+              mapa. Tocar duas vezes e arrastar continua aproximando com um
+              dedo. Um navegador sem WebGL agora mostra um aviso no lugar do
+              mapa, e o painel continua planejando, calculando e exportando a
+              rota.
+            </li>
+            <li>
               Usar minha localização mostra um ponto azul que acompanha sua
               posição no mapa, com um círculo para a margem de erro e o ponto
               cinza quando a posição deixa de ser atualizada; o mapa acompanha o
@@ -750,6 +773,13 @@
           </ul>
           <h3 data-kind="Fixed">Corrigido</h3>
           <ul>
+            <li>
+              No celular, o mapa abre na sua localização (quando já permitida)
+              ou região acima do painel da rota, e não embaixo dele, e a legenda
+              de Luz do dia mantém Dia, Crepúsculo e Escuro numa linha em telas
+              de 320 px. No Pavimento, Pavimentada passou a Asfalto e
+              Desconhecido a Sem dados, mais curtos na legenda.
+            </li>
             <li>
               Em celulares estreitos, o topo da Ajuda e das Novidades cabe na
               tela: o idioma aparece como EN ou PT, Voltar ao mapa não sai mais

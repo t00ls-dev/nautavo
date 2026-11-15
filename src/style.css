@@ -1023,11 +1023,11 @@ div.step-item {
 .maneuver-link:hover {
   background: var(--color-soft);
 }
-.leaflet-pane .maneuver-marker {
-  fill: #145e49;
-  fill-opacity: 0.25;
-  stroke: #145e49;
-  stroke-width: 3;
+.maneuver-marker {
+  box-sizing: border-box;
+  border: 3px solid #145e49;
+  border-radius: 50%;
+  background: rgb(20 94 73 / 25%);
 }
 .local-road {
   color: var(--color-warning);
@@ -1304,14 +1304,30 @@ dialog.settings::backdrop {
   justify-content: flex-start;
   border-color: transparent;
 }
-.planner .leaflet-top {
-  top: var(--safe-top);
+/* Map controls in the map's corners, above its markers. */
+.map-corner {
+  position: absolute;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.map-corner > * {
+  pointer-events: auto;
+}
+.map-top-right {
+  top: calc(10px + var(--safe-top));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  align-items: flex-end;
   /* Map tools and the Map layers menu open above the bottom controls (the
      route coloring legend), which come later in the page. */
   z-index: 1001;
 }
-.planner .leaflet-right {
-  right: env(safe-area-inset-right, 0px);
+.map-bottom-left {
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  align-items: flex-start;
 }
 .map-action-control {
   display: grid;
@@ -1367,10 +1383,26 @@ dialog.settings::backdrop {
   }
 }
 .location-dot {
-  transition: fill 0.3s;
+  box-sizing: border-box;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #1765a5;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+  transition: background-color 0.3s;
 }
 .location-dot.stale {
-  fill: #6b7785;
+  background: #6b7785;
+}
+/* The margin of error, centered on the dot's coordinate. */
+.location-accuracy {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  border: 1px solid rgb(23 101 165 / 60%);
+  border-radius: 50%;
+  background: rgb(23 101 165 / 12%);
+  transform: translate(-50%, -50%);
 }
 #fullscreen[aria-pressed='false'] .icon-minimize,
 #fullscreen[aria-pressed='true'] .icon-maximize,
@@ -1437,32 +1469,30 @@ dialog.settings::backdrop {
 #satellite-license {
   margin: 0 4px;
 }
-.planner .leaflet-control-zoom {
-  border: 0;
+.map-zoom {
+  display: grid;
   border-radius: 10px;
   box-shadow: var(--shadow-control);
 }
-.leaflet-control-zoom a {
-  width: var(--control) !important;
-  height: var(--control) !important;
-  line-height: 44px !important;
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
+.map-zoom button {
+  width: var(--control);
+  height: var(--control);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
 }
-.leaflet-control-zoom a:first-child {
-  border-radius: 10px 10px 0 0 !important;
+.map-zoom button:first-child {
+  border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
 }
-.leaflet-control-zoom a:last-child {
-  border-radius: 0 0 10px 10px !important;
-}
-[data-map-layer='satellite'] .route-line {
-  stroke: #b61f64;
-}
-[data-map-layer='satellite'] .route-casing {
-  stroke: #fff;
-}
-[data-map-layer='topographic'] .route-line {
-  stroke: #174cbd;
+.map-zoom button:last-child {
+  border-radius: 0 0 10px 10px;
 }
 [data-map-layer='satellite'] .route-marker span {
   background: #164e8a;
@@ -1713,7 +1743,7 @@ dialog.settings::backdrop {
     font-size: 13px;
   }
   /* Phones zoom with pinch and double tap; the column keeps room for map tools. */
-  .planner .leaflet-control-zoom {
+  .planner .map-zoom {
     display: none;
   }
   #layers-menu {
@@ -1723,11 +1753,11 @@ dialog.settings::backdrop {
   .map-fullscreen #layers-menu {
     max-height: calc(100dvh - 90px);
   }
-  .planner .leaflet-bottom {
-    bottom: var(--sheet-height, var(--sheet-half));
+  .planner .map-bottom-left {
+    bottom: calc(var(--sheet-height, var(--sheet-half)) + 10px);
   }
-  .planner.map-fullscreen .leaflet-bottom {
-    bottom: env(safe-area-inset-bottom, 0px);
+  .planner.map-fullscreen .map-bottom-left {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
   .planner .map-credits {
     bottom: calc(var(--sheet-height, var(--sheet-half)) + 10px);
@@ -1866,6 +1896,51 @@ dialog.settings::backdrop {
   background: none;
   border: 0;
 }
+/* A route point's name while the pointer is on it or it has focus. */
+.marker-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  display: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-control);
+  color: var(--color-text);
+  font-size: 13px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.route-marker:hover .marker-tooltip,
+.route-marker:focus-visible .marker-tooltip {
+  display: block;
+}
+/* A popup above a map point (elevation here). */
+.map-popup {
+  position: absolute;
+  left: 0;
+  bottom: 10px;
+  max-width: 260px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 3px 14px rgb(0 0 0 / 40%);
+  color: var(--color-text);
+  transform: translateX(-50%);
+  width: max-content;
+}
+.map-popup-tip {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  background: var(--color-surface);
+  transform: rotate(45deg);
+  box-shadow: 3px 3px 6px rgb(0 0 0 / 20%);
+  z-index: -1;
+}
 .route-marker span,
 .placement-pin span {
   display: flex;
@@ -1891,7 +1966,7 @@ dialog.settings::backdrop {
 .placement-pin span {
   background: #164e8a;
 }
-.leaflet-container {
+#map {
   font-family: inherit;
   /* A long press on the map opens the point menu, not the browser's
      copy/selection or image callout (as OpenLayers and MapLibre do). */
@@ -1899,12 +1974,8 @@ dialog.settings::backdrop {
   -webkit-user-select: none;
   user-select: none;
 }
-/* iOS ignores -webkit-touch-callout in some versions: keep the finger off
-   the tile images (Leaflet listens on the map container), and switch off
-   selection on the whole page only while a finger is on the map. */
-.leaflet-container .leaflet-tile {
-  pointer-events: none;
-}
+/* iOS ignores -webkit-touch-callout in some versions: switch off selection
+   on the whole page only while a finger is on the map. */
 html.map-touching,
 html.map-touching body,
 html.navigating,
@@ -2061,10 +2132,10 @@ input[type='range'].range-input:disabled {
   max-width: 100%;
 }
 /* Map layers › Weather on the map: off hides the icons, not the cards. */
-.hide-weather .leaflet-weather-pane {
+.hide-weather .weather-marker {
   display: none;
 }
-.leaflet-marker-icon.weather-marker {
+.maplibregl-marker.weather-marker {
   color: #526b82;
   pointer-events: none;
 }
@@ -2152,7 +2223,7 @@ input[type='range'].range-input:disabled {
   border-color: #d49a9d;
 }
 /* Clustered: another marker stands for this stretch at the current zoom (#119). */
-.leaflet-marker-icon.weather-marker-clustered {
+.maplibregl-marker.weather-marker-clustered {
   display: none;
 }
 /* "+N" on the symbol's top corner away from the route point, inside the
@@ -2451,11 +2522,6 @@ input[type='range'].range-input:disabled {
 .route-coloring-steep-up {
   --route-coloring: #b8261c;
 }
-.leaflet-pane path.route-coloring {
-  stroke: var(--route-coloring);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
 .coloring-group {
   border-top: 1px solid var(--border);
   margin-top: 6px;
@@ -2496,6 +2562,12 @@ input[type='range'].range-input:disabled {
   color: var(--ink);
   font-size: 12px;
   box-shadow: 0 1px 4px #0003;
+}
+/* The narrowest phones keep three items on one line (Day, Twilight, Dark). */
+@media (max-width: 359px) {
+  .route-legend {
+    column-gap: 8px;
+  }
 }
 /* Item lists only: the compact scale lays out its own children. */
 .route-legend:not(.route-legend-scale) > span {
@@ -2575,24 +2647,6 @@ input[type='range'].range-input:disabled {
   margin-top: 6px;
   padding-top: 6px;
 }
-.route-arrow {
-  background: transparent;
-  border: 0;
-}
-.route-arrow > span {
-  display: grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-}
-.route-arrow .button-icon {
-  width: 14px;
-  height: 14px;
-  color: #fff;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 1px #0b2f27) drop-shadow(0 0 1px #0b2f27);
-}
-
 /* Elevation profile (elevation-ui.ts). */
 .elevation-frame {
   position: relative;
@@ -2697,18 +2751,11 @@ input[type='range'].range-input:disabled {
   height: 16px;
   color: #74420b;
 }
-.leaflet-pane .climb-line {
-  stroke: #be812b;
-  stroke-width: 7;
-  stroke-opacity: 0.85;
-  stroke-linecap: round;
-  fill: none;
-}
-.leaflet-pane .climb-start {
-  fill: #fff;
-  fill-opacity: 1;
-  stroke: #74420b;
-  stroke-width: 3;
+.climb-start {
+  box-sizing: border-box;
+  border: 3px solid #74420b;
+  border-radius: 50%;
+  background: #fff;
 }
 .climb-summit {
   display: grid;
@@ -2776,7 +2823,7 @@ input[type='range'].range-input:disabled {
   --extreme: #0b5ea8;
 }
 /* Elevation of one map point, asked from the point menu. */
-.elevation-point-popup .leaflet-popup-content {
+.elevation-point-popup .map-popup-content {
   margin: 8px 10px 10px 12px;
   font-size: 14px;
   line-height: 1.4;
@@ -2807,11 +2854,11 @@ input[type='range'].range-input:disabled {
 #elevation-status:empty {
   display: none;
 }
-.leaflet-pane .elevation-cursor {
-  fill: #0b72c6;
-  fill-opacity: 1;
-  stroke: #fff;
-  stroke-width: 3;
+.elevation-cursor {
+  box-sizing: border-box;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #0b72c6;
 }
 
 /* Adjustments to the feature rules above for the current layout. */
@@ -2891,14 +2938,6 @@ input[type='range'].range-input:disabled {
 }
 .surface-section .climb-grid {
   grid-template-columns: 12px minmax(0, 1fr);
-}
-/* A selected stretch looks like a selected climb. */
-.leaflet-pane .surface-line {
-  stroke: #be812b;
-  stroke-width: 7;
-  stroke-opacity: 0.85;
-  stroke-linecap: round;
-  fill: none;
 }
 
 /* Guided navigation (#31): start notice and the full-screen navigation view. */

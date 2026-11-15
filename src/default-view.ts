@@ -4,26 +4,27 @@ export interface View {
   center: Coord;
   zoom: number;
 }
-const view = (lat: number, lon: number, zoom = 6): View => ({
+/** Zoom levels are MapLibre's (512 px tiles). */
+const view = (lat: number, lon: number, zoom = 5): View => ({
   center: [lat, lon],
   zoom,
 });
 // Regional centers, intentionally broad; extend with IANA timezone identifiers.
 const zones: Record<string, View> = {
-  'America/Sao_Paulo': view(-23, -46, 7),
+  'America/Sao_Paulo': view(-23, -46, 6),
   'America/Fortaleza': view(-5, -39),
   'America/Manaus': view(-3, -60),
   'America/Recife': view(-8, -35),
-  'America/New_York': view(40.7, -74, 7),
-  'America/Chicago': view(41.9, -87.6, 7),
-  'America/Denver': view(39.7, -105, 7),
-  'America/Los_Angeles': view(34, -118, 7),
-  'America/Toronto': view(43.7, -79.4, 7),
-  'America/Vancouver': view(49.3, -123, 7),
-  'America/Mexico_City': view(19.4, -99.1, 7),
-  'America/Argentina/Buenos_Aires': view(-34.6, -58.4, 7),
-  'America/Santiago': view(-33.4, -70.7, 7),
-  'America/Bogota': view(4.7, -74.1, 7),
+  'America/New_York': view(40.7, -74, 6),
+  'America/Chicago': view(41.9, -87.6, 6),
+  'America/Denver': view(39.7, -105, 6),
+  'America/Los_Angeles': view(34, -118, 6),
+  'America/Toronto': view(43.7, -79.4, 6),
+  'America/Vancouver': view(49.3, -123, 6),
+  'America/Mexico_City': view(19.4, -99.1, 6),
+  'America/Argentina/Buenos_Aires': view(-34.6, -58.4, 6),
+  'America/Santiago': view(-33.4, -70.7, 6),
+  'America/Bogota': view(4.7, -74.1, 6),
   'Europe/Lisbon': view(39.5, -8),
   'Europe/London': view(53, -2),
   'Europe/Paris': view(47, 2),
@@ -31,28 +32,28 @@ const zones: Record<string, View> = {
   'Europe/Madrid': view(40, -4),
   'Europe/Rome': view(43, 12),
   'Europe/Warsaw': view(52, 19),
-  'Europe/Moscow': view(55.8, 37.6, 7),
+  'Europe/Moscow': view(55.8, 37.6, 6),
   'Europe/Istanbul': view(39, 35),
-  'Asia/Kolkata': view(22, 79, 5),
-  'Asia/Calcutta': view(22, 79, 5),
-  'Asia/Shanghai': view(35, 105, 5),
+  'Asia/Kolkata': view(22, 79, 4),
+  'Asia/Calcutta': view(22, 79, 4),
+  'Asia/Shanghai': view(35, 105, 4),
   'Asia/Tokyo': view(36, 138),
   'Asia/Seoul': view(36, 128),
-  'Asia/Jakarta': view(-6.2, 106.8, 7),
-  'Asia/Singapore': view(1.35, 103.8, 10),
-  'Asia/Dubai': view(24, 54, 7),
+  'Asia/Jakarta': view(-6.2, 106.8, 6),
+  'Asia/Singapore': view(1.35, 103.8, 9),
+  'Asia/Dubai': view(24, 54, 6),
   'Africa/Johannesburg': view(-29, 25),
   'Africa/Cairo': view(27, 30),
   'Africa/Lagos': view(9, 8),
-  'Australia/Sydney': view(-33.9, 151.2, 7),
-  'Australia/Perth': view(-31.9, 115.9, 7),
+  'Australia/Sydney': view(-33.9, 151.2, 6),
+  'Australia/Perth': view(-31.9, 115.9, 6),
   'Pacific/Auckland': view(-41, 174),
 };
 const countries: Record<string, View> = {
   BR: zones['America/Sao_Paulo'],
   PT: zones['Europe/Lisbon'],
-  US: view(39, -98, 4),
-  CA: view(56, -106, 4),
+  US: view(39, -98, 3),
+  CA: view(56, -106, 3),
   GB: zones['Europe/London'],
   FR: zones['Europe/Paris'],
   DE: zones['Europe/Berlin'],
@@ -61,7 +62,7 @@ const countries: Record<string, View> = {
   IN: zones['Asia/Kolkata'],
   CN: zones['Asia/Shanghai'],
   JP: zones['Asia/Tokyo'],
-  AU: view(-25, 134, 4),
+  AU: view(-25, 134, 3),
   MX: zones['America/Mexico_City'],
   AR: zones['America/Argentina/Buenos_Aires'],
 };
@@ -88,7 +89,7 @@ export function defaultView(
       countries[country?.toUpperCase() ?? languages[parts[0].toLowerCase()]];
     if (match) return match;
   }
-  return view(20, 0, 2);
+  return view(20, 0, 1);
 }
 
 export async function initialView(options: {

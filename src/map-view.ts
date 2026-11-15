@@ -1,13 +1,14 @@
-import L from 'leaflet';
+import type { PlannerMap } from './planner-map';
 import { t } from './i18n';
 import { defaultView, initialView } from './default-view';
 import { authorizedView } from './location';
 import { setupUserLocation } from './user-location';
+import { compactLayout } from './panel';
 import { approximateRegion, defaultRegionUrl, regionUrl } from './services';
 import { byId as element } from './dom';
 
 export function setupMapView(
-  map: L.Map,
+  map: PlannerMap,
   route: {
     hasRoute: () => boolean;
   },
@@ -18,7 +19,10 @@ export function setupMapView(
   };
   // Input and map gestures supersede startup work, including address edits without coordinates.
   document.addEventListener('input', interact, { once: true });
-  map.on('dragstart zoomstart click', interact);
+  for (const type of ['dragstart', 'zoomstart', 'click'])
+    map.on(type, (event: { originalEvent?: Event }) => {
+      if (event.originalEvent) interact();
+    });
   let detectRegion = true;
   let ipRegionUrl = defaultRegionUrl;
   try {
@@ -63,7 +67,7 @@ export function setupMapView(
       'aria-pressed',
       String(document.body.classList.contains('map-fullscreen')),
     );
-    requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    requestAnimationFrame(() => map.resize());
   };
   layout();
   document.addEventListener('fullscreenchange', () => {
@@ -106,7 +110,13 @@ export function setupMapView(
         navigator.languages,
       ),
   }).then((view) => {
-    if (view && !interacted && !route.hasRoute())
-      map.setView(view.center, view.zoom, { animate: false });
+    if (!view || interacted || route.hasRoute()) return;
+    // On phones the open sheet covers the lower map: the place shows in the
+    // part above it.
+    const cover =
+      compactLayout() && !element('route-panel').hidden
+        ? element('sheet').getBoundingClientRect().height
+        : 0;
+    map.setView(view.center, view.zoom, cover);
   });
 }

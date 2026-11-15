@@ -1,4 +1,10 @@
-import { holdMap, mockBasemap } from './map-helpers';
+import {
+  holdMap,
+  mapCanvas,
+  mapReady,
+  mockBasemap,
+  overlayFeatures,
+} from './map-helpers';
 import { defaults, encodeState, encodeStateV1 } from '../src/core';
 import { readFile } from 'node:fs/promises';
 import { Fit, le, name, recordFields, semi } from './fit-fixture';
@@ -44,6 +50,7 @@ async function setup(page: Page) {
   });
   await page.goto(base);
   await page.locator('#language').selectOption('en');
+  await mapReady(page);
 }
 async function fillPair(page: Page) {
   await page.locator('#location-0').fill(start);
@@ -123,7 +130,7 @@ for (const mobile of [false, true]) {
       await setup(page);
       await fillPair(page);
       const requestsBefore = routeRequests;
-      await expect(page.locator('.leaflet-marker-draggable')).toHaveCount(2);
+      await expect(page.locator('.map-marker-draggable')).toHaveCount(2);
 
       await page.locator('#lock').click();
       await expect(page.locator('#lock')).toHaveAttribute(
@@ -145,7 +152,7 @@ for (const mobile of [false, true]) {
       ).toBeDisabled();
       await expect(page.locator('#import')).toBeDisabled();
       await expect(page.locator('#apply-json')).toBeDisabled();
-      await expect(page.locator('.leaflet-marker-draggable')).toHaveCount(0);
+      await expect(page.locator('.map-marker-draggable')).toHaveCount(0);
 
       // The point menu keeps only the elevation query, which is not an edit.
       if (mobile) await holdMap(page);
@@ -171,8 +178,8 @@ for (const mobile of [false, true]) {
       await expect(page.locator('#location-1')).toHaveValue(end);
 
       // Viewing and export stay available.
-      if (mobile) await page.locator('#map').press('+');
-      else await page.locator('.leaflet-control-zoom-in').click();
+      if (mobile) await mapCanvas(page).press('+');
+      else await page.locator('.map-zoom-in').click();
       await page.locator('#fit').click();
       const download = page.waitForEvent('download');
       await page.locator('#download').click();
@@ -189,7 +196,7 @@ for (const mobile of [false, true]) {
         'readOnly',
         false,
       );
-      await expect(page.locator('.leaflet-marker-draggable')).toHaveCount(2);
+      await expect(page.locator('.map-marker-draggable')).toHaveCount(2);
       // Lock toggles are not undo steps: undo still reverts the last edit.
       await page.locator('#undo').click();
       await expect(page.locator('#location-1')).toHaveValue('');
@@ -208,12 +215,16 @@ test('route marks: arrows by default, parallel lines on a round trip, persisted 
   await fillPair(page);
   // A typed route is not framed on its own; arrows are drawn in view.
   await page.locator('#fit').click();
-  await expect(page.locator('.route-arrow').first()).toBeAttached();
-  await expect(page.locator('path.route-line-pass')).toHaveCount(0);
+  const arrows = async () => (await overlayFeatures(page, 'rg-marks')).length;
+  const passes = async () =>
+    (await overlayFeatures(page, 'rg-route')).filter((f) => f.repeated).length;
+  await expect.poll(arrows).toBeGreaterThan(0);
+  expect(await passes()).toBe(0);
   // Round trip: the mocked router returns the same straight road back.
   await page.locator('#roundtrip').click();
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await expect(page.locator('path.route-line-pass')).toHaveCount(2);
+  // The road out and the road back: one offset line each.
+  await expect.poll(passes).toBe(2);
   const before = routes;
   await page.locator('#layers-toggle').click();
   await expect(page.locator('#marks-heading')).toHaveText('Route marks');
@@ -221,14 +232,15 @@ test('route marks: arrows by default, parallel lines on a round trip, persisted 
   // The halfway point was removed: no switch for it.
   await expect(page.locator('#marks-halfway')).toHaveCount(0);
   await page.locator('#marks-arrows').uncheck();
-  await expect(page.locator('.route-arrow')).toHaveCount(0);
+  await expect.poll(arrows).toBe(0);
   await page.keyboard.press('Escape');
   // Device preferences: kept across reloads, never in the link.
   expect(new URL(page.url()).hash).not.toMatch(/arrows/);
   expect(routes).toBe(before);
   await page.reload();
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await expect(page.locator('.route-arrow')).toHaveCount(0);
+  await mapReady(page);
+  expect(await arrows()).toBe(0);
   await page.locator('#language').selectOption('pt');
   await page.locator('#layers-toggle').click();
   await expect(page.locator('#marks-heading')).toHaveText('Marcas da rota');
@@ -236,7 +248,7 @@ test('route marks: arrows by default, parallel lines on a round trip, persisted 
     'Setas de direção',
   );
   await page.locator('#marks-arrows').check();
-  await expect(page.locator('.route-arrow').first()).toBeAttached();
+  await expect.poll(arrows).toBeGreaterThan(0);
 });
 test('address searches belong to their own point and do not fire while typing', async ({
   page,
@@ -394,11 +406,11 @@ test('the itinerary shows turn directions in both languages', async ({
   await expect(items.nth(2).locator('button')).toHaveCount(0);
   // Choosing an instruction centers the map on it, at street zoom.
   await items.nth(1).locator('button').click();
-  await expect(page.locator('path.maneuver-marker')).toHaveCount(1);
+  await expect(page.locator('.maneuver-marker')).toHaveCount(1);
   const view = await page.evaluate(() => {
     const box = document.querySelector('#map')!.getBoundingClientRect();
     const marker = document
-      .querySelector('path.maneuver-marker')!
+      .querySelector('.maneuver-marker')!
       .getBoundingClientRect();
     return {
       dx: Math.abs(marker.x + marker.width / 2 - (box.x + box.width / 2)),
@@ -765,8 +777,8 @@ test('editing points keeps the map view; only loads and Fit route frame the rout
     const box = (await marker.boundingBox())!;
     return [Math.round(box.x), Math.round(box.y)];
   };
-  await page.locator('.leaflet-control-zoom-in').click();
-  await page.locator('.leaflet-control-zoom-in').click();
+  await page.locator('.map-zoom-in').click();
+  await page.locator('.map-zoom-in').click();
   await expect
     .poll(view)
     .not.toEqual([Math.round(framed.x), Math.round(framed.y)]);

@@ -6,8 +6,7 @@
 // - Crosshair: tapping a marker enters an adjust mode with a fixed marker at
 //   the map center; the map pans under it until Confirm.
 // Both only change how a point is moved; the point is set as before.
-import L from 'leaflet';
-import type { Map as VectorMap } from 'maplibre-gl';
+import { isolate, type PlannerMap } from './planner-map';
 import type { Coord } from './core';
 
 export type PlacementMode = 'loupe' | 'crosshair';
@@ -55,11 +54,7 @@ export function loupeCenter(
 }
 
 /** The magnifier shown while a marker is dragged by touch. */
-export function createLoupe(
-  map: L.Map,
-  vectorMap: () => VectorMap | null,
-  route: () => Coord[][],
-) {
+export function createLoupe(map: PlannerMap) {
   const ratio = Math.min(3, window.devicePixelRatio || 1);
   const el = document.createElement('div');
   el.className = 'placement-loupe';
@@ -68,9 +63,9 @@ export function createLoupe(
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = Math.round(LOUPE.size * ratio);
   el.append(canvas);
-  map.getContainer().append(el);
+  map.container.append(el);
   const ctx = canvas.getContext('2d');
-  let at: L.LatLng | null = null;
+  let at: Coord | null = null;
   let pending = false;
   let frame = 0;
 
@@ -92,16 +87,16 @@ export function createLoupe(
   };
   const draw = () => {
     pending = false;
-    if (!at || !ctx) return;
-    const p = map.latLngToContainerPoint(at);
+    const p = at && map.project(at);
+    if (!p || !ctx) return;
     const w = canvas.width;
     ctx.save();
     ctx.fillStyle = '#e8ebe6';
     ctx.fillRect(0, 0, w, w);
-    const gl = vectorMap()?.getCanvas();
+    const gl = map.gl()?.getCanvas();
     if (gl) {
       const rect = gl.getBoundingClientRect();
-      const box = map.getContainer().getBoundingClientRect();
+      const box = map.container.getBoundingClientRect();
       if (rect.width) {
         const scale = gl.width / rect.width;
         const sx = (box.left + p.x - rect.left) * scale;
@@ -114,24 +109,6 @@ export function createLoupe(
         }
       }
     }
-    // The route line, which Leaflet draws above the vector map.
-    const k = LOUPE.zoom * ratio;
-    ctx.lineJoin = ctx.lineCap = 'round';
-    ctx.strokeStyle = '#12796e';
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = 5 * ratio;
-    for (const segment of route()) {
-      ctx.beginPath();
-      segment.forEach((c, i) => {
-        const q = map.latLngToContainerPoint(c);
-        const x = (q.x - p.x) * k + w / 2;
-        const y = (q.y - p.y) * k + w / 2;
-        if (i) ctx.lineTo(x, y);
-        else ctx.moveTo(x, y);
-      });
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
     // The exact spot: a crosshair with a white halo and a center dot.
     cross(w / 2, '#fff', 5);
     cross(w / 2, '#126447', 2.5);
@@ -144,7 +121,7 @@ export function createLoupe(
   const request = () => {
     if (pending) return;
     pending = true;
-    const gl = vectorMap();
+    const gl = map.gl();
     if (gl) {
       // The WebGL buffer is readable only in the frame that drew it.
       gl.once('render', draw);
@@ -152,9 +129,11 @@ export function createLoupe(
     } else frame = requestAnimationFrame(draw);
   };
   return {
-    move(latlng: L.LatLng) {
-      at = latlng;
-      const c = loupeCenter(map.latLngToContainerPoint(latlng), map.getSize());
+    move(coord: Coord) {
+      at = coord;
+      const tip = map.project(coord);
+      if (!tip) return;
+      const c = loupeCenter(tip, map.size());
       el.style.transform = `translate(${c.x - LOUPE.size / 2}px, ${c.y - LOUPE.size / 2}px)`;
       el.hidden = false;
       request();
@@ -169,7 +148,7 @@ export function createLoupe(
 }
 
 /** Adjust mode: a fixed marker at the map center over a panning map. */
-export function createCrosshair(map: L.Map) {
+export function createCrosshair(map: PlannerMap) {
   const pin = document.createElement('div');
   pin.className = 'placement-pin';
   pin.hidden = true;
@@ -197,9 +176,8 @@ export function createCrosshair(map: L.Map) {
   const buttons = document.createElement('div');
   buttons.append(cancel, confirm);
   bar.append(text, buttons);
-  L.DomEvent.disableClickPropagation(bar);
-  L.DomEvent.disableScrollPropagation(bar);
-  map.getContainer().append(pin, bar);
+  isolate(bar);
+  map.container.append(pin, bar);
   let done: ((coord: Coord | null) => void) | null = null;
   const finish = (coord: Coord | null) => {
     if (!done) return;
@@ -218,8 +196,8 @@ export function createCrosshair(map: L.Map) {
   };
   cancel.onclick = () => finish(null);
   confirm.onclick = () => {
-    const c = map.getCenter();
-    finish([+c.lat.toFixed(6), +c.lng.toFixed(6)]);
+    const [lat, lon] = map.getCenter();
+    finish([+lat.toFixed(6), +lon.toFixed(6)]);
   };
   return {
     get active() {
@@ -232,7 +210,7 @@ export function createCrosshair(map: L.Map) {
       number.textContent = String(label);
       text.textContent = `Move the map to place point ${label}`;
       map.stop();
-      map.setView(coord, Math.max(map.getZoom(), 16), { animate: false });
+      map.setView(coord, Math.max(map.getZoom(), 15));
       pin.hidden = bar.hidden = false;
       document.body.classList.add('placing-point');
       document.addEventListener('keydown', onKey, true);

@@ -1,4 +1,4 @@
-import L from 'leaflet';
+import { toCoord, type PlannerMap, type Pixel } from './planner-map';
 import { LongPress } from './long-press';
 import { t } from './i18n';
 import type { Coord } from './core';
@@ -9,8 +9,22 @@ import { compactLayout } from './panel';
  * Route points are set by typing, by a desktop click on the map (the selected
  * point) or by moving a marker; the menu no longer sets them.
  */
+const TAP_TIME = 250,
+  DOUBLE_TAP_TIME = 300,
+  DOUBLE_TAP_DISTANCE = 30;
+
+interface MapPointerEvent {
+  point: Pixel;
+  lngLat: { lat: number; lng: number };
+  originalEvent: Event;
+}
+const onMarker = (event: MapPointerEvent) =>
+  !!(event.originalEvent.target as Element | null)?.closest?.(
+    '.maplibregl-marker',
+  );
+
 export function setupPointMenu(
-  map: L.Map,
+  map: PlannerMap,
   options: {
     click: (coord: Coord) => void;
     /** False while route editing is locked; it reports why to the user. */
@@ -27,7 +41,7 @@ export function setupPointMenu(
     elevation,
     dismiss = () => false,
   } = options;
-  const container = map.getContainer();
+  const container = map.container;
   const menu = document.createElement('div');
   menu.id = 'point-menu';
   menu.className = 'point-menu';
@@ -39,6 +53,8 @@ export function setupPointMenu(
     pointerId: number | null = null,
     openingEvent: PointerEvent | null = null;
   let suppressClick = false;
+  let down: { x: number; y: number; time: number } | null = null,
+    lastTap: { x: number; y: number; time: number } | null = null;
   // A touch release may retarget its synthetic click to the menu just opened
   // under the finger. Consume that click, but allow the next deliberate tap.
   container.parentElement!.addEventListener(
@@ -69,7 +85,7 @@ export function setupPointMenu(
     button.setAttribute('role', 'menuitem');
     button.onclick = () => {
       close();
-      container.focus();
+      map.focus();
       action();
     };
     menu.append(button);
@@ -82,8 +98,8 @@ export function setupPointMenu(
     );
   /** The menu has something to offer: the elevation query. */
   const available = () => !!elevation;
-  const open = (point: L.Point, position: L.LatLng, focus: boolean) => {
-    coord = [position.lat, position.lng];
+  const open = (point: Pixel, position: Coord, focus: boolean) => {
+    coord = position;
     menu.hidden = false;
     const bounds = container.getBoundingClientRect();
     // On phones the bottom sheet covers the lower part of the map.
@@ -98,8 +114,13 @@ export function setupPointMenu(
   const press = new LongPress(() => {
     if (!openingEvent || !available()) return;
     suppressClick = true;
-    const point = map.mouseEventToContainerPoint(openingEvent);
-    open(point, map.containerPointToLatLng(point), false);
+    const box = container.getBoundingClientRect();
+    const point = {
+      x: openingEvent.clientX - box.left,
+      y: openingEvent.clientY - box.top,
+    };
+    const at = map.unproject(point);
+    if (at) open(point, at, false);
     try {
       navigator.vibrate?.(15);
     } catch {
@@ -122,14 +143,25 @@ export function setupPointMenu(
     if (
       !matchMedia('(pointer: coarse)').matches ||
       event.pointerType === 'mouse' ||
-      (event.target as Element).closest('.leaflet-marker-icon,.leaflet-control')
+      (event.target as Element).closest('.maplibregl-marker,.map-control')
     )
       return;
     if (pointerId !== null) {
       press.cancel();
       return;
     }
+    // A tap, then touch and hold: MapLibre's one-finger zoom, not a choice.
+    if (
+      lastTap &&
+      event.timeStamp - lastTap.time < DOUBLE_TAP_TIME &&
+      Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) <
+        DOUBLE_TAP_DISTANCE
+    ) {
+      lastTap = null;
+      return;
+    }
     pointerId = event.pointerId;
+    down = { x: event.clientX, y: event.clientY, time: event.timeStamp };
     openingEvent = event;
     suppressClick = false;
     press.start(event.clientX, event.clientY);
@@ -142,18 +174,30 @@ export function setupPointMenu(
     pointerId = null;
     touching(false);
   };
-  container.addEventListener('pointerup', end);
+  container.addEventListener('pointerup', (event) => {
+    // A short touch that stayed in place may start a double tap.
+    lastTap =
+      down &&
+      event.timeStamp - down.time < TAP_TIME &&
+      Math.hypot(event.clientX - down.x, event.clientY - down.y) <
+        DOUBLE_TAP_DISTANCE
+        ? { x: event.clientX, y: event.clientY, time: event.timeStamp }
+        : null;
+    down = null;
+    end();
+  });
   container.addEventListener('pointercancel', end);
   // A finger lifted outside the map must not leave page selection off.
   window.addEventListener('pointerup', () => touching(false));
   window.addEventListener('pointercancel', () => touching(false));
-  // Double tap and hold zooms (src/quick-zoom.ts); that hold is not a point choice.
-  map.on('quickzoomstart', () => press.cancel());
+  // A double tap and hold zooms; that hold is not a point choice.
   map.on('movestart', () => {
     press.cancel();
     close();
   });
-  map.on('click', (event: L.LeafletMouseEvent) => {
+  map.on('click', (event: MapPointerEvent) => {
+    // Clicks on markers belong to them, not to the map.
+    if (onMarker(event)) return;
     if (suppressClick) {
       suppressClick = false;
       return;
@@ -162,12 +206,12 @@ export function setupPointMenu(
     // A tap that closes the elevation popup only closes it.
     if (dismiss()) return;
     if (!matchMedia('(pointer: coarse)').matches && editable())
-      click([event.latlng.lat, event.latlng.lng]);
+      click(toCoord(event.lngLat));
   });
-  map.on('contextmenu', (event: L.LeafletMouseEvent) => {
-    if (matchMedia('(pointer: coarse)').matches) return;
+  map.on('contextmenu', (event: MapPointerEvent) => {
+    if (matchMedia('(pointer: coarse)').matches || onMarker(event)) return;
     if (!available()) return;
-    open(event.containerPoint, event.latlng, true);
+    open(event.point, toCoord(event.lngLat), true);
   });
   container.addEventListener('keydown', (event) => {
     if (
@@ -175,7 +219,9 @@ export function setupPointMenu(
       (event.shiftKey && event.key === 'F10')
     ) {
       event.preventDefault();
-      if (available()) open(map.getSize().divideBy(2), map.getCenter(), true);
+      const size = map.size();
+      if (available())
+        open({ x: size.x / 2, y: size.y / 2 }, map.getCenter(), true);
     }
   });
   document.addEventListener('pointerdown', (event) => {
@@ -185,7 +231,7 @@ export function setupPointMenu(
     if (event.key === 'Escape' && !menu.hidden) {
       event.preventDefault();
       close();
-      container.focus();
+      map.focus();
     }
   });
   menu.addEventListener('keydown', (event) => {

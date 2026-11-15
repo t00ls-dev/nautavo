@@ -82,7 +82,7 @@ for (const width of [320, 360, 390, 430]) {
       // Average speed belongs to the route summary card, with the departure.
       await expect(page.locator('#trip-options .speed-options')).toHaveCount(1);
       // Phones zoom with pinch and double tap, so the map tools column has room.
-      await expect(page.locator('.leaflet-control-zoom')).toBeHidden();
+      await expect(page.locator('.map-zoom')).toBeHidden();
       expect(lastBottom).toBeLessThanOrEqual(
         (await page.locator('#route-panel').boundingBox())!.y,
       );

@@ -9,7 +9,7 @@ it('uses a known timezone before language, then region and language fallbacks', 
 });
 it('has a world fallback with no network access', () => {
   const fetch = vi.spyOn(globalThis, 'fetch');
-  expect(defaultView('Etc/UTC', ['xx'])).toEqual({ center: [20, 0], zoom: 2 });
+  expect(defaultView('Etc/UTC', ['xx'])).toEqual({ center: [20, 0], zoom: 1 });
   expect(fetch).not.toHaveBeenCalled();
   fetch.mockRestore();
 });

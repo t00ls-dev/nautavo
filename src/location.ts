@@ -14,7 +14,7 @@ export function positionView(position: GeolocationPosition): View {
     throw new Error('Invalid position');
   return {
     center: [latitude, longitude],
-    zoom: accuracy < 100 ? 16 : accuracy < 1000 ? 14 : 11,
+    zoom: accuracy < 100 ? 15 : accuracy < 1000 ? 13 : 10,
   };
 }
 export function getPosition(): Promise<GeolocationPosition> {

@@ -47,7 +47,7 @@ for (const [width, height] of [
       const map = (await page.locator('#map').boundingBox())!;
       // Phones hide the zoom buttons; the credits sit below the map tools instead.
       const zoom = (await page
-        .locator(width < 760 ? '#undo' : '.leaflet-control-zoom-out')
+        .locator(width < 760 ? '#undo' : '.map-zoom-out')
         .boundingBox())!;
       expect(button.width).toBeGreaterThanOrEqual(44);
       expect(button.height).toBeGreaterThanOrEqual(44);
@@ -81,7 +81,7 @@ for (const [width, height] of [
         }),
       ).toHaveCount(1);
       await expect(
-        dialog.getByRole('link', { name: 'Leaflet', exact: true }),
+        dialog.getByRole('link', { name: 'MapLibre GL JS', exact: true }),
       ).toHaveCount(1);
       if (layer === 'satellite') {
         await expect(dialog).toContainText(
@@ -143,8 +143,8 @@ test('credit and help links preserve a route in the app; modal translates and fo
   context,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await context.route('https://leafletjs.com/**', (route) =>
-    route.fulfill({ body: 'Leaflet' }),
+  await context.route('https://maplibre.org/**', (route) =>
+    route.fulfill({ body: 'MapLibre' }),
   );
   await context.route('https://creativecommons.org/**', (route) =>
     route.fulfill({ body: 'License' }),
@@ -158,7 +158,7 @@ test('credit and help links preserve a route in the app; modal translates and fo
   await page.locator('#layers-toggle').click();
   await page.locator('[data-layer=satellite]').click();
   await toggle.click();
-  for (const name of ['Leaflet', 'CC BY-NC-SA 4.0']) {
+  for (const name of ['MapLibre GL JS', 'CC BY-NC-SA 4.0']) {
     const [popup] = await Promise.all([
       page.waitForEvent('popup'),
       dialog.getByRole('link', { name, exact: true }).click(),

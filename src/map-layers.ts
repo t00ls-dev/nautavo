@@ -1,5 +1,5 @@
-import L from 'leaflet';
-import type { Map as VectorMap, StyleSpecification } from 'maplibre-gl';
+import type { StyleSpecification } from 'maplibre-gl';
+import type { PlannerMap } from './planner-map';
 import { setupMapCredits } from './map-credits';
 import {
   NEUTRAL_STYLE,
@@ -31,12 +31,12 @@ const FIRST_LOAD_WAIT = 4000;
 const FIRST_LOAD_PIXEL_RATIO = 0.5;
 
 /**
- * The planner's base map: one MapLibre layer inside Leaflet drawing
- * OpenFreeMap's vector style, the same map as navigation, composed for the
- * selected layer. Without WebGL or the style, the route and markers still
- * draw over a neutral background with a notice.
+ * The planner's base map: the MapLibre map draws OpenFreeMap's vector style,
+ * the same map as navigation, composed for the selected layer. Without the
+ * style, the route and markers still draw over a neutral background with a
+ * notice; without WebGL there is no map, and a notice says the panel works.
  */
-export function setupMapLayers(map: L.Map) {
+export function setupMapLayers(map: PlannerMap) {
   const updateCredits = setupMapCredits(map);
   let active: BaseLayer = 'standard',
     vintage: SatelliteVintage = '2025',
@@ -54,8 +54,7 @@ export function setupMapLayers(map: L.Map) {
   } catch {
     /* Map selection is optional device state. */
   }
-  let glMap: VectorMap | null = null,
-    base: StyleSpecification | null = null,
+  let base: StyleSpecification | null = null,
     terrain: TerrainSources | null = null,
     terrainLoading: Promise<TerrainSources | null> | null = null,
     revision = 0;
@@ -98,8 +97,8 @@ export function setupMapLayers(map: L.Map) {
   const apply = async () => {
     const current = ++revision;
     if (active === 'topographic') await loadTerrain();
-    if (!glMap || current !== revision) return;
-    glMap.setStyle(currentStyle(), { diff: false });
+    if (!map.gl() || current !== revision) return;
+    map.setStyle(currentStyle());
   };
   const loadBase = async () => {
     base ??= await fetchStyle(STYLE_URL);
@@ -108,7 +107,7 @@ export function setupMapLayers(map: L.Map) {
   // A style that failed (offline, for instance) is asked once more when the
   // connection returns, as routing does; never in a loop.
   window.addEventListener('online', () => {
-    if (base || !glMap) return;
+    if (base || !map.gl()) return;
     void loadBase().then(() => (base ? apply() : undefined));
   });
   /**
@@ -117,7 +116,7 @@ export function setupMapLayers(map: L.Map) {
    * the GPU, each frame's cost grows with its pixels, and the first load draws
    * one frame per arriving tile.
    */
-  const sharpenWhenLoaded = (gl: VectorMap) => {
+  const sharpenWhenLoaded = (gl: NonNullable<ReturnType<PlannerMap['gl']>>) => {
     const sharpen = () => {
       clearTimeout(timer);
       // null (documented, missing from the type) follows devicePixelRatio
@@ -133,26 +132,14 @@ export function setupMapLayers(map: L.Map) {
       return;
     }
     try {
-      await Promise.all([
-        loadMapLibre(),
-        import('@maplibre/maplibre-gl-leaflet'),
-      ]);
+      const ml = await loadMapLibre();
       await loadBase();
       if (active === 'topographic') await loadTerrain();
       // Created with the final style, so the first load draws one style only.
-      const options: L.LeafletMaplibreGLOptions & { padding: number } = {
-        style: currentStyle(),
-        interactive: false,
-        fadeDuration: 0,
+      const gl = map.create(ml, currentStyle(), {
         pixelRatio: FIRST_LOAD_PIXEL_RATIO,
-        // No canvas margin past the screen (the wrapper's option, missing
-        // from its types): its 10% on each side draws 44% more pixels per frame.
-        padding: 0,
-        // MapLibre's default 'same-origin' credentials send nothing cross-origin.
-      };
-      const layer = L.maplibreGL(options).addTo(map);
-      glMap = layer.getMaplibreMap();
-      sharpenWhenLoaded(glMap);
+      });
+      sharpenWhenLoaded(gl);
       // A layer chosen while terrain was still loading.
       if (active === 'topographic' && !terrain) void apply();
     } catch {
@@ -264,5 +251,4 @@ export function setupMapLayers(map: L.Map) {
     requestAnimationFrame(() => setTimeout(() => void start()));
   if (document.readyState === 'complete') afterPaint();
   else window.addEventListener('load', afterPaint, { once: true });
-  return { vectorMap: () => glMap };
 }

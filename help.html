@@ -185,8 +185,9 @@
           switched off. For commercial use, choose the EOX 2016 edition (CC BY
           4.0) in Settings. Satellite imagery is a regional mosaic, not live or
           street-level imagery; zooming beyond its native level enlarges pixels.
-          A browser without WebGL, or without access to the map, still shows the
-          route on a plain background.
+          Without access to the map, the route still shows on a plain
+          background. A browser without WebGL cannot draw the map; the panel
+          still plans, calculates and exports the route.
         </p>
         <p>
           Only the active layer and enabled labels request tiles. Their
@@ -261,12 +262,15 @@
         </p>
         <p>
           The initial view prefers the URL route, then already authorized GPS,
-          approximate IP region, and browser timezone/language. To stop IP
-          requests, open Settings and disable Detect region by IP. The selected
-          provider receives your IP address. The location dot is never stored or
-          sent; GPS only leaves the device as a route point you chose or as the
-          current position of a navigation recalculation; tile requests reveal
-          the visible area.
+          approximate IP region, and browser timezone/language. Already
+          authorized means the browser reports location as allowed for this site
+          without asking; on iPhone, Safari does so only when the site is set to
+          Allow in its settings, otherwise the IP region is used and the app
+          never asks on its own. To stop IP requests, open Settings and disable
+          Detect region by IP. The selected provider receives your IP address.
+          The location dot is never stored or sent; GPS only leaves the device
+          as a route point you chose or as the current position of a navigation
+          recalculation; tile requests reveal the visible area.
         </p>
         <h2>Choose main roads</h2>
         <p>
@@ -798,15 +802,14 @@
         <p>
           <a href="https://github.com/t00ls-dev/route-gpx"
             >Code, full documentation and issues</a
-          >. MIT license. Leaflet uses BSD 2-Clause, MapLibre GL JS and
-          maplibre-contour BSD 3-Clause, MapLibre GL Leaflet ISC and fflate MIT;
-          see the
+          >. MIT license. MapLibre GL JS and maplibre-contour use BSD 3-Clause
+          and fflate MIT; see the
           <a href="./THIRD_PARTY_NOTICES.txt">complete third-party notice</a>.
           Map data ©
           <a href="https://www.openstreetmap.org/copyright"
             >OpenStreetMap contributors</a
-          >. Built with Leaflet, OSRM, Valhalla, Nominatim and Photon. IP region
-          by ipwho.is; the map by MapLibre GL JS and OpenFreeMap, ©
+          >. Built with MapLibre GL JS, OSRM, Valhalla, Nominatim and Photon. IP
+          region by ipwho.is; the map by MapLibre GL JS and OpenFreeMap, ©
           OpenMapTiles; relief from Terrain Tiles (Mapzen) and satellite imagery
           by EOX. Weather data by Open-Meteo (CC BY 4.0); elevation data from
           the Copernicus DEM GLO-90 via Open-Meteo. Compass headings are
@@ -906,8 +909,9 @@
           e podem ser desligados. Para uso comercial, escolha a edição EOX 2016
           (CC BY 4.0) em Configurações. O satélite é um mosaico regional, não
           uma imagem ao vivo nem em nível de rua; o zoom acima do nível nativo
-          amplia os pixels. Um navegador sem WebGL, ou sem acesso ao mapa, ainda
-          mostra a rota sobre um fundo neutro.
+          amplia os pixels. Sem acesso ao mapa, a rota ainda aparece sobre um
+          fundo neutro. Um navegador sem WebGL não consegue desenhar o mapa; o
+          painel continua planejando, calculando e exportando a rota.
         </p>
         <p>
           Só a camada ativa e os rótulos habilitados requisitam tiles. Seus
@@ -987,12 +991,16 @@
         </p>
         <p>
           A vista inicial prioriza a rota da URL, GPS já autorizado, região
-          aproximada por IP e fuso/idioma do navegador. Para impedir consultas
-          por IP, abra Configurações e desative Detectar região pelo IP. O
-          provedor escolhido recebe seu endereço IP. O ponto de localização
-          nunca é guardado nem enviado; o GPS só sai do aparelho como um ponto
-          da rota que você escolheu ou como a posição atual num recálculo da
-          navegação; as requisições de tiles revelam a área visível.
+          aproximada por IP e fuso/idioma do navegador. Já autorizado quer dizer
+          que o navegador informa a localização como permitida para este site
+          sem perguntar; no iPhone, o Safari só faz isso quando o site está como
+          Permitir nos ajustes, senão a região por IP é usada e o app nunca
+          pergunta sozinho. Para impedir consultas por IP, abra Configurações e
+          desative Detectar região pelo IP. O provedor escolhido recebe seu
+          endereço IP. O ponto de localização nunca é guardado nem enviado; o
+          GPS só sai do aparelho como um ponto da rota que você escolheu ou como
+          a posição atual num recálculo da navegação; as requisições de tiles
+          revelam a área visível.
         </p>
         <h2>Escolher vias principais</h2>
         <p>
@@ -1261,10 +1269,10 @@
           mapeado, o Valhalla supõe um pelo tipo de via: vias comuns, inclusive
           vicinais pequenas, contam como pavimentadas, e só estradas de fazenda
           ou florestais contam como sem asfalto. Assim, uma estrada de terra sem
-          pavimento mapeado aparece como Pavimentada, enquanto os trechos sem
+          pavimento mapeado aparece como Asfalto, enquanto os trechos sem
           asfalto são quase sempre mapeados; o app não consegue saber quais
           trechos foram supostos. Trechos que não casam com uma via, ou uma
-          parte que falha, aparecem como Desconhecido. Em trilhas com ruído, uma
+          parte que falha, aparecem como Sem dados. Em trilhas com ruído, uma
           via paralela pode ser escolhida. Confira antes de sair.
         </p>
         <h2 id="navigate-pt">Navegar</h2>
@@ -1547,15 +1555,14 @@
         <p>
           <a href="https://github.com/t00ls-dev/route-gpx"
             >Código, documentação e relatos de problemas</a
-          >. Licença MIT. Leaflet usa BSD de 2 cláusulas, MapLibre GL JS e
-          maplibre-contour BSD de 3 cláusulas, MapLibre GL Leaflet ISC e fflate
-          MIT; veja o
+          >. Licença MIT. MapLibre GL JS e maplibre-contour usam BSD de 3
+          cláusulas e fflate MIT; veja o
           <a href="./THIRD_PARTY_NOTICES.txt">aviso completo de terceiros</a>.
           Dados ©
           <a href="https://www.openstreetmap.org/copyright"
             >OpenStreetMap e colaboradores</a
-          >. Feito com Leaflet, OSRM, Valhalla, Nominatim e Photon. Região por
-          IP pelo ipwho.is; mapa por MapLibre GL JS e OpenFreeMap, ©
+          >. Feito com MapLibre GL JS, OSRM, Valhalla, Nominatim e Photon.
+          Região por IP pelo ipwho.is; mapa por MapLibre GL JS e OpenFreeMap, ©
           OpenMapTiles; relevo do Terrain Tiles (Mapzen) e satélite da EOX.
           Dados do tempo por Open-Meteo (CC BY 4.0); dados de elevação do
           Copernicus DEM GLO-90 via Open-Meteo. A bússola é corrigida para o

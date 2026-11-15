@@ -660,7 +660,7 @@ export function approximateRegion(
           Math.round(data.latitude * 10) / 10,
           Math.round(data.longitude * 10) / 10,
         ] as Coord,
-        zoom: 10,
+        zoom: 9,
       };
     } catch {
       return null;

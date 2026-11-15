@@ -1,6 +1,6 @@
 import { speedFromKmh } from './travel-time';
 import { byId as $ } from './dom';
-import L from 'leaflet';
+import { isolate, type MapMarker, type PlannerMap } from './planner-map';
 import { type Route, type State, serverUrl } from './core';
 import { t, weatherDescription } from './i18n';
 import { distanceLabel, precipitationLabel, temperatureLabel } from './units';
@@ -73,7 +73,7 @@ function restorePosition(element: HTMLElement, before: number) {
   (scroller ?? document.scrollingElement)?.scrollBy(0, delta);
 }
 interface Placed {
-  marker: L.Marker;
+  marker: MapMarker;
   coord: [number, number];
   /** Cluster description, read after the marker's name. */
   note: HTMLElement;
@@ -86,7 +86,7 @@ interface Placed {
 const UV_RISKS = new Set(['Very high UV', 'Extreme UV']);
 
 export function setupWeather(
-  map: L.Map,
+  map: PlannerMap,
   getState: () => State,
   getRoute: () => Route | null,
   syncState: () => void,
@@ -95,12 +95,16 @@ export function setupWeather(
 ) {
   const departure = $<HTMLInputElement>('departure'),
     retry = $<HTMLButtonElement>('weather-retry');
-  // Route editing pins stay above weather, including neighboring samples.
-  map.createPane('weather').style.zIndex = '590';
-  const markers = L.layerGroup().addTo(map);
   /** Markers on the map, for clustering those that would overlap (#119). */
   let placed: Placed[] = [];
+  const markers = {
+    clearLayers: () => placed.forEach((p) => p.marker.remove()),
+  };
   map.on('zoomend', () => layoutClusters());
+  map.on('rotateend', () => layoutClusters());
+  map.on('resize', () => layoutClusters());
+  // Markers placed before the map existed are clustered once it shows them.
+  map.ready(() => requestAnimationFrame(() => layoutClusters()));
   let endpoint = DEFAULT_WEATHER_URL;
   try {
     endpoint = serverUrl(localStorage.getItem('weather-server') ?? endpoint);
@@ -179,16 +183,16 @@ export function setupWeather(
    */
   function layoutClusters() {
     if (!placed.length) return;
+    if (!map.gl()) return;
     const items = placed.map((p) => {
-      const at = map.latLngToContainerPoint(p.coord);
+      const at = map.project(p.coord)!;
       return { ...p.item, box: markerBox(at.x, at.y, p.item.pass) };
     });
     clusterWeather(items).forEach((cluster, group) => {
       for (const i of cluster.members) {
         placed[i].cluster = group;
         const { marker, note, count } = placed[i];
-        const element = marker.getElement();
-        if (!element) continue;
+        const element = marker.element;
         const shown = i === cluster.shown;
         element.classList.toggle('weather-marker-clustered', !shown);
         const more = cluster.members.length - 1;
@@ -220,18 +224,16 @@ export function setupWeather(
   /** Moves a count to the other side of its symbol when route pins or other markers cover it. */
   function placeCounts() {
     const shown = placed.filter(
-      (p) =>
-        !p.marker.getElement()?.classList.contains('weather-marker-clustered'),
+      (p) => !p.marker.element.classList.contains('weather-marker-clustered'),
     );
     const parts = (p: Placed) =>
       [
-        ...(p.marker
-          .getElement()
-          ?.querySelectorAll('.weather-marker-symbol, .weather-marker-wind') ??
-          []),
+        ...p.marker.element.querySelectorAll(
+          '.weather-marker-symbol, .weather-marker-wind',
+        ),
       ].map((e) => e.getBoundingClientRect());
-    const pins = [...map.getContainer().querySelectorAll('.route-marker')].map(
-      (e) => e.getBoundingClientRect(),
+    const pins = [...map.container.querySelectorAll('.route-marker')].map((e) =>
+      e.getBoundingClientRect(),
     );
     const hits = (a: DOMRect, b: DOMRect) =>
       a.left < b.right &&
@@ -250,13 +252,14 @@ export function setupWeather(
     }
   }
   /** Zooms in until a clustered marker shows on its own. */
-  function revealMarker(marker: L.Marker) {
-    const element = marker.getElement();
+  function revealMarker(marker: MapMarker) {
+    const element = marker.element;
     // Stops when the zoom no longer grows (the map's or the layers' limit).
     for (let step = 0; step < 20; step++) {
-      if (!element?.classList.contains('weather-marker-clustered')) return;
+      if (!element.classList.contains('weather-marker-clustered')) return;
       const zoom = map.getZoom();
-      map.setView(marker.getLatLng(), zoom + 1, { animate: false });
+      map.setView(marker.getCoord(), zoom + 1);
+      layoutClusters();
       if (map.getZoom() <= zoom) return;
     }
   }
@@ -609,40 +612,39 @@ export function setupWeather(
       note.className = 'sr-only';
       note.id = `weather-cluster-${first}`;
       markerBody.append(markerIcon, windBadge, count, note);
-      const marker = L.marker(m.point.coord, {
-        pane: 'weather',
-        icon: L.divIcon({
-          // A return marker hangs to the left, beside the outbound one.
-          className:
-            pass === 'return'
-              ? 'weather-marker weather-marker-return'
-              : 'weather-marker',
-          html: markerBody,
-          iconSize: MARKER_SIZE,
-          iconAnchor: pass === 'return' ? RETURN_ANCHOR : OUTBOUND_ANCHOR,
-        }),
-        keyboard: true,
-      }).addTo(markers);
+      const marker = map.marker(m.point.coord, {
+        // A return marker hangs to the left, beside the outbound one.
+        className:
+          pass === 'return'
+            ? 'weather-marker weather-marker-return'
+            : 'weather-marker',
+        html: markerBody,
+        size: MARKER_SIZE,
+        anchor: pass === 'return' ? RETURN_ANCHOR : OUTBOUND_ANCHOR,
+        interactive: true,
+        // Route editing pins stay above weather.
+        z: 5,
+      });
       centerIcon(mapSymbol);
       const markerSpeed = speedLabel(hour.wind);
       const markerLabel = `${t('View weather')}: ${when} · ${km}${passText} · ${t(weather.text)} · ${t(strength.text)}${relation === strength.text ? '' : ` · ${t(relation)}`}${markerSpeed === null ? '' : ` · ${markerSpeed}`}${flow ? ` · ${t('Wind toward')} ${t(flow.compass)}` : ''}`;
-      marker.getElement()?.setAttribute('aria-label', markerLabel);
-      marker.getElement()?.setAttribute('aria-describedby', note.id);
+      marker.element.setAttribute('aria-label', markerLabel);
+      marker.element.setAttribute('aria-describedby', note.id);
       const members = group.map((i) => facts[i].point);
-      L.DomEvent.on(count, 'click', (event) => {
-        L.DomEvent.stop(event);
+      isolate(count);
+      count.addEventListener('click', (event) => {
+        event.preventDefault();
         // Zoom in on this cluster until its samples separate.
         const together = placed
           .filter((p) => p.cluster === placed[index].cluster)
           .map((p) => p.coord);
-        const bounds = L.latLngBounds(
-          together.length ? together : [m.point.coord],
-        );
-        const zoom = Math.min(
-          map.getMaxZoom(),
-          Math.max(map.getZoom() + 1, map.getBoundsZoom(bounds.pad(0.2))),
-        );
-        map.setView(bounds.getCenter(), zoom, { animate: false });
+        const coords = together.length ? together : [m.point.coord];
+        const before = map.getZoom();
+        map.fit(coords, {
+          padding: 0.2 * Math.min(...Object.values(map.size())),
+        });
+        map.setView(map.getCenter(), Math.max(before + 1, map.getZoom()));
+        layoutClusters();
       });
       const index = placed.length;
       placed.push({
@@ -672,21 +674,20 @@ export function setupWeather(
         )
           $('panel-toggle').click();
         map.stop();
-        map.setView(m.point.coord, Math.max(map.getZoom(), 12), {
-          animate: false,
-        });
+        map.setView(m.point.coord, Math.max(map.getZoom(), 11));
+        layoutClusters();
         revealMarker(marker);
-        marker.getElement()?.focus({ preventScroll: true });
+        marker.element.focus({ preventScroll: true });
       };
-      marker.getElement()?.setAttribute('aria-controls', detail.id);
-      marker.getElement()?.addEventListener('keydown', (event) => {
+      marker.element.setAttribute('aria-controls', detail.id);
+      marker.element.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           event.stopPropagation();
           void revealCard(detail);
         }
       });
-      marker.on('click', () => {
+      marker.element.addEventListener('click', () => {
         void revealCard(detail);
       });
     });

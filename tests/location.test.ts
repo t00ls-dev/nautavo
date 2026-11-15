@@ -27,7 +27,7 @@ it('selects precision-dependent zoom and rejects invalid positions', () => {
     positionView({
       coords: { latitude: 10.123456, longitude: 20.654321, accuracy: 20 },
     } as GeolocationPosition).zoom,
-  ).toBe(16);
+  ).toBe(15);
   expect(() =>
     positionView({
       coords: { latitude: NaN, longitude: 20, accuracy: 1 },

@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { BASEMAP_STYLE, mockBasemap } from './map-helpers';
+import { BASEMAP_STYLE, mockBasemap, mapCanvas } from './map-helpers';
 import { readFile } from 'node:fs/promises';
 const base = 'http://127.0.0.1:5173/';
 test.beforeEach(async ({ page }) => {
@@ -19,7 +19,7 @@ function watchBasemap(page: Page) {
     has: (pattern: string) => requests.some((url) => url.includes(pattern)),
   };
 }
-const canvas = (page: Page) => page.locator('#map .leaflet-gl-layer canvas');
+const canvas = (page: Page) => page.locator('#map canvas.maplibregl-canvas');
 
 test('draws one vector map, loads only the selected layer, updates credits and keeps layer preferences out of route state', async ({
   page,
@@ -366,7 +366,7 @@ test('satellite overzoom enlarges native level 14 imagery instead of requesting 
     .getByRole('menuitemradio', { name: 'Satellite', exact: true })
     .click();
   await expect.poll(() => zooms.includes(14)).toBe(true);
-  await page.locator('.leaflet-control-zoom-in').click();
+  await page.locator('.map-zoom-in').click();
   await page.waitForTimeout(500);
   expect(Math.max(...zooms)).toBe(14);
 });
@@ -414,7 +414,7 @@ test('GPX import during a running zoom takes precedence over that view', async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(base);
   // Phones have no zoom buttons; the map keyboard shortcut starts the same zoom.
-  await page.locator('#map').press('+');
+  await mapCanvas(page).press('+');
   await page.locator('#import').setInputFiles('docs/example.gpx');
   await expect(page.locator('#download')).toBeEnabled();
   const bounds = (await page.locator('#map').boundingBox())!;

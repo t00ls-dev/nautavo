@@ -1,4 +1,4 @@
-import L from 'leaflet';
+import type { PlannerMap } from './planner-map';
 import { icon, iconControl } from './icons';
 import { byId as $ } from './dom';
 
@@ -23,7 +23,7 @@ const DRAG_THRESHOLD = 8;
  * or full height; the handle toggles it and can be dragged between heights.
  * Also the panel's icons, the More actions disclosure and the Settings dialog.
  */
-export function setupPanel(map: L.Map): void {
+export function setupPanel(map: PlannerMap): void {
   iconControl($('add'), 'plus', 'Add stop');
   iconControl($('reverse'), 'swap', 'Reverse');
   iconControl($('roundtrip'), 'roundtrip', 'Round trip');
@@ -66,7 +66,7 @@ export function setupPanel(map: L.Map): void {
     document.body.classList.toggle('sheet-full', open && size === 'full');
     panel.hidden = !open;
     handle.setAttribute('aria-expanded', String(open));
-    requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    requestAnimationFrame(() => map.resize());
   };
   new ResizeObserver(() => {
     document.body.style.setProperty(

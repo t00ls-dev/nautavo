@@ -64,6 +64,7 @@ export async function mockBasemap(target: Page | BrowserContext) {
   );
 }
 export async function holdMap(page: Page, x = 205, y = 245) {
+  await mapReady(page);
   const box = (await page.locator('#map').boundingBox())!;
   const session = await page.context().newCDPSession(page);
   await session.send('Input.dispatchTouchEvent', {
@@ -76,4 +77,73 @@ export async function holdMap(page: Page, x = 205, y = 245) {
     touchPoints: [],
   });
   await session.detach();
+}
+
+/** Waits for the planner map, which loads after the first painted frame. */
+export async function mapReady(page: Page) {
+  await page.locator('#map canvas.maplibregl-canvas').waitFor();
+  await page.waitForFunction(() =>
+    (
+      window as unknown as {
+        plannerMap: { gl(): { loaded(): boolean } | null };
+      }
+    ).plannerMap
+      .gl()
+      ?.loaded(),
+  );
+}
+/** The planner map's canvas: the map's keyboard focus target. */
+export const mapCanvas = (page: Page) =>
+  page.locator('#map canvas.maplibregl-canvas');
+/** Waits until the planner map has stopped moving or zooming. */
+export async function mapIdle(page: Page) {
+  await page.waitForFunction(() => {
+    const gl = (
+      window as unknown as {
+        plannerMap: { gl(): { isMoving(): boolean } | null };
+      }
+    ).plannerMap.gl();
+    return !!gl && !gl.isMoving();
+  });
+}
+/**
+ * Properties of the features an overlay of the planner map draws (its
+ * GeoJSON source): `rg-route`, `rg-coloring`, `rg-marks`, `rg-surface` or
+ * `rg-climb`. Empty before the map exists.
+ */
+export function overlayFeatures(
+  page: Page,
+  source: string,
+): Promise<Record<string, unknown>[]> {
+  return page.evaluate((id) => {
+    const gl = (
+      window as unknown as {
+        plannerMap: {
+          gl(): {
+            getSource(id: string):
+              | {
+                  serialize(): {
+                    data: { features: { properties: object }[] };
+                  };
+                }
+              | undefined;
+          } | null;
+        };
+      }
+    ).plannerMap.gl();
+    const data = gl?.getSource(id)?.serialize().data;
+    return (data?.features ?? []).map(
+      (f) => f.properties as Record<string, unknown>,
+    );
+  }, source);
+}
+/** Kinds of route coloring drawn on the planner map. */
+export async function coloringKinds(page: Page): Promise<string[]> {
+  return (await overlayFeatures(page, 'rg-coloring')).map((f) =>
+    String(f.kind),
+  );
+}
+/** Number of lines an overlay draws (a highlighted stretch, the coloring). */
+export async function overlayCount(page: Page, source: string) {
+  return (await overlayFeatures(page, source)).length;
 }

@@ -1,4 +1,4 @@
-import { mockBasemap } from './map-helpers';
+import { mockBasemap, mapCanvas } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
 
@@ -48,7 +48,7 @@ async function chooseCrosshair(page: Page) {
 }
 /** Pans the map with the keyboard: Leaflet moves it 80 px per arrow key. */
 async function panMap(page: Page) {
-  await page.locator('#map').focus();
+  await mapCanvas(page).focus();
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowUp');
 }
@@ -67,7 +67,7 @@ test.describe('phone', () => {
     expect(
       await page.evaluate(() => localStorage.getItem('point-placement')),
     ).toBe('crosshair');
-    const markers = page.locator('.leaflet-marker-icon.route-marker');
+    const markers = page.locator('.maplibregl-marker.route-marker');
     await expect(markers).toHaveCount(2);
     await markers.last().tap();
     const bar = page.locator('.placement-bar');
@@ -97,7 +97,7 @@ test.describe('phone', () => {
   test('Cancel and locking leave the point in place', async ({ page }) => {
     await setup(page);
     await chooseCrosshair(page);
-    const markers = page.locator('.leaflet-marker-icon.route-marker');
+    const markers = page.locator('.maplibregl-marker.route-marker');
     const bar = page.locator('.placement-bar');
     await markers.last().tap();
     await panMap(page);
@@ -119,7 +119,7 @@ test.describe('phone', () => {
     await setup(page);
     const loupe = page.locator('.placement-loupe');
     const box = (await page
-      .locator('.leaflet-marker-icon.route-marker')
+      .locator('.maplibregl-marker.route-marker')
       .last()
       .boundingBox())!;
     const x = box.x + box.width / 2,
@@ -157,7 +157,7 @@ test('the crosshair bar fits a 320 px phone in Portuguese', async ({
     .locator('#point-placement')
     .selectOption({ label: 'Tocar e mover o mapa' });
   await page.locator('#close-settings').click();
-  await page.locator('.leaflet-marker-icon.route-marker').last().click();
+  await page.locator('.maplibregl-marker.route-marker').last().click();
   const bar = page.locator('.placement-bar');
   await expect(bar).toContainText('Mova o mapa para posicionar o ponto 2');
   const fits = await bar.evaluate((element) => {
@@ -192,7 +192,7 @@ test('a mouse drag on a desktop moves the point without a loupe', async ({
   await page.setViewportSize({ width: 1280, height: 900 });
   await setup(page);
   const box = (await page
-    .locator('.leaflet-marker-icon.route-marker')
+    .locator('.maplibregl-marker.route-marker')
     .last()
     .boundingBox())!;
   await page.mouse.move(box.x + 15, box.y + 15);

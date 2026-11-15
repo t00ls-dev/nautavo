@@ -1,3 +1,4 @@
+import { mapCanvas, mapIdle } from './map-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { chooseUnits } from './unit-settings';
@@ -85,6 +86,7 @@ async function open(page: Page, language: 'en' | 'pt') {
   if (page.viewportSize()!.width < 760)
     await page.locator('#panel-toggle').click();
   await page.locator('#fit').click();
+  await mapIdle(page);
 }
 /** What the map shows: visible markers, their counts and the layout boxes. */
 function layout(page: Page) {
@@ -92,7 +94,7 @@ function layout(page: Page) {
     const boxes = (e: Element, selector: string) =>
       [...e.querySelectorAll(selector)].map((p) => p.getBoundingClientRect());
     const markers = [
-      ...document.querySelectorAll('.leaflet-marker-icon.weather-marker'),
+      ...document.querySelectorAll('.maplibregl-marker.weather-marker'),
     ];
     const visible = markers.filter(
       (m) => getComputedStyle(m).display !== 'none',
@@ -182,6 +184,10 @@ test('a count rings hidden alerts, zooms in when tapped, and markers then show o
 }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await open(page, 'en');
+  // One level out: the heavy rain sample joins the thunderstorm's cluster.
+  await mapCanvas(page).focus();
+  await page.keyboard.press('Minus');
+  await mapIdle(page);
   const before = await layout(page);
   const stormCard = await storm(page).getAttribute('id');
   const shownStorm = before.visible.find((m) => m.card === stormCard)!;
@@ -219,12 +225,12 @@ test('a hidden sample is not focusable, and its card shows it on the map', async
     .poll(async () => (await layout(page)).visible.length)
     .toBeLessThan(11);
   const card = await page
-    .locator('.leaflet-marker-icon.weather-marker-clustered')
+    .locator('.maplibregl-marker.weather-marker-clustered')
     .first()
     .getAttribute('aria-controls');
   // By its card: a locator for "the first clustered marker" would move on.
   const marker = page.locator(
-    `.leaflet-marker-icon.weather-marker[aria-controls="${card}"]`,
+    `.maplibregl-marker.weather-marker[aria-controls="${card}"]`,
   );
   await expect(marker).toBeHidden();
   await marker.evaluate((e) => (e as HTMLElement).focus());
@@ -294,9 +300,9 @@ test('a loop with stops that comes back near itself shows no overlapping markers
   await page.locator('#fit').click();
   for (let zoomOut = 0; zoomOut < 2; zoomOut++) {
     if (zoomOut) {
-      await page.locator('#map').focus();
+      await mapCanvas(page).focus();
       await page.keyboard.press('Minus');
-      await expect(page.locator('.leaflet-zoom-anim')).toHaveCount(0);
+      await mapIdle(page);
       await page.waitForTimeout(400);
     }
     const map = await layout(page);
