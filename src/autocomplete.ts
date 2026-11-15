@@ -1,5 +1,19 @@
 import { photonSearch, type SearchResult } from './services';
 import { parseCoordinates, type Coord } from './core';
+import { icon, type IconName } from './icons';
+
+/** A choice listed above the suggestions: My location, Choose on map. */
+export interface SearchAction {
+  label: string;
+  icon: IconName;
+  run: () => void;
+}
+/** The first part of a result's name as its title, the rest below it. */
+export function splitPlace(name: string): [string, string] {
+  const parts = name.split(',').map((part) => part.trim());
+  return [parts[0], parts.slice(1).filter(Boolean).join(', ')];
+}
+
 export function addressAutocomplete(
   input: HTMLInputElement,
   list: HTMLElement,
@@ -11,9 +25,14 @@ export function addressAutocomplete(
     pending: () => void;
     completed: (count: number) => void;
     failed: () => void;
+    /** Choices shown first while the field has focus (none when read-only). */
+    actions?: () => SearchAction[];
+    /** A short distance label for a result, or null. */
+    distance?: (coord: Coord) => string | null;
   },
 ): () => void {
   let timer: ReturnType<typeof setTimeout>;
+  let blurTimer: ReturnType<typeof setTimeout> | undefined;
   let controller: AbortController | undefined;
   let version = 0,
     active = -1;
@@ -35,8 +54,57 @@ export function addressAutocomplete(
     input.removeAttribute('aria-activedescendant');
     input.setAttribute('aria-expanded', 'false');
   };
+  const option = (id: string, onChoose: () => void) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = `${list.id}-${id}`;
+    button.setAttribute('role', 'option');
+    button.setAttribute('aria-selected', 'false');
+    button.tabIndex = -1;
+    let pressed = false,
+      done = false;
+    const choose = () => {
+      if (done) return;
+      done = true;
+      close();
+      onChoose();
+    };
+    // The field keeps focus where the browser allows it. On phones the
+    // keyboard closes and the panel moves under the finger before a click
+    // arrives, so a touch chooses when it lifts on the same option.
+    button.onpointerdown = (event) => {
+      event.preventDefault();
+      pressed = true;
+    };
+    button.onpointerleave = () => (pressed = false);
+    button.onpointerup = (event) => {
+      if (!pressed || event.pointerType === 'mouse') return;
+      event.preventDefault();
+      choose();
+    };
+    button.onclick = choose;
+    list.append(button);
+    return button;
+  };
+  /** The actions alone, as the field gets focus or its text changes. */
+  const showActions = () => {
+    if (input.readOnly || !config.actions) return;
+    config.actions().forEach((action, i) => {
+      const button = option(`action-${i}`, action.run);
+      button.className = 'suggestion-action';
+      const label = document.createElement('span');
+      label.textContent = action.label;
+      button.append(icon(action.icon), label);
+    });
+    input.setAttribute('aria-expanded', String(list.children.length > 0));
+  };
+  input.addEventListener('focus', () => {
+    clearTimeout(blurTimer);
+    if (!list.children.length) showActions();
+  });
   input.addEventListener('input', () => {
     close();
+    showActions();
     const query = input.value.trim();
     if (
       query.length < 3 ||
@@ -65,21 +133,33 @@ export function addressAutocomplete(
           )
             return;
           results.forEach((result, i) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.id = `${list.id}-${i}`;
-            button.textContent = result.display_name;
-            button.setAttribute('role', 'option');
-            button.setAttribute('aria-selected', 'false');
-            button.tabIndex = -1;
-            button.onpointerdown = (event) => event.preventDefault();
-            button.onclick = () => {
-              close();
-              config.choose(result);
-            };
-            list.append(button);
+            const button = option(String(i), () => config.choose(result));
+            button.className = 'suggestion-place';
+            const [title, detail] = splitPlace(result.display_name);
+            const text = document.createElement('span');
+            const name = document.createElement('b');
+            name.textContent = title;
+            text.append(name);
+            if (detail) {
+              const more = document.createElement('small');
+              more.textContent = detail;
+              text.append(more);
+            }
+            button.append(icon('pin'), text);
+            const coord = parseCoordinates(`${result.lat},${result.lon}`);
+            const away = coord && config.distance?.(coord);
+            if (away) {
+              const label = document.createElement('em');
+              label.textContent = away;
+              button.append(label);
+            }
+            // The whole name stays the option's accessible name.
+            button.setAttribute(
+              'aria-label',
+              away ? `${result.display_name}, ${away}` : result.display_name,
+            );
           });
-          input.setAttribute('aria-expanded', String(results.length > 0));
+          input.setAttribute('aria-expanded', String(list.children.length > 0));
           config.completed(results.length);
         })
         .catch((error) => {
@@ -122,6 +202,13 @@ export function addressAutocomplete(
       close();
     }
   });
-  input.addEventListener('blur', close);
+  // Losing focus closes the list a moment later, so a choice on its way
+  // (a tap that blurred the field first) still lands.
+  input.addEventListener('blur', () => {
+    clearTimeout(blurTimer);
+    blurTimer = setTimeout(() => {
+      if (document.activeElement !== input) close();
+    }, 300);
+  });
   return close;
 }

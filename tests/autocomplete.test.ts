@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from 'vitest';
-import { addressAutocomplete } from '../src/autocomplete';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { addressAutocomplete, splitPlace } from '../src/autocomplete';
 import { photonSearch } from '../src/services';
 vi.mock('../src/services', () => ({ photonSearch: vi.fn() }));
 afterEach(() => {
@@ -78,4 +78,14 @@ it('keeps incomplete coordinate input local while still suggesting numbered stre
   input.dispatchEvent(new Event('input'));
   await vi.advanceTimersByTimeAsync(300);
   expect(photonSearch).toHaveBeenCalledTimes(1);
+});
+
+describe('splitPlace', () => {
+  it('uses the first part as the title and the rest below it', () => {
+    expect(splitPlace('Posto Shell, Avenida Roberto Silveira, Maricá')).toEqual(
+      ['Posto Shell', 'Avenida Roberto Silveira, Maricá'],
+    );
+    expect(splitPlace('Lisboa')).toEqual(['Lisboa', '']);
+    expect(splitPlace('Porto, , Portugal')).toEqual(['Porto', 'Portugal']);
+  });
 });

@@ -84,8 +84,12 @@ test('autocomplete selects by keyboard and explicitly falls back to Nominatim af
   });
   await page.goto(base);
   await page.locator('#location-0').fill('Lisboa');
-  await expect(page.locator('#suggestions-0 [role=option]')).toHaveCount(2);
-  await page.locator('#location-0').press('ArrowDown');
+  await expect(
+    page.locator('#suggestions-0 [role=option].suggestion-place'),
+  ).toHaveCount(2);
+  // My location and Choose on map come first.
+  for (let i = 0; i < 3; i++)
+    await page.locator('#location-0').press('ArrowDown');
   await page.locator('#location-0').press('Enter');
   await expect(page.locator('#location-0')).toHaveValue('Lisboa, Portugal');
   expect(nominatim).toBe(0);
@@ -127,7 +131,9 @@ test('old autocomplete request is aborted and cannot replace newer suggestions',
   await started;
   await page.locator('#location-0').fill('Newer');
   release();
-  await expect(page.locator('#suggestions-0 [role=option]')).toHaveCount(2);
+  await expect(
+    page.locator('#suggestions-0 [role=option].suggestion-place'),
+  ).toHaveCount(2);
   await expect.poll(() => aborted).toBe(true);
 });
 test('full geometry survives visual simplification and share uses the same GPX and custom filename', async ({
@@ -233,17 +239,26 @@ for (const width of [320, 390]) {
       page.locator('.point-location-form button:not(.point-grip)'),
     ).toHaveCount(0);
     await page.locator('#location-1').fill('Li');
-    await expect(page.locator('#suggestions-1 [role=option]')).toHaveCount(0);
+    await expect(
+      page.locator('#suggestions-1 [role=option].suggestion-place'),
+    ).toHaveCount(0);
     await page.locator('#location-1').pressSequentially('sboa');
-    await expect(page.locator('#suggestions-1 [role=option]')).toHaveCount(2);
+    await expect(
+      page.locator('#suggestions-1 [role=option].suggestion-place'),
+    ).toHaveCount(2);
     await expect(page.locator('#status')).toHaveText('Choose a place.');
-    await page.locator('#suggestions-1 [role=option]').first().click();
+    await page
+      .locator('#suggestions-1 [role=option].suggestion-place')
+      .first()
+      .click();
     await expect(page.locator('#location-1')).toHaveValue('Lisboa, Portugal');
     await page.locator('#add').click();
     await page.locator('#location-1').fill('Porto');
-    await expect(page.locator('#suggestions-1 [role=option]')).toHaveCount(2);
-    await page.locator('#location-1').press('ArrowDown');
-    await page.locator('#location-1').press('ArrowDown');
+    await expect(
+      page.locator('#suggestions-1 [role=option].suggestion-place'),
+    ).toHaveCount(2);
+    for (let i = 0; i < 4; i++)
+      await page.locator('#location-1').press('ArrowDown');
     await page.locator('#location-1').press('Enter');
     await expect(page.locator('#location-1')).toHaveValue('Porto');
     await expect(page.locator('#location-2')).toHaveValue('Lisboa, Portugal');
