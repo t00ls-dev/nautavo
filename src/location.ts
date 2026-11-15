@@ -51,20 +51,9 @@ export function locationError(code: number): string {
       : 'Location unavailable. Check your device location settings or choose a point on the map.';
 }
 /**
- * The traveler's position for a navigation recalculation (#31): about 10 m
- * (4 decimals), so the new route starts on the right street. It is the only
- * position ever sent, at that moment only, and never stored.
+ * A GPS position used as a route point or sent for a navigation
+ * recalculation: full precision, to the 6 decimals (about 10 cm) of links.
  */
-export function navigationPoint(coord: Coord): Coord {
-  return coord.map((n) => Number(n.toFixed(4))) as Coord;
-}
-// Route services only receive an explicitly chosen approximate point (~100 m grid).
-export function approximatePoint(coord: Coord): Coord {
-  const rounded = coord.map((n) => Number(n.toFixed(3))) as Coord;
-  // Even a device that reports coordinates already on the grid stays separate.
-  if (rounded[0] === coord[0] && rounded[1] === coord[1])
-    rounded[0] = Number(
-      (rounded[0] + (rounded[0] >= 90 ? -0.001 : 0.001)).toFixed(3),
-    );
-  return rounded;
+export function gpsPoint(coord: Coord): Coord {
+  return coord.map((n) => Number(n.toFixed(6))) as Coord;
 }

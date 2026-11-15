@@ -1289,23 +1289,6 @@ dialog.settings::backdrop {
 .planner.panel-closed .map-notice {
   left: 64px;
 }
-.location-card {
-  position: absolute;
-  z-index: 1200;
-  top: 10px;
-  left: 10px;
-  width: min(360px, calc(100% - 20px));
-  max-height: calc(100% - 20px);
-  padding: 14px 16px;
-  overflow: auto;
-  border-radius: var(--radius-large);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-raised);
-}
-.location-card p {
-  margin: 8px 0;
-  line-height: 1.5;
-}
 .point-menu {
   position: absolute;
   z-index: 1100;
@@ -1365,6 +1348,29 @@ dialog.settings::backdrop {
   background: var(--color-soft);
   color: var(--color-primary);
   box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+/* Use my location: pressed while the dot shows, outlined once the map is panned away. */
+.map-tool-group #locate.free {
+  background: var(--color-surface);
+}
+.map-tool-group #locate.locating svg {
+  animation: locating 1.2s ease-in-out infinite alternate;
+}
+@keyframes locating {
+  to {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-tool-group #locate.locating svg {
+    animation: none;
+  }
+}
+.location-dot {
+  transition: fill 0.3s;
+}
+.location-dot.stale {
+  fill: #6b7785;
 }
 #fullscreen[aria-pressed='false'] .icon-minimize,
 #fullscreen[aria-pressed='true'] .icon-maximize,
@@ -1705,9 +1711,6 @@ dialog.settings::backdrop {
     left: calc(8px + env(safe-area-inset-left, 0px));
     max-width: calc(100% - 76px);
     font-size: 13px;
-  }
-  .location-card {
-    top: calc(60px + var(--safe-top));
   }
   /* Phones zoom with pinch and double tap; the column keeps room for map tools. */
   .planner .leaflet-control-zoom {
@@ -2363,38 +2366,6 @@ input[type='range'].range-input:disabled {
   outline-offset: 2px;
 }
 
-.location-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-.location-card-header #close-location {
-  float: none;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-}
-.location-action-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-}
-.location-action-buttons button {
-  width: 100%;
-  min-height: 48px;
-  padding: 10px;
-  white-space: normal;
-}
-@media (max-width: 359px) {
-  .location-action-buttons {
-    grid-template-columns: 1fr;
-  }
-}
-
 .weather-card:hover {
   background: var(--weather-card-background);
   border-color: var(--weather-card-border);
@@ -2882,12 +2853,6 @@ input[type='range'].range-input:disabled {
 .coloring-group button,
 .coloring-group button + button {
   margin-top: 4px;
-}
-.location-card-header {
-  margin-bottom: 0;
-}
-.location-card-header #close-location {
-  border-color: transparent;
 }
 .route-legend {
   border: 0;

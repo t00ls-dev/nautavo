@@ -1212,7 +1212,7 @@ export async function valhallaAttributes(
 
 /**
  * A navigation recalculation (#31): one route from the traveler's position
- * (already rounded by `navigationPoint`) to a point on the planned route,
+ * (from `gpsPoint`) to a point on the planned route,
  * with the route's servers and options, on the routing queue with the usual
  * OSRM → Valhalla fallback and no retries. The caller limits how often.
  */

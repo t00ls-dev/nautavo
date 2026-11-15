@@ -98,11 +98,20 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
     Math.abs(dot!.y + dot!.height / 2 - box!.y - box!.height / 2),
   ).toBeLessThan(3);
   await expect(page.locator('#location-0')).toHaveValue('');
+  await expect(page.locator('#locate')).toHaveAttribute('aria-pressed', 'true');
   expect(ipRequests).toBe(0);
   await noExactStorage(page);
-  await page.locator('#location-start').click();
-  await expect(page.locator('#location-0')).toHaveValue('48.123000, 11.765000');
+  // The dot follows the device and the map follows the dot.
+  await context.setGeolocation({ ...position, latitude: 48.1244567 });
+  await expect
+    .poll(async () => {
+      const moved = (await page.locator('.location-dot').boundingBox())!;
+      return Math.abs(moved.y + moved.height / 2 - box!.y - box!.height / 2);
+    })
+    .toBeLessThan(3);
   await noExactStorage(page);
+  await page.locator('#location-0').fill('48.123, 11.765');
+  await page.locator('#location-0').press('Tab');
   await page.locator('#location-1').fill('48.2, 11.8');
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled();
@@ -117,17 +126,23 @@ test('denial is actionable and points remain editable without automatic re-promp
   page,
 }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
-      value: (_ok: unknown, fail: PositionErrorCallback) =>
-        fail({ code: 1 } as GeolocationPositionError),
+    Object.defineProperty(navigator.geolocation, 'watchPosition', {
+      value: (_ok: unknown, fail: PositionErrorCallback) => {
+        fail({ code: 1 } as GeolocationPositionError);
+        return 1;
+      },
     });
   });
   await page.goto(base);
   await locate(page);
-  await expect(page.locator('#location-status')).toContainText(
+  await expect(page.locator('#location-notice')).toContainText(
     'browser site settings',
   );
-  await page.locator('#close-location').click();
+  await expect(page.locator('#locate')).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await expect(page.locator('.location-dot')).toHaveCount(0);
   await page.locator('#location-0').fill('40, 10');
   await page.locator('#location-0').press('Tab');
   await expect(page.locator('.route-marker')).toHaveCount(1);
@@ -136,17 +151,18 @@ test('startup never calls geolocation while permission is prompt', async ({
   page,
 }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
-      value: () => {
-        document.documentElement.dataset.gpsCalls = 'unexpected';
-      },
-    });
+    for (const name of ['getCurrentPosition', 'watchPosition'])
+      Object.defineProperty(navigator.geolocation, name, {
+        value: () => {
+          document.documentElement.dataset.gpsCalls = 'unexpected';
+        },
+      });
   });
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base);
   await expect(page.locator('#map')).toBeVisible();
-  await expect(page.locator('#location-card')).toBeHidden();
+  await expect(page.locator('#location-notice')).toBeHidden();
   await page.waitForTimeout(300);
   expect(errors).toEqual([]);
   await expect(page.locator('html')).not.toHaveAttribute('data-gps-calls');
@@ -226,7 +242,7 @@ for (const mode of [
     await expect
       .poll(() => tiles.some((url) => url.includes('/planet/9/')))
       .toBe(mode === 'success');
-    await expect(page.locator('#location-card')).toBeHidden();
+    await expect(page.locator('#location-notice')).toBeHidden();
     await expect(page.locator('#status')).not.toHaveClass('error');
     await page.reload();
     await page.waitForTimeout(100);
@@ -316,17 +332,19 @@ for (const mobile of [false, true]) {
 for (const code of [2, 3]) {
   test(`GPS error ${code} offers a map alternative`, async ({ page }) => {
     await page.addInitScript((code) => {
-      Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
-        value: (_ok: unknown, fail: PositionErrorCallback) =>
-          fail({ code } as GeolocationPositionError),
+      Object.defineProperty(navigator.geolocation, 'watchPosition', {
+        value: (_ok: unknown, fail: PositionErrorCallback) => {
+          fail({ code } as GeolocationPositionError);
+          return 1;
+        },
       });
     }, code);
     await page.goto(base);
     await locate(page);
-    await expect(page.locator('#location-status')).toContainText(
+    await expect(page.locator('#location-notice')).toContainText(
       code === 3 ? 'timed out' : 'unavailable',
     );
-    await expect(page.locator('#location-status')).toContainText(
+    await expect(page.locator('#location-notice')).toContainText(
       'point on the map',
     );
   });
@@ -337,7 +355,7 @@ test('unsupported browser explains map alternative', async ({ page }) => {
   );
   await page.goto(base);
   await locate(page);
-  await expect(page.locator('#location-status')).toContainText(
+  await expect(page.locator('#location-notice')).toContainText(
     'does not support location',
   );
 });
@@ -369,7 +387,7 @@ test('insecure context explains HTTPS requirement', async ({ page }) => {
   );
   await page.goto(base);
   await locate(page);
-  await expect(page.locator('#location-status')).toContainText(
+  await expect(page.locator('#location-notice')).toContainText(
     'requires HTTPS',
   );
 });
@@ -409,42 +427,150 @@ test('mobile route endpoints fit above the open sheet', async ({ page }) => {
   }
 });
 
+test('the dot follows, the button re-centers a panned map and then turns location off', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.addInitScript(() => {
+    const w = window as unknown as {
+      fix: (lat: number, lon: number, accuracy: number) => void;
+      watches: number;
+      cleared: number;
+    };
+    let callback: PositionCallback | null = null;
+    w.watches = 0;
+    w.cleared = 0;
+    w.fix = (latitude, longitude, accuracy) =>
+      callback?.({
+        coords: { latitude, longitude, accuracy },
+        timestamp: Date.now(),
+      } as GeolocationPosition);
+    Object.defineProperty(navigator.geolocation, 'watchPosition', {
+      value: (ok: PositionCallback) => {
+        callback = ok;
+        return ++w.watches;
+      },
+    });
+    Object.defineProperty(navigator.geolocation, 'clearWatch', {
+      value: () => {
+        callback = null;
+        w.cleared++;
+      },
+    });
+  });
+  await page.goto(base);
+  await locate(page);
+  await expect(page.locator('#location-notice')).toContainText(
+    'Finding your location',
+  );
+  await expect(page.locator('#locate')).toHaveClass(/locating/);
+  const fix = (lat: number, lon: number, accuracy: number) =>
+    page.evaluate(
+      ([lat, lon, accuracy]) =>
+        (
+          window as unknown as {
+            fix: (a: number, b: number, c: number) => void;
+          }
+        ).fix(lat, lon, accuracy),
+      [lat, lon, accuracy],
+    );
+  await fix(48.1234, 11.7654, 20);
+  await expect(page.locator('#location-notice')).toBeHidden();
+  await expect(page.locator('#locate')).not.toHaveClass(/locating/);
+  const map = (await page.locator('#map').boundingBox())!;
+  const center = async () => {
+    const dot = (await page.locator('.location-dot').boundingBox())!;
+    return [
+      dot.x + dot.width / 2 - map.x - map.width / 2,
+      dot.y + dot.height / 2 - map.y - map.height / 2,
+    ];
+  };
+  const radius = async () =>
+    (await page.locator('.location-accuracy').boundingBox())!.width;
+  const precise = await radius();
+  // A less reliable fix widens the margin of error around the moved dot.
+  await fix(48.1244, 11.7664, 400);
+  await expect.poll(radius).toBeGreaterThan(precise * 5);
+  await expect
+    .poll(async () => Math.max(...(await center()).map(Math.abs)))
+    .toBeLessThan(3);
+  // A pan leaves the dot behind; the next fix does not pull the map back.
+  await page.mouse.move(map.x + 300, map.y + 300);
+  await page.mouse.down();
+  await page.mouse.move(map.x + 450, map.y + 380, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator('#locate')).toHaveClass(/free/);
+  await fix(48.1245, 11.7665, 20);
+  await page.waitForTimeout(400);
+  expect(Math.max(...(await center()).map(Math.abs))).toBeGreaterThan(50);
+  await page.locator('#locate').click();
+  await expect(page.locator('#locate')).not.toHaveClass(/free/);
+  await expect
+    .poll(async () => Math.max(...(await center()).map(Math.abs)))
+    .toBeLessThan(3);
+  await expect(page.locator('#locate')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#locate').click();
+  await expect(page.locator('#locate')).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  await expect(page.locator('.location-accuracy')).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { cleared: number }).cleared,
+    ),
+  ).toBe(1);
+  await expect(page.locator('#location-0')).toHaveValue('');
+});
+
+test('a dot without new fixes turns grey', async ({ page }) => {
+  await page.clock.install();
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator.geolocation, 'watchPosition', {
+      value: (ok: PositionCallback) => {
+        ok({
+          coords: { latitude: 48.123, longitude: 11.765, accuracy: 25 },
+          timestamp: Date.now(),
+        } as GeolocationPosition);
+        return 1;
+      },
+    }),
+  );
+  await page.goto(base);
+  await locate(page);
+  await expect(page.locator('.location-dot')).not.toHaveClass(/stale/);
+  await page.clock.runFor(31_000);
+  await expect(page.locator('.location-dot')).toHaveClass(/stale/);
+});
+
 for (const width of [320, 390, 1280])
-  test(`location actions stay spaced and inside the card at ${width}px`, async ({
+  test(`location notice stays clear of the map tools at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.addInitScript(() =>
-      Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
-        value: (ok: PositionCallback) =>
-          ok({
-            coords: { latitude: 48.123, longitude: 11.765, accuracy: 25 },
-            timestamp: Date.now(),
-          } as GeolocationPosition),
+      Object.defineProperty(navigator.geolocation, 'watchPosition', {
+        value: (_ok: unknown, fail: PositionErrorCallback) => {
+          fail({ code: 1 } as GeolocationPositionError);
+          return 1;
+        },
       }),
     );
     await page.goto(base);
-    await locate(page);
-    await expect(page.locator('#location-actions')).toBeVisible();
-    const a = (await page.locator('#location-start').boundingBox())!,
-      b = (await page.locator('#location-stop').boundingBox())!,
-      card = (await page.locator('#location-card').boundingBox())!;
-    expect(a.width).toBeCloseTo(b.width, 0);
-    for (const button of [a, b]) {
-      expect(button.height).toBeGreaterThanOrEqual(48);
-      expect(button.x).toBeGreaterThan(card.x);
-      expect(button.x + button.width).toBeLessThan(card.x + card.width);
-      expect(button.y + button.height).toBeLessThan(card.y + card.height);
+    for (const language of ['en', 'pt']) {
+      await page.locator('#language').selectOption(language);
+      await locate(page);
+      const notice = page.locator('#location-notice');
+      await expect(notice).toBeVisible();
+      if (language === 'pt')
+        await expect(notice).toContainText('Permissão de localização negada');
+      const box = (await notice.boundingBox())!;
+      const tools = (await page.locator('.map-action-control').boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThan(tools.x);
+      expect(
+        await notice.evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
+      ).toBe(true);
     }
-    expect(b.x - a.x - a.width >= 11.9 || b.y - a.y - a.height >= 11.9).toBe(
-      true,
-    );
-    if (width === 320) expect(b.y).toBeGreaterThan(a.y + a.height);
-    await page.locator('#language').selectOption('pt');
-    await expect(page.locator('#location-start')).toHaveText(
-      'Definir como início',
-    );
-    await expect(page.locator('#location-stop')).toHaveText(
-      'Adicionar como parada',
-    );
   });

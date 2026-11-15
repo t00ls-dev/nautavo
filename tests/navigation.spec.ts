@@ -718,12 +718,14 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-rerouted')).toBeVisible();
     await expect(page.locator('#nav-screen')).not.toHaveClass(/off-route/);
     expect(asked).toHaveLength(1);
-    // Only the position, rounded to 4 decimals (about 10 m), is sent.
+    // The position is sent at full precision.
     const [from] = asked[0].split('/driving/')[1].split(';');
     const [x, y] = from.split(',');
-    expect(x).toMatch(/^-43\.\d{4}$/);
-    expect(y).toMatch(/^-22\.\d{4}$/);
-    expect(Number(y)).toBeCloseTo(lat + 0.003, 3);
+    const fixes = [...Array(7).keys()].map((i) =>
+      Number((lat + 0.003 + i * 0.00001).toFixed(6)),
+    );
+    expect(fixes).toContain(Number(y));
+    expect(x).toMatch(/^-43\.\d+$/);
     // The planned route goes on after the recalculated path.
     await expect(page.locator('#nav-then')).toBeVisible();
     // Nothing more within the minute, and the planner's route is unchanged.

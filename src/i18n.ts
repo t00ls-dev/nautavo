@@ -240,19 +240,11 @@ const pt: Record<string, string> = {
     'O serviço de região recebe seu endereço IP. Apenas uma vista aproximada da cidade é usada.',
   'Use my location': 'Usar minha localização',
   'Full screen': 'Tela cheia',
-  'Your location': 'Sua localização',
-  'Close location': 'Fechar localização',
-  'Route points are rounded to about 100 m before sharing or routing. Check the point on the map.':
-    'Os pontos da rota são arredondados para cerca de 100 m antes de compartilhar ou calcular. Confira o ponto no mapa.',
-  'Set as start': 'Definir como início',
-  'Add as stop': 'Adicionar como parada',
   'Location requires HTTPS. Open the secure site or choose a point on the map.':
     'A localização exige HTTPS. Abra o site seguro ou escolha um ponto no mapa.',
   'This browser does not support location. Choose a point on the map.':
     'Este navegador não oferece localização. Escolha um ponto no mapa.',
   'Finding your location…': 'Buscando sua localização…',
-  'Location found. Your route has not changed.':
-    'Localização encontrada. Sua rota não foi alterada.',
   'Location permission denied. Allow location in your browser site settings, then try again. You can still plan routes without GPS.':
     'Permissão de localização negada. Libere a localização nas configurações deste site no navegador e tente novamente. Você pode continuar planejando rotas sem GPS.',
   'Location timed out. Move to an open area and try again, or choose a point on the map.':

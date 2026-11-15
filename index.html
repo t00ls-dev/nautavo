@@ -395,6 +395,13 @@
         <p id="map-no-style" class="map-notice" hidden>
           The map could not be loaded. The route still shows.
         </p>
+        <p
+          id="location-notice"
+          class="map-notice"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></p>
         <div class="layer-control">
           <button
             id="layers-toggle"
@@ -462,34 +469,6 @@
             Lock editing
           </button>
         </div>
-        <section
-          id="location-card"
-          class="location-card"
-          aria-label="Your location"
-          hidden
-        >
-          <div class="location-card-header">
-            <h2>Your location</h2>
-            <button
-              id="close-location"
-              type="button"
-              aria-label="Close location"
-            >
-              Close
-            </button>
-          </div>
-          <p id="location-status" role="status"></p>
-          <div id="location-actions" hidden>
-            <p>
-              Route points are rounded to about 100 m before sharing or routing.
-              Check the point on the map.
-            </p>
-            <div class="location-action-buttons">
-              <button id="location-start" type="button">Set as start</button>
-              <button id="location-stop" type="button">Add as stop</button>
-            </div>
-          </div>
-        </section>
         <button id="fit" class="fit-button" type="button">Fit route</button>
       </section>
     </main>

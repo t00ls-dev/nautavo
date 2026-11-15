@@ -109,8 +109,8 @@
           <h3 data-kind="Added">Added</h3>
           <ul>
             <li>
-              A point's field opens a menu with My location (rounded to about
-              100 m) and Choose on map (move the map under a fixed marker and
+              A point's field opens a menu with My location (your exact
+              position) and Choose on map (move the map under a fixed marker and
               Confirm); place suggestions show their name, the rest of the
               address and the distance from the point before or after.
             </li>
@@ -197,6 +197,14 @@
           <h3 data-kind="Changed">Changed</h3>
           <ul>
             <li>
+              Use my location shows a blue dot that follows your position on the
+              map, with a circle for its margin of error and a grey dot when the
+              position stops updating; the map follows it until you move the
+              map, the button re-centers and a further press turns it off. The
+              card with Set as start and Add as stop was removed: My location in
+              a point's field sets a route point.
+            </li>
+            <li>
               Add stop, Reverse and Round trip are tiles of the same size below
               the points. On wide screens, Copy link and Import are icon buttons
               beside Download GPX, so no label wraps in the sidebar.
@@ -237,11 +245,11 @@
               Online, after 15 seconds off the route, navigation recalculates a
               way back to the planned route, at most once a minute, and
               Recalculate route asks right away within the same limit; only your
-              current position, rounded to about 10 m, is sent, and the planned
-              route does not change. Automatic recalculation can be turned off
-              in the start notice, in Settings or from the reminder shown when
-              navigation starts, to follow the planned track exactly, as in an
-              event; Recalculate route still works.
+              current position is sent, and the planned route does not change.
+              Automatic recalculation can be turned off in the start notice, in
+              Settings or from the reminder shown when navigation starts, to
+              follow the planned track exactly, as in an event; Recalculate
+              route still works.
             </li>
             <li>
               Off the route while navigating, the card turns amber and says Back
@@ -521,11 +529,10 @@
           <h3 data-kind="Added">Novo</h3>
           <ul>
             <li>
-              O campo de um ponto abre um menu com Minha localização
-              (arredondada a cerca de 100 m) e Escolher no mapa (mova o mapa sob
-              um marcador fixo e Confirme); as sugestões de lugares mostram o
-              nome, o resto do endereço e a distância até o ponto anterior ou
-              seguinte.
+              O campo de um ponto abre um menu com Minha localização (sua
+              posição exata) e Escolher no mapa (mova o mapa sob um marcador
+              fixo e Confirme); as sugestões de lugares mostram o nome, o resto
+              do endereço e a distância até o ponto anterior ou seguinte.
             </li>
             <li>
               Mover um ponto no mapa ficou preciso em telas de toque: enquanto
@@ -612,6 +619,15 @@
           <h3 data-kind="Changed">Alterado</h3>
           <ul>
             <li>
+              Usar minha localização mostra um ponto azul que acompanha sua
+              posição no mapa, com um círculo para a margem de erro e o ponto
+              cinza quando a posição deixa de ser atualizada; o mapa acompanha o
+              ponto até você mover o mapa, o botão centraliza de novo e mais um
+              toque desliga. O cartão com Definir como início e Adicionar como
+              parada foi removido: Minha localização no campo de um ponto define
+              um ponto da rota.
+            </li>
+            <li>
               Adicionar parada, Inverter e Ida e volta são blocos do mesmo
               tamanho abaixo dos pontos. Em telas largas, Copiar link e Importar
               são botões de ícone ao lado de Baixar GPX, e nenhum texto quebra
@@ -652,12 +668,11 @@
               Com conexão, depois de 15 segundos fora da rota, a navegação
               recalcula um caminho de volta à rota planejada, no máximo uma vez
               por minuto, e Recalcular rota pede na hora, dentro do mesmo
-              limite; só a sua posição atual, arredondada para cerca de 10 m, é
-              enviada, e a rota planejada não muda. O recálculo automático pode
-              ser desativado no aviso inicial, nas Configurações ou pelo
-              lembrete que aparece ao iniciar a navegação, para seguir
-              exatamente o trajeto planejado, como numa prova; Recalcular rota
-              continua funcionando.
+              limite; só a sua posição atual é enviada, e a rota planejada não
+              muda. O recálculo automático pode ser desativado no aviso inicial,
+              nas Configurações ou pelo lembrete que aparece ao iniciar a
+              navegação, para seguir exatamente o trajeto planejado, como numa
+              prova; Recalcular rota continua funcionando.
             </li>
             <li>
               Fora da rota durante a navegação, o cartão fica âmbar e diz Volte

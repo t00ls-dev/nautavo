@@ -110,7 +110,7 @@ test('Choose on map places an empty point under the crosshair', async ({
   );
 });
 
-test('My location sets the point to a position rounded to about 100 m', async ({
+test('My location sets the point to the exact position', async ({
   page,
   context,
 }) => {
@@ -127,7 +127,7 @@ test('My location sets the point to a position rounded to about 100 m', async ({
     .getByRole('option', { name: 'Minha localização' })
     .click();
   await expect(page.locator('#location-1')).toHaveValue(
-    '-22.912000, -43.177000',
+    '-22.912345, -43.176543',
   );
 });
 

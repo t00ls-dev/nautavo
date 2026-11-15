@@ -245,21 +245,28 @@
         </p>
         <p>
           Use my location requests your position directly. The browser asks for
-          permission when needed, without a preliminary confirmation screen.
-          Exact location only centers the map and displays an accuracy circle.
-          Set as start and Add as stop, like My location in a point's field, use
-          a rounded coordinate (about 100 m); review it before routing. If
-          permission is denied, open this site's permissions in your browser
-          settings and allow Location, then try again. You can keep using the
-          map without GPS.
+          permission when needed, without a preliminary confirmation screen. A
+          blue dot then follows your position on the map, with a lighter circle
+          showing its margin of error: the wider the circle, the less precise
+          the location. The dot turns grey when no new position arrives for 30
+          seconds. The map follows the dot until you move it; press the button
+          again to re-center, and press it once more to turn location off. It
+          pauses while the page is hidden and changes nothing in the route; to
+          use it as a route point, choose My location in a point's field, which
+          uses the exact position, like a tap on the map; like every route
+          point, it is sent to the services that calculate the route and its
+          weather, and links carry it. If permission is denied, open this site's
+          permissions in your browser settings and allow Location, then try
+          again. You can keep using the map without GPS.
         </p>
         <p>
           The initial view prefers the URL route, then already authorized GPS,
           approximate IP region, and browser timezone/language. To stop IP
           requests, open Settings and disable Detect region by IP. The selected
-          provider receives your IP address. Exact GPS is never stored; it goes
-          to the routing service only as a navigation recalculation, rounded to
-          about 10 m; tile requests reveal the visible area.
+          provider receives your IP address. The location dot is never stored or
+          sent; GPS only leaves the device as a route point you chose or as the
+          current position of a navigation recalculation; tile requests reveal
+          the visible area.
         </p>
         <h2>Choose main roads</h2>
         <p>
@@ -588,8 +595,7 @@
           and sends no request; without it, the chip does not show. There is no
           live traffic. Your location is watched only from Start navigation
           until End, pauses while the page is hidden and is never stored; a
-          recalculation sends only your current position, rounded to about 10 m,
-          to the routing server.
+          recalculation sends only your current position to the routing server.
         </p>
         <h2>Travel the route</h2>
         <p>
@@ -965,21 +971,28 @@
         <p>
           Usar minha localização solicita a posição diretamente. O navegador
           pede permissão quando necessário, sem tela preliminar de confirmação.
-          A posição exata só centraliza o mapa e mostra um círculo de precisão.
-          Definir como início e Adicionar como parada, assim como Minha
-          localização no campo de um ponto, usam uma coordenada arredondada
-          (cerca de 100 m); confira antes de calcular. Se a permissão for
-          negada, abra as permissões deste site nas configurações do navegador e
-          libere Localização, depois tente novamente. O mapa continua utilizável
-          sem GPS.
+          Um ponto azul passa a acompanhar sua posição no mapa, com um círculo
+          mais claro mostrando a margem de erro: quanto maior o círculo, menos
+          precisa a localização. O ponto fica cinza quando nenhuma posição nova
+          chega por 30 segundos. O mapa acompanha o ponto até você movê-lo;
+          toque no botão de novo para centralizar e mais uma vez para desligar a
+          localização. Ela pausa enquanto a página está oculta e não altera a
+          rota; para usá-la como ponto da rota, escolha Minha localização no
+          campo de um ponto, que usa a posição exata, como um toque no mapa;
+          como todo ponto da rota, ela é enviada aos serviços que calculam a
+          rota e o clima, e os links a levam. Se a permissão for negada, abra as
+          permissões deste site nas configurações do navegador e libere
+          Localização, depois tente novamente. O mapa continua utilizável sem
+          GPS.
         </p>
         <p>
           A vista inicial prioriza a rota da URL, GPS já autorizado, região
           aproximada por IP e fuso/idioma do navegador. Para impedir consultas
           por IP, abra Configurações e desative Detectar região pelo IP. O
-          provedor escolhido recebe seu endereço IP. O GPS exato nunca é
-          armazenado; só vai ao roteador num recálculo da navegação, arredondado
-          para cerca de 10 m; as requisições de tiles revelam a área visível.
+          provedor escolhido recebe seu endereço IP. O ponto de localização
+          nunca é guardado nem enviado; o GPS só sai do aparelho como um ponto
+          da rota que você escolheu ou como a posição atual num recálculo da
+          navegação; as requisições de tiles revelam a área visível.
         </p>
         <h2>Escolher vias principais</h2>
         <p>
@@ -1323,7 +1336,7 @@
           ela, o chip não aparece. Não há trânsito ao vivo. Sua localização é
           acompanhada só de Iniciar navegação até Sair, pausa com a página
           oculta e nunca é guardada; um recálculo envia ao roteador só a sua
-          posição atual, arredondada para cerca de 10 m.
+          posição atual.
         </p>
         <h2>Percorrer a rota</h2>
         <p>

@@ -35,7 +35,6 @@ export function setupPanel(map: L.Map): void {
   iconControl($('more-actions'), 'more', 'More actions', true);
   iconControl($('open-settings'), 'settings', 'Settings', true);
   iconControl($('close-settings'), 'close', 'Close settings', true);
-  iconControl($('close-location'), 'close', 'Close location', true);
   document
     .querySelector('.secondary-actions .file-button')!
     .prepend(icon('upload'));

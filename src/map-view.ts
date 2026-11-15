@@ -1,23 +1,15 @@
 import L from 'leaflet';
 import { t } from './i18n';
-import type { Coord } from './core';
 import { defaultView, initialView } from './default-view';
-import {
-  authorizedView,
-  getPosition,
-  positionView,
-  locationError,
-  approximatePoint,
-} from './location';
+import { authorizedView } from './location';
+import { setupUserLocation } from './user-location';
 import { approximateRegion, defaultRegionUrl, regionUrl } from './services';
 import { byId as element } from './dom';
-import { compactLayout } from './panel';
 
 export function setupMapView(
   map: L.Map,
   route: {
     hasRoute: () => boolean;
-    addPoint: (coord: Coord, asStart: boolean) => void;
   },
 ): void {
   let interacted = false;
@@ -100,84 +92,7 @@ export function setupMapView(
       layout();
     }
   });
-  const userLocation = L.layerGroup().addTo(map);
-  let exactPosition: Coord | null = null;
-  let locationRequest = 0;
-  element('close-location').onclick = () => {
-    locationRequest++;
-    element('location-card').hidden = true;
-    userLocation.clearLayers();
-    exactPosition = null;
-    element('location-actions').hidden = true;
-    element<HTMLButtonElement>('locate').disabled = false;
-  };
-  element('locate').onclick = () => {
-    interact();
-    if (!element('route-panel').hidden && compactLayout())
-      element('panel-toggle').click();
-    element('location-card').hidden = false;
-    element('location-actions').hidden = true;
-    exactPosition = null;
-    userLocation.clearLayers();
-    if (!window.isSecureContext) {
-      element('location-status').textContent =
-        'Location requires HTTPS. Open the secure site or choose a point on the map.';
-      return;
-    }
-    if (!navigator.geolocation) {
-      element('location-status').textContent =
-        'This browser does not support location. Choose a point on the map.';
-      return;
-    }
-    interact();
-    const request = ++locationRequest;
-    const button = element<HTMLButtonElement>('locate');
-    button.disabled = true;
-    element('location-status').textContent = 'Finding your location…';
-    void getPosition()
-      .then((position) => {
-        if (request !== locationRequest) return;
-        const view = positionView(position);
-        exactPosition = view.center;
-        userLocation.clearLayers();
-        L.circle(view.center, {
-          radius: position.coords.accuracy,
-          className: 'location-accuracy',
-          color: '#1765a5',
-          fillOpacity: 0.12,
-        }).addTo(userLocation);
-        L.circleMarker(view.center, {
-          radius: 7,
-          className: 'location-dot',
-          color: '#fff',
-          fillColor: '#1765a5',
-          fillOpacity: 1,
-        }).addTo(userLocation);
-        map.setView(view.center, view.zoom, { animate: false });
-        element('location-status').textContent =
-          'Location found. Your route has not changed.';
-        element('location-actions').hidden = false;
-      })
-      .catch((error: GeolocationPositionError) => {
-        if (request !== locationRequest) return;
-        element('location-status').textContent = locationError(error.code);
-      })
-      .finally(() => {
-        if (request === locationRequest) button.disabled = false;
-      });
-  };
-  const useLocation = (asStart: boolean) => {
-    if (!exactPosition) return;
-    route.addPoint(approximatePoint(exactPosition), asStart);
-    element('close-location').click();
-  };
-  element('location-start').onclick = () => useLocation(true);
-  element('location-stop').onclick = () => useLocation(false);
-  window.addEventListener('pagehide', () => {
-    locationRequest++;
-    exactPosition = null;
-    userLocation.clearLayers();
-  });
+  setupUserLocation(map, interact);
   void initialView({
     hasRoute: route.hasRoute(),
     authorizedPosition: authorizedView,

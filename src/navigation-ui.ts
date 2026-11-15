@@ -10,7 +10,7 @@ import { decimalYear, magneticDeclination } from './declination';
 import { byId as $ } from './dom';
 import { t } from './i18n';
 import { icon, iconControl, type IconName } from './icons';
-import { locationError, navigationPoint } from './location';
+import { gpsPoint, locationError } from './location';
 import { navigationRoute } from './services';
 import { creditsDialog } from './map-credits';
 import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
@@ -1130,7 +1130,7 @@ export function setupNavigation(deps: {
   /**
    * Off the route, asks the router for a way back to the planned route,
    * automatically or from the button, within `createRerouteSchedule`'s
-   * limits. Only the position (about 10 m) and the course are sent; the new
+   * limits. Only the position and the course are sent; the new
    * route lives in page memory until End.
    */
   function reroute(manual: boolean) {
@@ -1156,7 +1156,7 @@ export function setupNavigation(deps: {
     render();
     navigationRoute(
       deps.state(),
-      navigationPoint(last.coord),
+      gpsPoint(last.coord),
       target.coord,
       course,
       isCurrent,
