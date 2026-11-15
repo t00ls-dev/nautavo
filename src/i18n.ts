@@ -327,6 +327,8 @@ const pt: Record<string, string> = {
   'Add stop': 'Adicionar parada',
   Reverse: 'Inverter',
   'Starting point': 'Ponto de partida',
+  'Choose on map': 'Escolher no mapa',
+  'My location': 'Minha localização',
   'Add a stop': 'Adicionar parada',
   'Prefer main roads': 'Preferir vias principais',
   Settings: 'Configurações',

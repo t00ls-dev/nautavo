@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- A point's field opens a menu with My location (rounded to about 100 m) and Choose on map (move the map under a fixed marker and Confirm); place suggestions show their name, the rest of the address and the distance from the point before or after.
 - Moving a point on the map is precise on touch screens: while you drag a marker, a magnifier above your finger shows the exact spot under it. In Settings, Moving points on the map can instead be Tap, then move the map: tap a marker, move the map under a fixed marker and Confirm.
 - Speed while navigating: a round badge shows your current speed (0 when stopped), and the time left and the arrival start from your average speed and move to the trip's own average, stops included, over the first 10 minutes. Simulate navigation shows the trip's clock next to Replay.
 - Weather while navigating: a chip at the top left shows the weather here, with an icon, the temperature and the chance of rain (amber with an alert); tap it for the next samples ahead with their distance, passage time and alerts. It reads the forecast already fetched for the route, makes no request and never sends your position; it also follows Simulate navigation.

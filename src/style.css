@@ -673,8 +673,82 @@ header button.icon-control {
   text-align: left;
 }
 .suggestions {
-  max-height: 240px;
+  max-height: 320px;
   overflow-y: auto;
+}
+/* The field's menu: My location and Choose on map, then the places, each
+   with its name, the rest of its address and the distance from the route. */
+/* As wide as the point's row, from its number to its remove button. */
+.point-fields > .suggestions {
+  position: relative;
+  z-index: 3;
+  margin-right: -48px;
+  margin-left: -40px;
+}
+.suggestions:not(:empty) {
+  margin-top: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-control);
+}
+.suggestions > button {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text);
+  font-weight: 400;
+  text-align: left;
+}
+.suggestions > button:hover {
+  background: var(--color-soft);
+}
+.suggestions > button + button {
+  border-top: 1px solid var(--color-border);
+}
+.suggestions > .suggestion-action + .suggestion-action {
+  border-top: 0;
+}
+.suggestions > .suggestion-action {
+  height: 48px;
+  color: var(--color-primary);
+  font-weight: 650;
+}
+.suggestion-place .button-icon {
+  color: #56636c;
+}
+.suggestion-place > span {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.suggestion-place b,
+.suggestion-place small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.suggestion-place b {
+  font-weight: 600;
+}
+.suggestion-place small {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.suggestion-place em {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-style: normal;
 }
 .suggestions [aria-selected='true'] {
   outline: 3px solid var(--color-focus);

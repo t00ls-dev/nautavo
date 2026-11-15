@@ -110,6 +110,12 @@ import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
 import { moveItem, setupPointOrder } from './point-order';
 import {
+  approximatePoint,
+  getPosition,
+  locationError,
+  positionView,
+} from './location';
+import {
   createCrosshair,
   createLoupe,
   placementMode,
@@ -271,20 +277,76 @@ map
     (event) => (touchDrag = event.pointerType !== 'mouse'),
     { capture: true, passive: true },
   );
-function adjustPoint(point: Point) {
+/**
+ * Places `point` with the crosshair: from its marker (Settings) or from Choose
+ * on map in its field, which starts at the map center when the point is empty
+ * and names it by its role, so the field shows the coordinates.
+ */
+function adjustPoint(point: Point, fromField = false) {
   const i = state.points.indexOf(point);
-  if (i < 0 || !point.coord || editBlocked()) return;
+  const start: Coord | null =
+    point.coord && !dirty.has(point)
+      ? point.coord
+      : fromField
+        ? [map.getCenter().lat, map.getCenter().lng]
+        : null;
+  if (i < 0 || !start || editBlocked()) return;
   if (!$('route-panel').hidden && compactLayout()) $('panel-toggle').click();
   adjusting = point;
   renderMarkers();
-  crosshair.start(point.coord, i + 1, (coord) => {
+  crosshair.start(start, i + 1, (coord) => {
     adjusting = null;
     const index = state.points.indexOf(point);
     if (coord && index >= 0 && !editBlocked()) {
       selected = index;
-      setPoint(point, index, coord);
+      setPoint(point, index, coord, fromField ? pointLabel(index) : undefined);
     } else renderMarkers();
   });
+}
+/**
+ * My location in a point's field: one position on this explicit choice,
+ * rounded to about 100 m like Use my location, never stored apart from the
+ * route point it sets.
+ */
+function useMyLocation(point: Point) {
+  if (editBlocked()) return;
+  if (!navigator.geolocation || !window.isSecureContext) {
+    status(locationError(2), true);
+    return;
+  }
+  status('Finding your location…');
+  const before = revision;
+  getPosition()
+    .then((position) => {
+      const index = state.points.indexOf(point);
+      // A later edit wins over a late position.
+      if (index < 0 || revision !== before || editBlocked()) return;
+      const coord = approximatePoint(positionView(position).center);
+      setPoint(point, index, coord, pointLabel(index));
+      map.panTo(coord);
+    })
+    .catch((error: GeolocationPositionError | Error) => {
+      if (revision === before)
+        status(locationError('code' in error ? error.code : 2), true);
+    });
+}
+/** Distance shown beside a suggestion: from the point before it, or after. */
+function suggestionDistance(point: Point, coord: Coord): string | null {
+  const i = state.points.indexOf(point);
+  const known = (p: Point | undefined) =>
+    p && p !== point && p.coord && !dirty.has(p) ? p.coord : null;
+  let reference: Coord | null = null;
+  for (let j = i - 1; j >= 0 && !reference; j--)
+    reference = known(state.points[j]);
+  for (let j = i + 1; j < state.points.length && !reference; j++)
+    reference = known(state.points[j]);
+  return reference
+    ? stepDistanceLabel(
+        meters(reference, coord),
+        distanceUnits(),
+        state.language === 'pt' ? 'pt-BR' : 'en',
+      )
+    : null;
 }
 // Maneuver chosen in the itinerary, shown until the next map click or route.
 map.createPane('maneuver').style.zIndex = '587';
@@ -620,6 +682,19 @@ function renderPoints() {
         status(
           'Suggestions unavailable. Press Enter to search with Nominatim.',
         ),
+      actions: () => [
+        {
+          label: 'My location',
+          icon: 'locate',
+          run: () => useMyLocation(point),
+        },
+        {
+          label: 'Choose on map',
+          icon: 'pin',
+          run: () => adjustPoint(point, true),
+        },
+      ],
+      distance: (coord) => suggestionDistance(point, coord),
     });
     autocompleteCleanups.push(closeSuggestions);
     let coordinateTimer: ReturnType<typeof setTimeout>;
