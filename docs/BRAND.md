@@ -19,7 +19,7 @@ The route mark connects two points with a bend, matching the app's purpose. The 
 | Errors                  | `--color-danger`         | `#a3262b` |
 | Warnings                | `--color-warning`        | `#74420b` |
 
-The tokens are defined once at the top of `src/style.css` for a single light, high-contrast theme. Text uses the system font stack (no web font is loaded): 15px on wide screens and 16px on phones, with at least 13px for secondary text and 16px in editable fields on touch screens. Controls are at least 44px tall, with 8px and 12px corner radii.
+The tokens are defined once at the top of `src/style.css` for a single light, high-contrast theme. Rules refer to a role by its `--color-*` token, never by another name or by the literal value; a literal that happens to match a token stays only where the role differs (white borders and text on colored marks, the white status strip, map graphics such as the elevation cursor and location accuracy, climb marks). Text uses the system font stack (no web font is loaded): 15px on wide screens and 16px on phones, with at least 13px for secondary text and 16px in editable fields on touch screens. Controls are at least 44px tall, with 8px and 12px corner radii.
 
 The planner is a 400px side panel next to the map on wide screens and a bottom sheet over the map on phones (closed, half or full height). Export actions stay in a bar below the scrolling panel, and map tools are icon-only buttons with accessible names.
 
