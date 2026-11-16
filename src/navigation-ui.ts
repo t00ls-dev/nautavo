@@ -14,7 +14,7 @@ import { navigationRoute } from './services';
 import { creditsDialog } from './map-credits';
 import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
 import { loadMapLibre } from './maplibre-loader';
-import { maneuverIcon, maneuverText } from './maneuvers';
+import { maneuverIcon, maneuverText, stepRoad } from './maneuvers';
 import { navigationStyle } from './navigation-style';
 import {
   compassHeading,
@@ -38,6 +38,7 @@ import {
 } from './navigation-weather';
 import { weatherDescription } from './i18n';
 import { arrivalSpeedKmh, createSpeedMeter } from './navigation-speed';
+import { createVoiceSchedule } from './navigation-voice';
 import {
   forgetNavigation,
   rememberNavigation,
@@ -135,6 +136,9 @@ type OrientationPermission = {
 // traveler turns automatic recalculation off; absent means on.
 const noticeWanted = () =>
   readPreference(PREFERENCE.navigationNotice) !== 'off';
+const voiceWanted = () => readPreference(PREFERENCE.navigationVoice) === 'on';
+const rememberVoice = (on: boolean) =>
+  writePreference(PREFERENCE.navigationVoice, on ? 'on' : null);
 const autoRerouteWanted = () =>
   readPreference(PREFERENCE.autoReroute) !== 'off';
 const rememberAutoReroute = (on: boolean) =>
@@ -144,8 +148,7 @@ const rememberNotice = (show: boolean) =>
 
 /** Road text shown for a maneuver: its name, its reference or the instruction. */
 function roadText(step: Step): string {
-  const name = step.name && step.name !== 'Unnamed road' ? step.name : '';
-  const road = name || step.ref || '';
+  const road = stepRoad(step);
   const roundabout = step.exit ? maneuverText(step) : null;
   if (roundabout && road) return `${t(roundabout)} · ${road}`;
   return road || t(maneuverText(step) ?? 'Continue');
@@ -231,6 +234,48 @@ export function setupNavigation(deps: {
   autoNotice.checked = autoSetting.checked = autoReroute;
   autoNotice.onchange = () => setAutoReroute(autoNotice.checked);
   autoSetting.onchange = () => setAutoReroute(autoSetting.checked);
+  /** Speaks English source text in the interface language, if voice is on. */
+  function say(text: string | null) {
+    if (!text || !voiceOn || !('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(t(text));
+    utterance.lang = deps.locale();
+    speechSynthesis.speak(utterance);
+  }
+  function silence() {
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+  // Spoken directions (#190), off by default: the start notice, Settings and
+  // a button on the navigation screen turn them on or off.
+  const voiceNotice = $<HTMLInputElement>('nav-notice-voice'),
+    voiceSetting = $<HTMLInputElement>('voice-setting'),
+    voiceButton = $<HTMLButtonElement>('nav-voice');
+  let voiceOn = voiceWanted(),
+    voice = createVoiceSchedule();
+  const showVoice = () => {
+    voiceNotice.checked = voiceSetting.checked = voiceOn;
+    iconControl(
+      voiceButton,
+      voiceOn ? 'volume' : 'volume-off',
+      voiceOn ? 'Voice on' : 'Voice off',
+      true,
+    );
+    voiceButton.setAttribute('aria-pressed', String(voiceOn));
+  };
+  const setVoice = (on: boolean) => {
+    voiceOn = on;
+    rememberVoice(on);
+    if (!on) silence();
+    showVoice();
+  };
+  showVoice();
+  voiceNotice.onchange = () => setVoice(voiceNotice.checked);
+  voiceSetting.onchange = () => setVoice(voiceSetting.checked);
+  voiceButton.onclick = () => {
+    setVoice(!voiceOn);
+    // A tap lets iOS speak; it also says the switch worked.
+    if (voiceOn) say('Voice on');
+  };
   $('nav-auto-reroute-off').onclick = () => {
     setAutoReroute(false);
     screen.focus({ preventScroll: true });
@@ -281,6 +326,8 @@ export function setupNavigation(deps: {
     /** GPS course while moving, degrees, or null. */
     course: number | null = null,
     reroutedTimer = 0,
+    /** The device's latest speed, m/s, for the voice's thresholds. */
+    speedNow = 0,
     tileErrors = 0,
     tileLoads = 0,
     pivot = { x: 0, y: 0 },
@@ -749,6 +796,7 @@ export function setupNavigation(deps: {
       $('nav-then').hidden = true;
     } else renderManeuver(r, arrived);
     announce(r, arrived, !!rejoin);
+    say(voice.next(r, speedNow, units(), deps.locale()));
     renderBar(r);
     renderWeather();
     renderSpeed();
@@ -1060,6 +1108,7 @@ export function setupNavigation(deps: {
         meters(previous.coord, last.coord) / ((time - previous.time) / 1000);
     previous = { coord: last.coord, time };
     moving = isMoving(speed, moving);
+    speedNow = speed ?? speedNow;
     // Progress on the planned route: weather samples and the trip's average
     // are measured on it, so both hold after a recalculation.
     if (replaying) plannedProgress = replayDistance;
@@ -1153,6 +1202,7 @@ export function setupNavigation(deps: {
         drawRoute(route);
         rerouting = 'idle';
         $('nav-rerouted').hidden = false;
+        say(voice.rerouted());
         clearTimeout(reroutedTimer);
         reroutedTimer = window.setTimeout(
           () => ($('nav-rerouted').hidden = true),
@@ -1222,6 +1272,7 @@ export function setupNavigation(deps: {
     }
     if (document.visibilityState === 'hidden') {
       stopWatching();
+      silence();
       // A hidden tab may be discarded: keep the latest progress now.
       rememberProgress(plannedProgress, Date.now(), true);
     } else {
@@ -1250,6 +1301,9 @@ export function setupNavigation(deps: {
     weatherOpen(false);
     session++;
     hideAutoChip();
+    voice = createVoiceSchedule();
+    // Start and Continue are taps: iOS lets speech begin only from one.
+    say('Navigation started.');
     travelledBusy = false;
     travelledNext = null;
     replaying = replay;
@@ -1329,6 +1383,7 @@ export function setupNavigation(deps: {
     // A recalculation still under way belongs to this navigation only.
     session++;
     forgetNavigation();
+    silence();
     const wasReplay = replaying;
     if (replaying) {
       setReplayPlaying(false);

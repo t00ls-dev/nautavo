@@ -35,6 +35,12 @@ const TURN: Record<Modifier, string> = {
   'sharp left': 'Sharp left',
 };
 
+/** The road a step leads onto: its name, else its ref, else ''. */
+export function stepRoad(step: Step): string {
+  const name = step.name && step.name !== 'Unnamed road' ? step.name : '';
+  return name || step.ref || '';
+}
+
 /** Instruction for the maneuver that starts a step, or null when unknown. */
 export function maneuverText(step: Step): string | null {
   const { kind, modifier, exit } = step;
