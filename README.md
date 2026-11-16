@@ -14,7 +14,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 - **Weather:** conditions and risks along the route for a departure date, including recent past dates, in Celsius or Fahrenheit.
 
 - **Map layers:** one vector map for planning and navigation, as standard, topographic (relief shading and contour lines) and satellite maps (with the map's labels), route coloring by daylight, grade or surface and route marks (direction arrows, separate out-and-back lines, weather icons on or off).
-- **Save and share:** route links, named routes saved in this browser and JSON backup import/export.
+- **Save and share:** route links, named routes and favorite places saved in this browser and JSON backup import/export.
 - **Interface:** available in English and Portuguese.
 
 ## Quick start
@@ -28,7 +28,7 @@ Gestures, shortcuts and every control are explained on the [Help page](https://r
 
 ## Good to know
 
-- Nothing is saved automatically: use **Save route** to keep the exact geometry in this browser, and export backups, since clearing browser data can remove saved routes.
+- Nothing is saved automatically: use **Save route** to keep the exact geometry in this browser, and export backups, since clearing browser data can remove saved routes and favorite places.
 - On phones, More actions › Add to home screen shows your browser's steps to open the site from an icon; there is nothing to install. Only the map zooms on phones, so the page never zooms by accident; Help and What's new still zoom with a pinch.
 - After one visit with a connection, the app opens offline in the same browser and saved routes open and download as GPX; map tiles, routing, search, weather, elevation and surface still need a connection.
 - Routing currently uses a car profile. **Prefer main roads** flags possible local sections but does not guarantee their exclusion; estimates exclude stops and real-time traffic.

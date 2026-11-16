@@ -114,6 +114,38 @@ const pt: Record<string, string> = {
   'Voice on': 'Voz ligada',
   'Voice off': 'Voz desligada',
   'Upcoming turns': 'Próximas curvas',
+  'Save as favorite': 'Salvar como favorito',
+  Backup: 'Cópia de segurança',
+  'Your saved routes and favorite places in one file, to keep or to move to another device.':
+    'Suas rotas salvas e seus lugares favoritos em um arquivo, para guardar ou levar a outro aparelho.',
+  'Search a place or paste coordinates': 'Busque um lugar ou cole coordenadas',
+  'Your location is not available.': 'Sua localização não está disponível.',
+  'Search is unavailable right now.': 'A busca está indisponível agora.',
+  'Choose the place from the search, or paste coordinates.':
+    'Escolha o lugar na busca, ou cole coordenadas.',
+  Place: 'Lugar',
+  'Save favorite': 'Salvar favorito',
+  'Edit favorite': 'Editar favorito',
+  'Favorite saved.': 'Favorito salvo.',
+  'This point': 'Este ponto',
+  'E.g. Corner bakery': 'Ex.: Padaria do bairro',
+  Icon: 'Ícone',
+  Home: 'Casa',
+  Work: 'Trabalho',
+  Favorite: 'Favorito',
+  Save: 'Salvar',
+  Name: 'Nome',
+  'Favorite saved on this device.': 'Favorito salvo neste aparelho.',
+  'Favorite deleted.': 'Favorito excluído.',
+  'Could not access favorites.': 'Não foi possível acessar os favoritos.',
+  "No favorites. Save one from a point's menu: Save as favorite.":
+    'Nenhum favorito. Salve um pelo menu de um ponto: Salvar como favorito.',
+  'Favorite places': 'Lugares favoritos',
+  'Name the favorite before saving.': 'Dê um nome ao favorito antes de salvar.',
+  'Invalid favorite place.': 'Lugar favorito inválido.',
+  'A favorite with this name already exists.':
+    'Já existe um favorito com este nome.',
+  'Invalid favorite in the backup.': 'Favorito inválido no backup.',
   'Straight line, not by road': 'Em linha reta, não pelas ruas',
   'No map. The route and your position still show.':
     'Sem mapa. A rota e sua posição continuam na tela.',
@@ -561,6 +593,24 @@ const pt: Record<string, string> = {
   Via: 'Passagem',
 };
 const patterns: [RegExp, (...args: string[]) => string][] = [
+  [/^Edit favorite: (.+)$/, (name) => `Editar favorito: ${name}`],
+  [/^Delete favorite: (.+)$/, (name) => `Excluir favorito: ${name}`],
+  [
+    /^Imported (1 route|\d+ routes)(?: and (1 favorite|\d+ favorites))?\. Existing names were kept\.$/,
+    (routes, favorites) => {
+      const n = (text: string) => text.split(' ')[0];
+      const r =
+        n(routes) === '1'
+          ? '1 rota importada'
+          : `${n(routes)} rotas importadas`;
+      const f = favorites
+        ? n(favorites) === '1'
+          ? ' e 1 favorito'
+          : ` e ${n(favorites)} favoritos`
+        : '';
+      return `${r}${f}. Os nomes existentes foram mantidos.`;
+    },
+  ],
   [/^Stop (\d+)$/, (n) => `Parada ${n}`],
   // Spoken directions (`src/navigation-voice.ts`): distance words and the
   // maneuver's own translation, mid-sentence.
@@ -587,14 +637,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Download saved route: (.*?)$/, (n) => `Baixar rota salva: ${n}`],
   [/^Share saved route: (.*?)$/, (n) => `Compartilhar rota salva: ${n}`],
   [/^Delete saved route: (.*?)$/, (n) => `Excluir rota salva: ${n}`],
-  [
-    /^Imported 1 route\. Existing names were kept\.$/,
-    () => '1 rota importada. Os nomes existentes foram mantidos.',
-  ],
-  [
-    /^Imported (\d+) routes\. Existing names were kept\.$/,
-    (n) => `${n} rotas importadas. Os nomes existentes foram mantidos.`,
-  ],
 
   [/^At (.*?) (km\/h|mph) · no stops$/, (n, u) => `A ${n} ${u} · sem paradas`],
   [

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { holdMap, mockBasemap, BASEMAP_STYLE, mapCanvas } from './map-helpers';
 import { base, gpxPoints } from './app-helpers';
@@ -484,7 +484,7 @@ for (const language of ['en', 'pt'] as const)
     // Saved routes and the backup share too.
     await page.locator('#save-route').click();
     await expect(page.locator('#saved-count')).toHaveText('(1)');
-    await page.locator('.saved-routes summary').click();
+    await page.locator('.saved-routes > summary').click();
     await page
       .getByRole('button', {
         name:
@@ -494,6 +494,7 @@ for (const language of ['en', 'pt'] as const)
         exact: true,
       })
       .click();
+    await page.locator('#open-settings').click();
     await expect(page.locator('#backup-routes')).toHaveText(
       language === 'pt' ? 'Compartilhar backup' : 'Share backup',
     );
@@ -557,10 +558,9 @@ for (const width of [320, 360, 390, 430, 760])
       await expect(button).toHaveAccessibleName(
         language === 'pt' ? 'Compartilhar GPX' : 'Share GPX',
       );
-      await page.locator('.saved-routes summary').click();
-      await expect(page.locator('#backup-routes')).toBeVisible();
-      for (const target of [button, page.locator('#backup-routes')]) {
-        const fits = await target.evaluate((e) => {
+      // The GPX button on the bar, and the backup button in Settings.
+      const fits = (target: Locator) =>
+        target.evaluate((e) => {
           const label = e.querySelector('.button-label') ?? e;
           const range = document.createRange();
           range.selectNodeContents(label);
@@ -569,7 +569,9 @@ for (const width of [320, 360, 390, 430, 760])
           );
           return lines.size <= 1 && e.scrollWidth <= e.clientWidth + 1;
         });
-        expect(fits).toBe(true);
-      }
+      expect(await fits(button)).toBe(true);
+      await page.locator('#open-settings').click();
+      await expect(page.locator('#backup-routes')).toBeVisible();
+      expect(await fits(page.locator('#backup-routes'))).toBe(true);
       await context.close();
     });

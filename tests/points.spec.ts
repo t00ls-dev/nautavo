@@ -1001,7 +1001,7 @@ test('only explicitly saved named routes persist, and reopening does not reroute
   );
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   await page.goto(base);
-  await page.locator('.saved-routes summary').click();
+  await page.locator('.saved-routes > summary').click();
   await expect(page.locator('#saved-list strong')).toHaveText('Weekend route');
   let requests = 0;
   page.on('request', (r) => {
@@ -1038,13 +1038,16 @@ test('route backups restore deleted routes and skip existing names', async ({
   await page.locator('#route-name').fill('Backup test');
   await page.locator('#save-route').click();
   await expect(page.locator('#saved-count')).toHaveText('(1)');
-  await page.locator('.saved-routes summary').click();
+  // The backup lives in Settings.
+  await page.locator('#open-settings').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.locator('#backup-routes').click(),
   ]);
   const backup = await readFile((await download.path())!);
   expect(JSON.parse(backup.toString()).routes).toHaveLength(1);
+  await page.locator('#close-settings').click();
+  await page.locator('.saved-routes > summary').click();
   await page
     .getByRole('button', {
       name: 'Delete saved route: Backup test',
@@ -1052,6 +1055,7 @@ test('route backups restore deleted routes and skip existing names', async ({
     })
     .click();
   await expect(page.locator('#saved-count')).toHaveText('(0)');
+  await page.locator('#open-settings').click();
   for (let i = 0; i < 2; i++) {
     await page.locator('#restore-routes').setInputFiles({
       name: 'backup.json',
@@ -1061,10 +1065,11 @@ test('route backups restore deleted routes and skip existing names', async ({
     await expect(page.locator('#saved-count')).toHaveText('(1)');
     await expect(page.locator('#restore-routes')).toHaveValue('');
   }
-  await expect(page.locator('#saved-list strong')).toHaveText('Backup test');
-  await expect(page.locator('#library-status')).toContainText(
+  await expect(page.locator('#backup-status')).toContainText(
     'Existing names were kept.',
   );
+  await page.locator('#close-settings').click();
+  await expect(page.locator('#saved-list strong')).toHaveText('Backup test');
 });
 test('a route saved before turn directions gets them once, keeping its geometry', async ({
   page,
@@ -1167,12 +1172,12 @@ test('a route saved before turn directions gets them once, keeping its geometry'
       },
     ],
   };
-  await page.locator('.saved-routes summary').click();
   await page.locator('#restore-routes').setInputFiles({
     name: 'backup.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(backup)),
   });
+  await page.locator('.saved-routes > summary').click();
   const open = () =>
     page
       .getByRole('button', { name: 'Open saved route: Old route', exact: true })
@@ -1214,7 +1219,7 @@ test('a route saved before turn directions gets them once, keeping its geometry'
   // A fresh page without the route link, which would calculate the linked
   // route itself if opening took longer than the route-change debounce.
   await page.goto(base);
-  await page.locator('.saved-routes summary').click();
+  await page.locator('.saved-routes > summary').click();
   await open();
   await page.locator('#itinerary summary').click();
   await expect(page.locator('#itinerary li').nth(1)).toContainText('Turn left');
@@ -1309,12 +1314,12 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
       },
     ],
   };
-  await page.locator('.saved-routes summary').click();
   await page.locator('#restore-routes').setInputFiles({
     name: 'backup.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(backup)),
   });
+  await page.locator('.saved-routes > summary').click();
   const open = () =>
     page
       .getByRole('button', {
@@ -1332,7 +1337,7 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
   // Remembered in the saved entry: after a reload, no new request.
   await page.waitForTimeout(500);
   await page.reload();
-  await page.locator('.saved-routes summary').click();
+  await page.locator('.saved-routes > summary').click();
   await open();
   await page.locator('#itinerary summary').click();
   await expect(page.locator('#directions-status')).toContainText(

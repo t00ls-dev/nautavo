@@ -7,6 +7,8 @@ export interface SearchAction {
   label: string;
   icon: IconName;
   run: () => void;
+  /** A short note at the end of the row, such as a distance. */
+  detail?: string;
 }
 /** The first part of a result's name as its title, the rest below it. */
 export function splitPlace(name: string): [string, string] {
@@ -95,6 +97,11 @@ export function addressAutocomplete(
       const label = document.createElement('span');
       label.textContent = action.label;
       button.append(icon(action.icon), label);
+      if (action.detail) {
+        const detail = document.createElement('em');
+        detail.textContent = action.detail;
+        button.append(detail);
+      }
     });
     input.setAttribute('aria-expanded', String(list.children.length > 0));
   };
