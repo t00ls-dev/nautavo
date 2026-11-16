@@ -3,8 +3,7 @@ import { defaults, encodeState, meters, type Coord } from '../src/core';
 import { decodePolyline } from '../src/services';
 import { chooseUnits } from './unit-settings';
 import { coloringKinds, overlayCount } from './map-helpers';
-
-const base = 'http://127.0.0.1:5173/';
+import { base } from './app-helpers';
 
 /**
  * A mocked Valhalla `/trace_attributes`: one edge between each pair of sent

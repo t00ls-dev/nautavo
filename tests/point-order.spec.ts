@@ -1,8 +1,8 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
+import { base } from './app-helpers';
 
-const base = 'http://127.0.0.1:5173/';
 const coords = [
   '-22.930929, -43.238286',
   '-22.960000, -43.300000',

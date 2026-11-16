@@ -1,8 +1,8 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { BASEMAP_STYLE } from './map-helpers';
+import { previewBase as base, osrmAnswer } from './app-helpers';
 // The app-shell service worker only runs in production builds: these tests
 // use the preview server started by playwright.config.ts.
-const base = 'http://127.0.0.1:4175/';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
 
@@ -15,32 +15,21 @@ async function mockServices(context: BrowserContext) {
   await context.route('**/route/v1/driving/**', async (r) => {
     network.routing++;
     if (network.offline) return r.abort('internetdisconnected');
-    const part = new URL(r.request().url()).pathname.split('/driving/')[1]!;
-    const coords = part.split(';').map((p) => p.split(',').map(Number));
     await r.fulfill({
-      json: {
-        code: 'Ok',
-        waypoints: coords.map((location) => ({ location, distance: 0 })),
-        routes: [
+      json: osrmAnswer(r.request().url(), {
+        legs: [
           {
-            distance: 42000,
-            duration: 2940,
-            geometry: { coordinates: coords },
-            legs: [
+            steps: [
               {
-                steps: [
-                  {
-                    name: 'Main road',
-                    distance: 42000,
-                    duration: 2940,
-                    maneuver: { type: 'depart' },
-                  },
-                ],
+                name: 'Main road',
+                distance: 42000,
+                duration: 2940,
+                maneuver: { type: 'depart' },
               },
             ],
           },
         ],
-      },
+      }),
     });
   });
 }

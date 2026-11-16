@@ -1,8 +1,8 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
+import { base } from './app-helpers';
 
-const base = 'http://127.0.0.1:5173/';
 const start = '-22.900000, -43.100000';
 
 test.beforeEach(async ({ page }) => {

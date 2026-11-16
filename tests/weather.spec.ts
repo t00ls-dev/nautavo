@@ -4,7 +4,7 @@ import { defaults, decodeState, encodeState } from '../src/core';
 import { weatherResponse } from './weather-fixture';
 import { chooseUnits, setSpeed } from './unit-settings';
 import { coloringKinds, holdMap, overlayCount } from './map-helpers';
-const base = 'http://127.0.0.1:5173/';
+import { base } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
 async function setup(
