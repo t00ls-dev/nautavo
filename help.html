@@ -339,13 +339,29 @@
           in TCX files each track (for example each lap) is a segment. Downloads
           are always GPX. Import preserves the original geometry. A track
           without waypoints gets stops where its shape needs them (loops,
-          out-and-back sections and large bends). Editing a point recalculates
-          only the sections next to it; the rest of the imported track stays
-          exact. Removing a stop, Reverse and Round trip reuse the imported
-          track without a new request; a recalculated section joins any gap
-          between track segments. Calculate route recalculates the whole route
-          through your points. Shared links store points and settings, then
-          recalculate against current road data; they do not embed an imported
+          out-and-back sections and large bends). After the import, the track is
+          checked once against the roads (Valhalla map matching, by car and,
+          where a road is closed to cars, by bicycle): wherever the road matches
+          the recording closely, the track is aligned to the road actually
+          taken, without GPS noise, glitches or the straight line to where the
+          recording started indoors, and the summary says Track aligned to the
+          roads, with Keep the recorded track to undo it (Undo does the same).
+          Elsewhere the recording stays, with only its GPS glitches corrected.
+          Stretches no road follows, such as an unmapped path or off-road, stay
+          as recorded and are listed as places where the route cannot be
+          followed exactly, highlighted on the map; choose one to see it.
+          Stretches the matching cannot check stay as recorded with no warning,
+          and a result that would leave out any part of the track is never used.
+          Without a connection the check runs when it returns. Editing a point
+          recalculates only about 1 km of track on each side of it; the rest of
+          the imported track stays exact. Removing a stop, Reverse and Round
+          trip reuse the imported track without a new request; a recalculated
+          section joins any gap between track segments. On an imported track,
+          Calculate route keeps that same track and adds directions from the
+          roads it follows; it never takes another road in its place or adds
+          distance you did not cover. Shared links store points and settings,
+          then recalculate against current road data; they do not embed an
+          imported track, so Copy link says so: share the GPX for the exact
           track.
         </p>
         <p>
@@ -1090,13 +1106,30 @@
           exemplo, cada volta) é um segmento. Os downloads são sempre GPX.
           Importar preserva a geometria original. Um trajeto sem paradas ganha
           paradas onde o formato precisa delas (laços, idas e voltas e curvas
-          grandes). Editar um ponto recalcula só os trechos vizinhos; o resto do
+          grandes). Depois da importação, o trajeto é conferido uma vez com as
+          ruas (map matching do Valhalla, por carro e, onde uma via é fechada a
+          carros, por bicicleta): onde a rua acompanha a gravação de perto, o
+          trajeto é alinhado à rua realmente percorrida, sem o ruído e as falhas
+          do GPS nem a linha reta até onde a gravação começou dentro de casa, e
+          o resumo diz Trajeto alinhado às ruas, com Manter a trilha gravada
+          para desfazer (Desfazer faz o mesmo). No resto fica a gravação, só com
+          as falhas de GPS corrigidas. Trechos que nenhuma rua acompanha, como
+          um caminho não mapeado ou fora de estrada, ficam como gravados e
+          aparecem como lugares onde a rota não pode ser seguida exatamente,
+          destacados no mapa; escolha um para vê-lo. Trechos que a conferência
+          não consegue verificar ficam como gravados, sem aviso, e um resultado
+          que deixaria de fora qualquer parte do trajeto nunca é usado. Sem
+          conexão, a conferência roda quando ela voltar. Editar um ponto
+          recalcula só cerca de 1 km do trajeto de cada lado dele; o resto do
           trajeto importado continua exato. Remover uma parada, Inverter e Ida e
           volta reaproveitam o trajeto importado sem nova solicitação; um trecho
-          recalculado une eventuais intervalos entre segmentos do trajeto.
-          Calcular rota recalcula a rota inteira pelos seus pontos. Links
+          recalculado une eventuais intervalos entre segmentos do trajeto. Num
+          trajeto importado, Calcular rota mantém esse mesmo trajeto e
+          acrescenta instruções das ruas que ele percorre; nunca põe outra rua
+          no lugar nem acrescenta distância que você não percorreu. Links
           compartilhados guardam pontos e opções e recalculam com os dados
-          atuais; não incluem a geometria original de um arquivo importado.
+          atuais; não incluem a geometria original de um arquivo importado, e
+          Copiar link avisa isso: compartilhe o GPX para o trajeto exato.
         </p>
         <p>
           Ida e volta adiciona o retorno ao itinerário. Em vias de pistas

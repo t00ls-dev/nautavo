@@ -460,6 +460,24 @@ export function controlIndices(
   }
   return keep.slice(1, -1);
 }
+/**
+ * Route points of a track without waypoints: its ends and the automatic
+ * stops of `controlIndices`, with their flat track indices.
+ */
+export function trackStops(flat: Coord[]): {
+  points: Point[];
+  indices: number[];
+} {
+  const controls = controlIndices(flat);
+  return {
+    points: [
+      { name: 'Start', coord: flat[0] },
+      ...controls.map((j, i) => ({ name: `Stop ${i + 1}`, coord: flat[j] })),
+      { name: 'Destination', coord: flat.at(-1)! },
+    ],
+    indices: [0, ...controls, flat.length - 1],
+  };
+}
 /** Result of importing a GPX, TCX or FIT file. */
 export interface ImportedTrack {
   route: Route;
@@ -609,16 +627,9 @@ function finishImport(parsed: ParsedTrack): ImportedTrack {
   // let edits keep unchanged legs without locating points on the track.
   let indices: number[] | undefined;
   if (!inner.length) {
-    const controls = controlIndices(flat);
-    points.splice(
-      1,
-      0,
-      ...controls.map((j, i) => ({
-        name: `Stop ${i + 1}`,
-        coord: flat[j],
-      })),
-    );
-    indices = [0, ...controls, flat.length - 1];
+    const stops = trackStops(flat);
+    points.splice(0, points.length, ...stops.points);
+    indices = stops.indices;
   }
   return {
     route: {

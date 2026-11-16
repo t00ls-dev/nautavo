@@ -320,6 +320,22 @@ const pt: Record<string, string> = {
   'Choose a place.': 'Escolha um lugar.',
   'GPX downloaded.': 'GPX baixado.',
   'Link copied.': 'Link copiado.',
+  'Link copied. Opening it recalculates the route, which can differ from the imported track; share the GPX for the exact track.':
+    'Link copiado. Ao abrir, a rota é recalculada e pode diferir da trilha importada; compartilhe o GPX para a trilha exata.',
+  'Checking the track against the roads…': 'Conferindo a trilha com as ruas…',
+  'Route imported. No connection: the track will be checked against the roads when the connection returns.':
+    'Rota importada. Sem conexão: a trilha será conferida com as ruas quando a conexão voltar.',
+  'Route imported. The track could not be checked against the roads now.':
+    'Rota importada. Não foi possível conferir a trilha com as ruas agora.',
+  'Track aligned to the roads.': 'Trajeto alinhado às ruas.',
+  'Keep the recorded track': 'Manter a trilha gravada',
+  'Recorded track restored.': 'Trilha gravada restaurada.',
+  'This route cannot be followed exactly in 1 place:':
+    'Esta rota não pode ser seguida exatamente em 1 trecho:',
+  'The route could not be calculated along the imported track now. The imported track is kept.':
+    'Não foi possível calcular a rota ao longo da trilha importada agora. A trilha importada foi mantida.',
+  'Route calculated along the imported track.':
+    'Rota calculada ao longo da trilha importada.',
   'Route imported. Edits recalculate only the changed sections.':
     'Rota importada. Alterações recalculam só os trechos alterados.',
   'Settings applied.': 'Configurações aplicadas.',
@@ -647,6 +663,10 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
         .join(' + ')} · ${n} pontos`,
   ],
   [/^1 road section to review$/, () => '1 trecho para conferir'],
+  [
+    /^This route cannot be followed exactly in (\d+) places:$/,
+    (n) => `Esta rota não pode ser seguida exatamente em ${n} trechos:`,
+  ],
   [/^(\d+) road sections to review$/, (n) => `${n} trechos para conferir`],
   [/^Itinerary \((\d+)\)$/, (n) => `Itinerário (${n})`],
 

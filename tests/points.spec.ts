@@ -507,7 +507,7 @@ test('undo restores the geometry of each GPX import, even with equal points', as
   await page.locator('#undo').click();
   await expect(page.locator('#summary strong').first()).toHaveText(summaryA);
 });
-test('editing an imported track reroutes only the legs next to the edit', async ({
+test('editing an imported track reroutes only the track around the edit', async ({
   page,
 }) => {
   await setup(page);
@@ -571,12 +571,14 @@ test('editing an imported track reroutes only the legs next to the edit', async 
   await expect(page.locator('#route-name')).toHaveValue('Renamed spur');
   expect(routes).toEqual([3]);
 
-  // Calculate route asks the router for the whole route through every point.
+  // Calculate route matches an imported track to its roads (#173), never
+  // reroutes it through its points; without a match the track is kept.
   await page.locator('#calculate').click();
-  await expect(page.locator('#itinerary')).toContainText('OSRM ·', {
-    timeout: 15000,
-  });
-  expect(routes).toEqual([3, count]);
+  await expect(page.locator('#status')).toHaveText(
+    'The route could not be calculated along the imported track now. The imported track is kept.',
+  );
+  await expect(page.locator('#itinerary')).toContainText('Imported GPX ·');
+  expect(routes).toEqual([3]);
 });
 test('invalid coordinates cannot enable a stale GPX download', async ({
   page,
