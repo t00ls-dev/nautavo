@@ -1,12 +1,14 @@
 version: 2
 # Every schedule in the repository is the same cron expression, in UTC
-# (the Lighthouse workflow uses it too).
+# (the Lighthouse workflow uses it too). Minute 17, not 0: GitHub delays
+# scheduled workflow runs at the top of the hour, when most schedules fire,
+# and may drop them, as it did with the Lighthouse run of 2026-11-16.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: cron
-      cronjob: '0 9 * * 1' # Monday 09:00 UTC
+      cronjob: '17 9 * * 1' # Monday 09:17 UTC
     ignore:
       - dependency-name: '@types/node'
         update-types:
@@ -22,7 +24,7 @@ updates:
     directory: /
     schedule:
       interval: cron
-      cronjob: '0 9 * * 1' # Monday 09:00 UTC
+      cronjob: '17 9 * * 1' # Monday 09:17 UTC
     open-pull-requests-limit: 5
     groups:
       actions-minor-patch:
