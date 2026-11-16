@@ -202,10 +202,10 @@ export function setupUserLocation(
     render();
   });
   document.addEventListener('visibilitychange', sync);
-  new MutationObserver(sync).observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
+  // Guided navigation (`html.navigating`) keeps its own watch: two watches
+  // overlapping as one starts and the other stops can leave the new one
+  // without fixes, so navigation signals before it starts and after it stops.
+  document.addEventListener('navigationchange', sync);
   // Already allowed: on with the page, and on or off as the permission changes.
   let permission: PermissionStatus | null = null;
   const follow = () => {

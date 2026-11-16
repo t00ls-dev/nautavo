@@ -208,7 +208,9 @@ test.describe('phone navigation', () => {
     await setup(page);
     const watching = () =>
       page.evaluate(() => (window as unknown as { watching: number }).watching);
-    expect(await watching()).toBe(0);
+    // Location is allowed: the planner's dot watches until navigation
+    // starts, which replaces it with its own watch.
+    await expect.poll(watching).toBe(1);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
     await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
@@ -223,7 +225,8 @@ test.describe('phone navigation', () => {
     await visibility(false);
     await expect.poll(watching).toBe(1);
     await page.locator('#nav-stop').click();
-    await expect.poll(watching).toBe(0);
+    // Only the planner's dot again.
+    await expect.poll(watching).toBe(1);
     // No position ever reaches the address or storage.
     expect(page.url()).not.toContain(String(lon(6)).slice(0, 7));
     const stored = await page.evaluate(() => JSON.stringify(localStorage));

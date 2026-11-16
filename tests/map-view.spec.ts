@@ -749,13 +749,15 @@ test('the location watch pauses while hidden and during navigation, and stops wh
   await setHidden(false);
   await expect.poll(() => watching(page)).toBe(true);
   // Guided navigation keeps its own watch.
-  await page.evaluate(() =>
-    document.documentElement.classList.add('navigating'),
-  );
+  await page.evaluate(() => {
+    document.documentElement.classList.add('navigating');
+    document.dispatchEvent(new Event('navigationchange'));
+  });
   await expect.poll(() => watching(page)).toBe(false);
-  await page.evaluate(() =>
-    document.documentElement.classList.remove('navigating'),
-  );
+  await page.evaluate(() => {
+    document.documentElement.classList.remove('navigating');
+    document.dispatchEvent(new Event('navigationchange'));
+  });
   await expect.poll(() => watching(page)).toBe(true);
   await expect(page.locator('.location-dot')).toHaveCount(1);
   // Revoked in the browser's settings: the dot goes away, quietly.

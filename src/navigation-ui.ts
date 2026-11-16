@@ -1297,6 +1297,8 @@ export function setupNavigation(deps: {
     // off on the whole page (as `html.map-touching` does for the planner
     // map), no callout or selection menu opens while navigating.
     document.documentElement.classList.add('navigating');
+    // The planner's location watch stops before this one starts.
+    document.dispatchEvent(new Event('navigationchange'));
     // The screen itself takes focus, not its first button, so no button
     // looks selected when navigation starts.
     screen.focus({ preventScroll: true });
@@ -1351,6 +1353,8 @@ export function setupNavigation(deps: {
     weatherWrap.hidden = true;
     document.documentElement.classList.remove('navigating');
     stopWatching();
+    // The planner's location watch resumes only after this one has stopped.
+    document.dispatchEvent(new Event('navigationchange'));
     orientationEvents.forEach((name) =>
       window.removeEventListener(name, onOrientation as EventListener),
     );
