@@ -98,7 +98,7 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
     Math.abs(dot!.y + dot!.height / 2 - box!.y - box!.height / 2),
   ).toBeLessThan(3);
   await expect(page.locator('#location-0')).toHaveValue('');
-  await expect(page.locator('#locate')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#locate')).toHaveClass(/following/);
   expect(ipRequests).toBe(0);
   await noExactStorage(page);
   // The dot follows the device and the map follows the dot.
@@ -138,10 +138,7 @@ test('denial is actionable and points remain editable without automatic re-promp
   await expect(page.locator('#location-notice')).toContainText(
     'browser site settings',
   );
-  await expect(page.locator('#locate')).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  );
+  await expect(page.locator('#locate')).not.toHaveClass(/following/);
   await expect(page.locator('.location-dot')).toHaveCount(0);
   await page.locator('#location-0').fill('40, 10');
   await page.locator('#location-0').press('Tab');
@@ -428,7 +425,7 @@ test('mobile route endpoints fit above the open sheet', async ({ page }) => {
   }
 });
 
-test('the dot follows, the button re-centers a panned map and then turns location off', async ({
+test('the dot follows, and the button re-centers a panned map without ever turning location off', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -503,27 +500,34 @@ test('the dot follows, the button re-centers a panned map and then turns locatio
   await page.mouse.move(map.x + 450, map.y + 380, { steps: 10 });
   await page.mouse.up();
   await expect(page.locator('#locate')).toHaveClass(/free/);
+  // The button looks the same whether or not the map follows the dot.
+  const look = () =>
+    page.locator('#locate').evaluate((e) => {
+      const style = getComputedStyle(e);
+      return [style.backgroundColor, style.color, style.boxShadow].join();
+    });
+  const free = await look();
   await fix(48.1245, 11.7665, 20);
   await page.waitForTimeout(400);
   expect(Math.max(...(await center()).map(Math.abs))).toBeGreaterThan(50);
   await page.locator('#locate').click();
   await expect(page.locator('#locate')).not.toHaveClass(/free/);
+  await page.mouse.move(0, 0);
+  expect(await look()).toBe(free);
   await expect
     .poll(async () => Math.max(...(await center()).map(Math.abs)))
     .toBeLessThan(3);
-  await expect(page.locator('#locate')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#locate')).toHaveClass(/following/);
+  // A press while following keeps location on.
   await page.locator('#locate').click();
-  await expect(page.locator('#locate')).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  );
-  await expect(page.locator('.location-dot')).toHaveCount(0);
-  await expect(page.locator('.location-accuracy')).toHaveCount(0);
+  await expect(page.locator('#locate')).toHaveClass(/following/);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  await expect(page.locator('.location-accuracy')).toHaveCount(1);
   expect(
     await page.evaluate(
       () => (window as unknown as { cleared: number }).cleared,
     ),
-  ).toBe(1);
+  ).toBe(0);
   await expect(page.locator('#location-0')).toHaveValue('');
 });
 
@@ -611,7 +615,294 @@ test('with location already allowed, the map opens on the device above the sheet
       y: expect.closeTo(sheet.y / 2, 0),
     });
   expect(ip).toBe(0);
-  // The device's position only frames the map: no dot, no route point.
-  await expect(page.locator('.location-dot')).toHaveCount(0);
+  // The dot shows without a press, and the position sets no route point.
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  await expect(page.locator('#locate')).not.toHaveClass(/following/);
+  await expect(page.locator('#location-notice')).toBeHidden();
   await expect(page.locator('#location-0')).toHaveValue('');
+});
+
+/** A fake geolocation watch and permission whose state the test changes. */
+async function fakeLocation(page: Page, state: PermissionState) {
+  await page.addInitScript((state) => {
+    const w = window as unknown as {
+      fix: (lat: number, lon: number, accuracy?: number) => void;
+      watching: () => boolean;
+      watches: number;
+      setPermission: (state: PermissionState) => void;
+    };
+    let callback: PositionCallback | null = null;
+    w.watches = 0;
+    w.watching = () => !!callback;
+    w.fix = (latitude, longitude, accuracy = 20) =>
+      callback?.({
+        coords: { latitude, longitude, accuracy },
+        timestamp: Date.now(),
+      } as GeolocationPosition);
+    Object.defineProperty(navigator.geolocation, 'watchPosition', {
+      value: (ok: PositionCallback) => {
+        callback = ok;
+        return ++w.watches;
+      },
+    });
+    Object.defineProperty(navigator.geolocation, 'clearWatch', {
+      value: () => (callback = null),
+    });
+    // The startup view reads one position too; it never answers here.
+    Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
+      value: () => {},
+    });
+    const status = new EventTarget() as PermissionStatus & {
+      state: PermissionState;
+    };
+    status.state = state;
+    navigator.permissions.query = async () => status;
+    w.setPermission = (next) => {
+      status.state = next;
+      status.dispatchEvent(new Event('change'));
+    };
+  }, state);
+}
+const watching = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as { watching: () => boolean }).watching(),
+  );
+const fixAt = (page: Page, lat: number, lon: number, accuracy = 20) =>
+  page.evaluate(
+    ([lat, lon, accuracy]) =>
+      (
+        window as unknown as {
+          fix: (a: number, b: number, c: number) => void;
+        }
+      ).fix(lat, lon, accuracy),
+    [lat, lon, accuracy],
+  );
+const mapView = (page: Page) =>
+  page.evaluate(() => {
+    const map = (
+      window as unknown as {
+        plannerMap: { getZoom(): number; getCenter(): [number, number] };
+      }
+    ).plannerMap;
+    return { zoom: map.getZoom(), center: map.getCenter() };
+  });
+
+test('already allowed, the dot shows with the page and never moves the map until the button is pressed', async ({
+  page,
+}) => {
+  await fakeLocation(page, 'granted');
+  await page.route('**/route/v1/driving/**', (r) => r.abort());
+  const state = defaults();
+  state.points = [
+    { name: 'Start', coord: [-22, -43] },
+    { name: 'End', coord: [-23, -44] },
+  ];
+  await page.goto(base + encodeState(state));
+  await mapReady(page);
+  await expect.poll(() => watching(page)).toBe(true);
+  await fixAt(page, 48.1234, 11.7654);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  await expect(page.locator('#location-notice')).toBeHidden();
+  await expect(page.locator('#locate')).not.toHaveClass(/locating|following/);
+  // The route stays in view: the dot is far off screen.
+  await mapIdle(page);
+  const markers = page.locator('.route-marker');
+  await expect(markers).toHaveCount(2);
+  const map = (await page.locator('#map').boundingBox())!;
+  const dot = await page.locator('.location-dot').boundingBox();
+  expect(
+    !dot ||
+      dot.x > map.x + map.width ||
+      dot.x + dot.width < map.x ||
+      dot.y > map.y + map.height ||
+      dot.y + dot.height < map.y,
+  ).toBe(true);
+  // The button centers on the dot and follows it.
+  await page.locator('#locate').click();
+  await expect(page.locator('#locate')).toHaveClass(/following/);
+  await expect
+    .poll(async () => {
+      const box = (await page.locator('.location-dot').boundingBox())!;
+      return Math.abs(box.x + box.width / 2 - map.x - map.width / 2);
+    })
+    .toBeLessThan(3);
+});
+
+test('the location watch pauses while hidden and during navigation, and stops when the permission is revoked', async ({
+  page,
+}) => {
+  await fakeLocation(page, 'granted');
+  await page.goto(base);
+  await expect.poll(() => watching(page)).toBe(true);
+  await fixAt(page, 48.1234, 11.7654);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  const setHidden = (hidden: boolean) =>
+    page.evaluate((hidden) => {
+      Object.defineProperty(document, 'hidden', {
+        configurable: true,
+        get: () => hidden,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, hidden);
+  await setHidden(true);
+  await expect.poll(() => watching(page)).toBe(false);
+  await setHidden(false);
+  await expect.poll(() => watching(page)).toBe(true);
+  // Guided navigation keeps its own watch.
+  await page.evaluate(() =>
+    document.documentElement.classList.add('navigating'),
+  );
+  await expect.poll(() => watching(page)).toBe(false);
+  await page.evaluate(() =>
+    document.documentElement.classList.remove('navigating'),
+  );
+  await expect.poll(() => watching(page)).toBe(true);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  // Revoked in the browser's settings: the dot goes away, quietly.
+  await page.evaluate(() =>
+    (
+      window as unknown as { setPermission: (s: PermissionState) => void }
+    ).setPermission('denied'),
+  );
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  await expect.poll(() => watching(page)).toBe(false);
+  await expect(page.locator('#location-notice')).toBeHidden();
+  // Allowed again: on with no press.
+  await page.evaluate(() =>
+    (
+      window as unknown as { setPermission: (s: PermissionState) => void }
+    ).setPermission('granted'),
+  );
+  await expect.poll(() => watching(page)).toBe(true);
+});
+
+test('started with the page, a slow first fix waits without a notice', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.geolocation, 'watchPosition', {
+      value: (_ok: unknown, fail: PositionErrorCallback) => {
+        fail({ code: 3 } as GeolocationPositionError);
+        return 1;
+      },
+    });
+    Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
+      value: () => {},
+    });
+    const status = new EventTarget() as PermissionStatus & {
+      state: PermissionState;
+    };
+    status.state = 'granted';
+    navigator.permissions.query = async () => status;
+  });
+  await page.goto(base);
+  await mapReady(page);
+  await page.waitForTimeout(300);
+  await expect(page.locator('#location-notice')).toBeHidden();
+});
+
+test('already allowed, a slow GPS still opens the map on the device at street zoom, without IP', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fakeLocation(page, 'granted');
+  let ip = 0;
+  page.on('request', (r) => {
+    if (r.url().includes('ipwho.is')) ip++;
+  });
+  await page.goto(base);
+  await mapReady(page);
+  await expect.poll(() => watching(page)).toBe(true);
+  // No fix for a while: the map waits on the local default, never on IP.
+  await page.waitForTimeout(1500);
+  expect(ip).toBe(0);
+  const before = await mapView(page);
+  expect(before.zoom).toBeLessThan(10);
+  // A rough first fix frames the area; a precise one zooms to the street.
+  await fixAt(page, -22.6919, -43.4589, 800);
+  await expect.poll(async () => (await mapView(page)).zoom).toBe(13);
+  await fixAt(page, -22.692, -43.459, 15);
+  await expect.poll(async () => (await mapView(page)).zoom).toBe(15);
+  // The dot shows above the sheet.
+  const sheet = (await page.locator('#sheet').boundingBox())!;
+  const dot = (await page.locator('.location-dot').boundingBox())!;
+  expect(dot.y + dot.height / 2).toBeCloseTo(sheet.y / 2, -1);
+  // Once the traveler moves the map, fixes no longer frame it.
+  await mapIdle(page);
+  await page.mouse.move(200, 300);
+  await page.mouse.down();
+  await page.mouse.move(260, 360, { steps: 8 });
+  await page.mouse.up();
+  await mapIdle(page);
+  const moved = await mapView(page);
+  await fixAt(page, -22.7, -43.47, 5);
+  await page.waitForTimeout(400);
+  expect(await mapView(page)).toEqual(moved);
+  await expect(page.locator('#location-notice')).toBeHidden();
+  expect(ip).toBe(0);
+});
+
+for (const state of ['prompt', 'denied'] as const)
+  test(`location ${state}: ${state === 'prompt' ? 'the map opens where it was last left, without IP or asking' : 'the map opens on the IP region, not the last view'}`, async ({
+    page,
+  }) => {
+    await page.addInitScript((state) => {
+      localStorage.setItem(
+        'last-view',
+        JSON.stringify({ center: [-22.912, -43.23], zoom: 14 }),
+      );
+      for (const name of ['getCurrentPosition', 'watchPosition'])
+        Object.defineProperty(navigator.geolocation, name, {
+          value: () => {
+            document.documentElement.dataset.gpsCalls = 'unexpected';
+          },
+        });
+      navigator.permissions.query = async () => ({ state }) as PermissionStatus;
+    }, state);
+    let ip = 0;
+    page.on('request', (r) => {
+      if (r.url().includes('ipwho.is')) ip++;
+    });
+    await page.goto(base);
+    await mapReady(page);
+    if (state === 'prompt') {
+      await expect
+        .poll(() => mapView(page))
+        .toEqual({ zoom: 14, center: [-22.912, -43.23] });
+      expect(ip).toBe(0);
+    } else {
+      // The mocked IP answer is Paris.
+      await expect
+        .poll(async () => (await mapView(page)).center[0])
+        .toBeCloseTo(48.85, 1);
+      expect(ip).toBe(1);
+    }
+    await expect(page.locator('html')).not.toHaveAttribute('data-gps-calls');
+  });
+
+test('the map view is kept on the device when the page is left', async ({
+  page,
+}) => {
+  await page.goto(base);
+  await mapReady(page);
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        plannerMap: { setView(c: [number, number], z: number): void };
+      }
+    ).plannerMap.setView([-22.95, -43.2], 13),
+  );
+  await mapIdle(page);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      get: () => true,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const saved = await page.evaluate(() => localStorage.getItem('last-view'));
+  const view = JSON.parse(saved!);
+  expect(view.zoom).toBeCloseTo(13, 1);
+  expect(view.center[0]).toBeCloseTo(-22.95, 3);
+  expect(view.center[1]).toBeCloseTo(-43.2, 3);
 });
