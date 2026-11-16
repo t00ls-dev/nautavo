@@ -83,7 +83,13 @@ import {
   rememberLegs,
   routeKeepingLegs,
 } from './track-legs';
-import { shareFile } from './share-gpx';
+import {
+  canShareFiles,
+  exportFile,
+  GPX_TYPES,
+  JSON_TYPES,
+  sharesFirst,
+} from './share-file';
 import { setupPointMenu } from './point-menu';
 import { setupNavigation } from './navigation-ui';
 import { setupHomeScreen } from './home-screen';
@@ -1535,41 +1541,25 @@ function gpxContent(): string {
     state.name || `${state.points[0].name} to ${state.points.at(-1)!.name}`,
   );
 }
-function shareableFile(content = false) {
-  if (!navigator.canShare || !navigator.share) return null;
-  return shareFile(
-    content && current ? gpxContent() : '<gpx/>',
-    filename(state.points, state.name),
-    (data) => navigator.canShare(data),
-  );
-}
-$('share-gpx').onclick = () => {
+// Touch devices that can share files export through the share sheet, with a
+// named file (see src/share-file.ts): the main export action and the saved
+// routes share, and Share GPX in More actions merges into it. Elsewhere they
+// download, and Share GPX stays in More actions where files can be shared.
+const shareExports = sharesFirst();
+const GPX_DOWNLOAD = 'application/gpx+xml;charset=utf-8';
+function exportGpx(share: boolean) {
   if (!current) return;
-  const file = shareableFile(true);
-  if (!file) {
-    status('GPX sharing unavailable. Use Download GPX instead.', true);
-    return;
-  }
-  void navigator
-    .share({ files: [file], title: state.name || file.name })
-    .catch((error) => {
-      if (error?.name !== 'AbortError')
-        status('Could not share GPX. Use Download GPX instead.', true);
-    });
-};
-$('download').onclick = () => {
-  if (!current) return;
-  const blob = new Blob([gpxContent()], {
-    type: 'application/gpx+xml;charset=utf-8',
+  const name = filename(state.points, state.name);
+  void exportFile(gpxContent(), name, {
+    share,
+    types: GPX_TYPES,
+    downloadType: GPX_DOWNLOAD,
+  }).then((result) => {
+    if (result === 'downloaded') status('GPX downloaded.');
   });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename(state.points, state.name);
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  status('GPX downloaded.');
-};
+}
+$('share-gpx').onclick = () => exportGpx(true);
+$('download').onclick = () => exportGpx(shareExports);
 $('share').onclick = () => {
   syncUrl();
   void navigator.clipboard
@@ -1719,7 +1709,7 @@ $<HTMLInputElement>('average-speed').oninput = () => {
   updateSpeedEstimate();
 };
 function updateSaveButton() {
-  $('share-gpx').hidden = !shareableFile();
+  $('share-gpx').hidden = shareExports || !canShareFiles();
   $<HTMLButtonElement>('share-gpx').disabled = !current || dirty.size > 0;
   const button = $<HTMLButtonElement>('save-route');
   button.disabled =
@@ -1729,14 +1719,6 @@ function updateSaveButton() {
   )
     ? 'Update saved route'
     : 'Save route';
-}
-function downloadText(content: string, name: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 async function refreshSavedRoutes() {
   const version = ++libraryRevision;
@@ -1791,18 +1773,29 @@ async function refreshSavedRoutes() {
         status('Saved route opened.');
         void refreshSavedRoutes();
       };
-      const download = text('button', 'Download GPX') as HTMLButtonElement;
+      const download = text(
+        'button',
+        shareExports ? 'Share GPX' : 'Download GPX',
+      ) as HTMLButtonElement;
       download.type = 'button';
       download.setAttribute(
         'aria-label',
-        `Download saved route: ${record.name}`,
+        shareExports
+          ? `Share saved route: ${record.name}`
+          : `Download saved route: ${record.name}`,
       );
-      download.onclick = () =>
-        downloadText(
+      download.onclick = () => {
+        const name = filename(record.state.points, record.name);
+        void exportFile(
           generateGpx(record.route, record.state.points, record.name),
-          filename(record.state.points, record.name),
-          'application/gpx+xml;charset=utf-8',
+          name,
+          {
+            share: shareExports,
+            types: GPX_TYPES,
+            downloadType: GPX_DOWNLOAD,
+          },
         );
+      };
       const remove = text('button', 'Delete') as HTMLButtonElement;
       remove.type = 'button';
       remove.setAttribute('aria-label', `Delete saved route: ${record.name}`);
@@ -1848,13 +1841,18 @@ $('save-route').onclick = () => {
       updateSaveButton();
     });
 };
+if (shareExports) $('backup-routes').textContent = 'Share backup';
 $('backup-routes').onclick = () => {
-  if (savedEntries.length)
-    downloadText(
-      exportRouteBackup(savedEntries),
-      `route-gpx-backup-${new Date().toISOString().slice(0, 10)}.json`,
-      'application/json',
-    );
+  if (!savedEntries.length) return;
+  void exportFile(
+    exportRouteBackup(savedEntries),
+    `route-gpx-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    {
+      share: shareExports,
+      types: JSON_TYPES,
+      downloadType: 'application/json',
+    },
+  );
 };
 $<HTMLInputElement>('restore-routes').onchange = () => {
   const input = $<HTMLInputElement>('restore-routes');

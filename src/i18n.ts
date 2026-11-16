@@ -225,10 +225,6 @@ const pt: Record<string, string> = {
     'Sugestões indisponíveis. Pressione Enter para buscar com Nominatim.',
   'No suggestions found. Press Enter to search with Nominatim.':
     'Nenhuma sugestão encontrada. Pressione Enter para buscar com Nominatim.',
-  'GPX sharing unavailable. Use Download GPX instead.':
-    'Compartilhamento de GPX indisponível. Use Baixar GPX.',
-  'Could not share GPX. Use Download GPX instead.':
-    'Não foi possível compartilhar o GPX. Use Baixar GPX.',
   'The route already has 50 points.': 'A rota já tem 50 pontos.',
   'Route panel': 'Painel da rota',
   'Map credits': 'Créditos do mapa',
@@ -261,6 +257,7 @@ const pt: Record<string, string> = {
   'Download GPX': 'Baixar GPX',
   Delete: 'Excluir',
   'Export backup': 'Exportar backup',
+  'Share backup': 'Compartilhar backup',
   'Import backup': 'Importar backup',
   'Saved route opened.': 'Rota salva aberta.',
   'Saved route deleted.': 'Rota salva excluída.',
@@ -550,6 +547,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   ],
   [/^Open saved route: (.*?)$/, (n) => `Abrir rota salva: ${n}`],
   [/^Download saved route: (.*?)$/, (n) => `Baixar rota salva: ${n}`],
+  [/^Share saved route: (.*?)$/, (n) => `Compartilhar rota salva: ${n}`],
   [/^Delete saved route: (.*?)$/, (n) => `Excluir rota salva: ${n}`],
   [
     /^Imported 1 route\. Existing names were kept\.$/,

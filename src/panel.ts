@@ -1,6 +1,7 @@
 import type { PlannerMap } from './planner-map';
 import { icon, iconControl } from './icons';
 import { byId as $ } from './dom';
+import { sharesFirst } from './share-file';
 
 /** Width below which the route panel is a bottom sheet over the map. */
 const COMPACT = '(max-width: 759px)';
@@ -31,7 +32,9 @@ export function setupPanel(map: PlannerMap): void {
   iconControl($('reverse'), 'swap', 'Reverse');
   iconControl($('roundtrip'), 'roundtrip', 'Round trip');
   iconControl($('calculate'), 'refresh', 'Calculate route');
-  iconControl($('download'), 'download', 'Download GPX');
+  // Touch devices that can share files share the GPX instead (main.ts).
+  if (sharesFirst()) iconControl($('download'), 'share', 'Share GPX');
+  else iconControl($('download'), 'download', 'Download GPX');
   iconControl($('share'), 'link', 'Copy link');
   $('share').title = 'Copy route link';
   iconControl($('share-gpx'), 'share', 'Share GPX');
