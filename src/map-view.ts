@@ -110,25 +110,23 @@ export function setupMapView(
   });
   // Where the map is left, for the next visit when the browser cannot tell
   // whether location is allowed. On this device only; never sent.
-  // It keeps the middle of the visible part of the map, above the sheet on
-  // phones, which is where `frame` puts it back: the map's own center, under
-  // the sheet, would move the place half a sheet south on every visit.
-  const saveView = () => {
-    const { x, y } = map.size();
-    const center = map.unproject({ x: x / 2, y: (y - cover()) / 2 });
+  // The map's own camera, restored exactly as it was (`restored` below): no
+  // sheet arithmetic, which the browser's changing toolbars on phones can
+  // throw off, moving the place a little on every visit.
+  const saveView = () =>
     writePreference(
       PREFERENCE.lastView,
-      serializeView({ center: center ?? map.getCenter(), zoom: map.getZoom() }),
+      serializeView({ center: map.getCenter(), zoom: map.getZoom() }),
     );
-  };
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) saveView();
   });
   window.addEventListener('pagehide', saveView);
+  let restored: View | null = null;
   void initialView({
     hasRoute: route.hasRoute(),
     permission: async () => (await locationPermission())?.state ?? null,
-    lastView: () => parseView(readPreference(PREFERENCE.lastView)),
+    lastView: () => (restored = parseView(readPreference(PREFERENCE.lastView))),
     approximateRegion: () =>
       !interacted && !route.hasRoute()
         ? approximateRegion(detectRegion, ipRegionUrl)
@@ -140,6 +138,8 @@ export function setupMapView(
       ),
   }).then((view) => {
     if (!view || interacted || route.hasRoute()) return;
-    frame(view);
+    // The last view comes back as it was left; a place is framed above the sheet.
+    if (view === restored) map.setView(view.center, view.zoom);
+    else frame(view);
   });
 }
