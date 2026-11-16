@@ -1571,8 +1571,10 @@ dialog.settings::backdrop {
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 16px #1b29342e;
   }
+  /* Full height stops 8 px below the floating header, which sits below the
+     top safe area (status bar, notch or Dynamic Island). */
   .planner.sheet-full .sheet {
-    height: calc(100dvh - 60px);
+    height: calc(100dvh - 60px - var(--safe-top));
   }
   .planner.panel-closed .sheet {
     height: auto;
