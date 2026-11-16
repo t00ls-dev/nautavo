@@ -94,6 +94,7 @@ import {
 } from './share-file';
 import { setupPointMenu } from './point-menu';
 import { setupNavigation } from './navigation-ui';
+import { resumableNavigation } from './navigation-resume';
 import { setupHomeScreen } from './home-screen';
 import { setupElevation } from './elevation-ui';
 import { setupSurface } from './surface-ui';
@@ -1855,7 +1856,13 @@ window.addEventListener('hashchange', () => {
 });
 settings();
 renderPoints();
-if (state.points.every((p) => p.coord)) changed();
+// A reload during navigation shows the route that was being followed, as it
+// was (a link would recalculate it), and offers to continue (#138).
+const resumable = resumableNavigation(location.hash, Date.now());
+if (resumable) {
+  current = resumable.route;
+  renderRoute(current);
+} else if (state.points.every((p) => p.coord)) changed();
 fitRevision = revision;
 fit();
 
@@ -2119,6 +2126,7 @@ const navigation = setupNavigation({
   status,
   weather: () => weather.routeWeather(),
 });
+if (resumable) navigation.offerResume(resumable.progress);
 // Settings always open with the values in use; unapplied edits are dropped.
 $('open-settings').addEventListener('click', () => {
   settings();

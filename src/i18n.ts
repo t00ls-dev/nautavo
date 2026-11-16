@@ -53,6 +53,11 @@ const pt: Record<string, string> = {
   Stop: 'Parar',
   Navigation: 'Navegação',
   'Before you go': 'Antes de sair',
+  'Continue navigation?': 'Continuar a navegação?',
+  'The page reloaded during navigation. Continue on the same route?':
+    'A página recarregou durante a navegação. Continuar na mesma rota?',
+  'Continue navigation': 'Continuar navegação',
+  'Not now': 'Agora não',
   'Avoid handling the phone while moving. Put it in a mount you can see and check the route before you leave.':
     'Evite mexer no celular em movimento. Prenda-o num suporte à vista e confira a rota antes de sair.',
   'Keep this tab open and the screen on. With the screen off or in another tab, the browser stops following you.':
