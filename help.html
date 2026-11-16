@@ -257,31 +257,40 @@
         </p>
         <p>
           Use my location requests your position directly. The browser asks for
-          permission when needed, without a preliminary confirmation screen. A
-          blue dot then follows your position on the map, with a lighter circle
-          showing its margin of error: the wider the circle, the less precise
-          the location. The dot turns grey when no new position arrives for 30
-          seconds. The map follows the dot until you move it; press the button
-          again to re-center, and press it once more to turn location off. It
-          pauses while the page is hidden and changes nothing in the route; to
-          use it as a route point, choose My location in a point's field, which
-          uses the exact position, like a tap on the map; like every route
-          point, it is sent to the services that calculate the route and its
-          weather, and links carry it. If permission is denied, open this site's
-          permissions in your browser settings and allow Location, then try
-          again. You can keep using the map without GPS.
+          permission when needed, without a preliminary confirmation screen.
+          Once location is allowed for this site, a blue dot shows your position
+          on the map whenever the page is open, with no press needed, and a
+          lighter circle shows its margin of error: the wider the circle, the
+          less precise the location. The dot turns grey when no new position
+          arrives for 30 seconds. Press the button to center the map on the dot;
+          the map then follows it until you move the map, and the button centers
+          it again. The button does not turn location off: to stop it, block
+          location for this site in your browser settings. The dot pauses while
+          the page is hidden or while navigating and changes nothing in the
+          route; to use it as a route point, choose My location in a point's
+          field, which uses the exact position, like a tap on the map; like
+          every route point, it is sent to the services that calculate the route
+          and its weather, and links carry it. If permission is denied, open
+          this site's permissions in your browser settings and allow Location,
+          then try again. You can keep using the map without GPS.
         </p>
         <p>
           The initial view prefers the URL route, then already authorized GPS,
-          approximate IP region, and browser timezone/language. Already
+          which opens the map on you at street zoom as soon as the first
+          position arrives (without asking for the IP region). Already
           authorized means the browser reports location as allowed for this site
           without asking; on iPhone, Safari does so only when the site is set to
-          Allow in its settings, otherwise the IP region is used and the app
-          never asks on its own. To stop IP requests, open Settings and disable
-          Detect region by IP. The selected provider receives your IP address.
-          The location dot is never stored or sent; GPS only leaves the device
-          as a route point you chose or as the current position of a navigation
-          recalculation; tile requests reveal the visible area.
+          Allow in its settings, and other iPhone browsers usually cannot tell.
+          When the browser cannot tell, the map opens where you last left it in
+          this browser (its center and zoom are kept on the device only and
+          never sent); when location is denied, or there is no last view, it
+          uses the approximate IP region, then the browser timezone/language.
+          The app never asks for location on its own. To stop IP requests, open
+          Settings and disable Detect region by IP. The selected provider
+          receives your IP address. The location dot is never stored or sent;
+          GPS only leaves the device as a route point you chose or as the
+          current position of a navigation recalculation; tile requests reveal
+          the visible area.
         </p>
         <h2>Choose main roads</h2>
         <p>
@@ -997,32 +1006,41 @@
         <p>
           Usar minha localização solicita a posição diretamente. O navegador
           pede permissão quando necessário, sem tela preliminar de confirmação.
-          Um ponto azul passa a acompanhar sua posição no mapa, com um círculo
-          mais claro mostrando a margem de erro: quanto maior o círculo, menos
-          precisa a localização. O ponto fica cinza quando nenhuma posição nova
-          chega por 30 segundos. O mapa acompanha o ponto até você movê-lo;
-          toque no botão de novo para centralizar e mais uma vez para desligar a
-          localização. Ela pausa enquanto a página está oculta e não altera a
-          rota; para usá-la como ponto da rota, escolha Minha localização no
-          campo de um ponto, que usa a posição exata, como um toque no mapa;
-          como todo ponto da rota, ela é enviada aos serviços que calculam a
-          rota e o clima, e os links a levam. Se a permissão for negada, abra as
-          permissões deste site nas configurações do navegador e libere
-          Localização, depois tente novamente. O mapa continua utilizável sem
-          GPS.
+          Depois que a localização é permitida para este site, um ponto azul
+          mostra sua posição no mapa sempre que a página está aberta, sem
+          precisar tocar, e um círculo mais claro mostra a margem de erro:
+          quanto maior o círculo, menos precisa a localização. O ponto fica
+          cinza quando nenhuma posição nova chega por 30 segundos. Toque no
+          botão para centralizar o mapa no ponto; o mapa passa a acompanhá-lo
+          até você movê-lo, e o botão centraliza de novo. O botão não desliga a
+          localização: para parar, bloqueie a localização deste site nas
+          configurações do navegador. O ponto pausa enquanto a página está
+          oculta ou durante a navegação e não altera a rota; para usá-la como
+          ponto da rota, escolha Minha localização no campo de um ponto, que usa
+          a posição exata, como um toque no mapa; como todo ponto da rota, ela é
+          enviada aos serviços que calculam a rota e o clima, e os links a
+          levam. Se a permissão for negada, abra as permissões deste site nas
+          configurações do navegador e libere Localização, depois tente
+          novamente. O mapa continua utilizável sem GPS.
         </p>
         <p>
-          A vista inicial prioriza a rota da URL, GPS já autorizado, região
-          aproximada por IP e fuso/idioma do navegador. Já autorizado quer dizer
-          que o navegador informa a localização como permitida para este site
-          sem perguntar; no iPhone, o Safari só faz isso quando o site está como
-          Permitir nos ajustes, senão a região por IP é usada e o app nunca
-          pergunta sozinho. Para impedir consultas por IP, abra Configurações e
-          desative Detectar região pelo IP. O provedor escolhido recebe seu
-          endereço IP. O ponto de localização nunca é guardado nem enviado; o
-          GPS só sai do aparelho como um ponto da rota que você escolheu ou como
-          a posição atual num recálculo da navegação; as requisições de tiles
-          revelam a área visível.
+          A vista inicial prioriza a rota da URL, depois o GPS já autorizado,
+          que abre o mapa em você com zoom de rua assim que chega a primeira
+          posição (sem consultar a região por IP). Já autorizado quer dizer que
+          o navegador informa a localização como permitida para este site sem
+          perguntar; no iPhone, o Safari só faz isso quando o site está como
+          Permitir nos ajustes, e os outros navegadores do iPhone em geral não
+          conseguem informar. Quando o navegador não informa, o mapa abre onde
+          você o deixou da última vez neste navegador (o centro e o zoom ficam
+          só no aparelho e nunca são enviados); com a localização negada, ou sem
+          essa última vista, usa a região aproximada por IP e depois o
+          fuso/idioma do navegador. O app nunca pede a localização sozinho. Para
+          impedir consultas por IP, abra Configurações e desative Detectar
+          região pelo IP. O provedor escolhido recebe seu endereço IP. O ponto
+          de localização nunca é guardado nem enviado; o GPS só sai do aparelho
+          como um ponto da rota que você escolheu ou como a posição atual num
+          recálculo da navegação; as requisições de tiles revelam a área
+          visível.
         </p>
         <h2>Escolher vias principais</h2>
         <p>

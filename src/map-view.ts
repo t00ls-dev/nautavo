@@ -1,7 +1,14 @@
 import type { PlannerMap } from './planner-map';
 import { t } from './i18n';
-import { defaultView, initialView } from './default-view';
-import { authorizedView } from './location';
+import {
+  defaultView,
+  initialView,
+  LAST_VIEW_KEY,
+  parseView,
+  serializeView,
+} from './default-view';
+import { locationPermission } from './location';
+import type { View } from './default-view';
 import { setupUserLocation } from './user-location';
 import { compactLayout } from './panel';
 import { approximateRegion, defaultRegionUrl, regionUrl } from './services';
@@ -96,10 +103,48 @@ export function setupMapView(
       layout();
     }
   });
-  setupUserLocation(map, interact);
+  /** Show a startup view; on phones, in the part of the map above the sheet. */
+  const frame = (view: View) => {
+    const cover =
+      compactLayout() && !element('route-panel').hidden
+        ? element('sheet').getBoundingClientRect().height
+        : 0;
+    map.setView(view.center, view.zoom, cover);
+  };
+  // With location already allowed, the device's fixes open the map on it,
+  // again as a fix gets more precise, until the traveler moves the map.
+  let framedZoom = 0;
+  setupUserLocation(map, interact, (view) => {
+    if (interacted || route.hasRoute() || view.zoom <= framedZoom) return;
+    framedZoom = view.zoom;
+    frame(view);
+  });
+  // Where the map is left, for the next visit when the browser cannot tell
+  // whether location is allowed. On this device only; never sent.
+  const saveView = () => {
+    try {
+      localStorage.setItem(
+        LAST_VIEW_KEY,
+        serializeView({ center: map.getCenter(), zoom: map.getZoom() }),
+      );
+    } catch {
+      /* Optional. */
+    }
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveView();
+  });
+  window.addEventListener('pagehide', saveView);
   void initialView({
     hasRoute: route.hasRoute(),
-    authorizedPosition: authorizedView,
+    permission: async () => (await locationPermission())?.state ?? null,
+    lastView: () => {
+      try {
+        return parseView(localStorage.getItem(LAST_VIEW_KEY));
+      } catch {
+        return null;
+      }
+    },
     approximateRegion: () =>
       !interacted && !route.hasRoute()
         ? approximateRegion(detectRegion, ipRegionUrl)
@@ -111,12 +156,6 @@ export function setupMapView(
       ),
   }).then((view) => {
     if (!view || interacted || route.hasRoute()) return;
-    // On phones the open sheet covers the lower map: the place shows in the
-    // part above it.
-    const cover =
-      compactLayout() && !element('route-panel').hidden
-        ? element('sheet').getBoundingClientRect().height
-        : 0;
-    map.setView(view.center, view.zoom, cover);
+    frame(view);
   });
 }

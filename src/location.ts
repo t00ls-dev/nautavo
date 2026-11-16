@@ -26,7 +26,11 @@ export function getPosition(): Promise<GeolocationPosition> {
     }),
   );
 }
-export async function authorizedView(): Promise<View | null> {
+/**
+ * The site's location permission, or null where it cannot be read (no secure
+ * context, geolocation or Permissions API). Reading it never prompts.
+ */
+export async function locationPermission(): Promise<PermissionStatus | null> {
   try {
     if (
       !window.isSecureContext ||
@@ -34,11 +38,7 @@ export async function authorizedView(): Promise<View | null> {
       !navigator.permissions
     )
       return null;
-    const permission = await navigator.permissions.query({
-      name: 'geolocation',
-    });
-    if (permission.state !== 'granted') return null;
-    return positionView(await getPosition());
+    return await navigator.permissions.query({ name: 'geolocation' });
   } catch {
     return null;
   }

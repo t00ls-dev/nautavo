@@ -1,6 +1,7 @@
 import { metersPerPixel, type MapMarker, type PlannerMap } from './planner-map';
 import type { Coord } from './core';
-import { locationError, positionView } from './location';
+import type { View } from './default-view';
+import { locationError, locationPermission, positionView } from './location';
 import { byId as element } from './dom';
 import { compactLayout } from './panel';
 
@@ -9,14 +10,21 @@ const STALE_AFTER = 30_000;
 const NOTICE_TIME = 8_000;
 
 /**
- * Use my location on the planner map: after the explicit tap, a blue
- * dot follows the device with its accuracy circle, like a maps app. The map
- * follows the dot until the traveler pans it; the button then re-centers, and
- * a tap while following turns location off. Positions stay in page memory
- * only: never in links, storage or requests, and the watch stops while the
- * page is hidden.
+ * Use my location on the planner map: while the site may use location, a blue
+ * dot follows the device with its accuracy circle, like a maps app. With the
+ * permission already granted it starts with the page, without moving the map;
+ * otherwise the first tap asks for it. The button centers the map on the dot
+ * and follows it until the traveler pans the map; it never turns location
+ * off. The watch pauses while the page is hidden and during guided navigation
+ * (which keeps its own), and stops when the permission is revoked. Positions
+ * stay in page memory only: never in links, storage or requests.
  */
-export function setupUserLocation(map: PlannerMap, interact: () => void): void {
+export function setupUserLocation(
+  map: PlannerMap,
+  interact: () => void,
+  /** Every fix while the map does not follow the dot (startup framing). */
+  onFix: (view: View) => void,
+): void {
   const button = element<HTMLButtonElement>('locate');
   const notice = element('location-notice');
   let accuracy: MapMarker | null = null;
@@ -25,6 +33,8 @@ export function setupUserLocation(map: PlannerMap, interact: () => void): void {
   let watch: number | null = null;
   let active = false;
   let following = false;
+  // Started with the page: errors before the first fix stay silent.
+  let quiet = false;
   let last: { center: Coord; zoom: number; time: number } | null = null;
   let staleTimer = 0;
   let noticeTimer = 0;
@@ -40,8 +50,8 @@ export function setupUserLocation(map: PlannerMap, interact: () => void): void {
       );
   };
   const render = () => {
-    button.setAttribute('aria-pressed', String(active));
-    button.classList.toggle('locating', active && !last);
+    button.classList.toggle('locating', active && !last && !quiet);
+    button.classList.toggle('following', active && following);
     button.classList.toggle('free', active && !!last && !following);
   };
   const markStale = () => {
@@ -52,21 +62,48 @@ export function setupUserLocation(map: PlannerMap, interact: () => void): void {
       STALE_AFTER,
     );
   };
+  const paused = () =>
+    document.hidden ||
+    document.documentElement.classList.contains('navigating');
   const stopWatch = () => {
     if (watch !== null) navigator.geolocation.clearWatch(watch);
     watch = null;
   };
+  /** Watch while location is on and the page is shown, outside navigation. */
+  const sync = () => {
+    if (!active || paused()) {
+      stopWatch();
+      return;
+    }
+    if (watch !== null) return;
+    const id = navigator.geolocation.watchPosition(update, failed, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 5000,
+    });
+    // An error delivered at once may have stopped location already.
+    if (active && !paused()) watch = id;
+    else navigator.geolocation.clearWatch(id);
+  };
   const stop = () => {
     stopWatch();
     clearTimeout(staleTimer);
-    active = following = false;
+    active = following = quiet = false;
     last = null;
     accuracy?.remove();
     dot?.remove();
     accuracy = dot = null;
     render();
   };
-  const update = (position: GeolocationPosition) => {
+  const start = (follow: boolean, silent: boolean) => {
+    active = true;
+    following = follow;
+    quiet = silent;
+    if (!silent) show('Finding your location…');
+    render();
+    sync();
+  };
+  function update(position: GeolocationPosition) {
     let view;
     try {
       view = positionView(position);
@@ -97,38 +134,38 @@ export function setupUserLocation(map: PlannerMap, interact: () => void): void {
     }
     sizeAccuracy();
     markStale();
-    if (first) {
-      show(null);
-      map.setView(view.center, view.zoom);
-    } else if (following) map.panTo(view.center);
+    if (first && !quiet) show(null);
+    // Only a tap on the button makes the map follow the dot.
+    if (first && following) map.setView(view.center, view.zoom);
+    else if (following) map.panTo(view.center);
+    else onFix(view);
     render();
-  };
-  const failed = (error: GeolocationPositionError) => {
-    // Once there is a dot, a slow fix only greys it; denial always stops.
-    if (last && error.code !== 1) return;
+  }
+  function failed(error: GeolocationPositionError) {
+    if (error.code === 1) {
+      const silent = quiet;
+      stop();
+      if (!silent) show(locationError(1));
+      return;
+    }
+    // Once there is a dot, a slow fix only greys it; started with the page,
+    // the watch keeps waiting without a notice.
+    if (last || quiet) return;
     stop();
     show(locationError(error.code));
-  };
-  const startWatch = () => {
-    stopWatch();
-    watch = navigator.geolocation.watchPosition(update, failed, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 5000,
-    });
-  };
+  }
 
   button.onclick = () => {
     interact();
-    if (active && following) {
-      stop();
-      return;
-    }
     if (!element('route-panel').hidden && compactLayout())
       element('panel-toggle').click();
     if (active) {
       following = true;
       if (last) map.setView(last.center, Math.max(map.getZoom(), last.zoom));
+      else if (quiet) {
+        quiet = false;
+        show('Finding your location…');
+      }
       render();
       return;
     }
@@ -144,10 +181,7 @@ export function setupUserLocation(map: PlannerMap, interact: () => void): void {
       );
       return;
     }
-    active = following = true;
-    show('Finding your location…');
-    render();
-    startWatch();
+    start(true, false);
   };
   /** The circle's diameter in pixels at the current zoom (capped). */
   function sizeAccuracy() {
@@ -167,11 +201,26 @@ export function setupUserLocation(map: PlannerMap, interact: () => void): void {
     following = false;
     render();
   });
-  document.addEventListener('visibilitychange', () => {
-    if (!active) return;
-    if (document.hidden) stopWatch();
-    else startWatch();
+  document.addEventListener('visibilitychange', sync);
+  // Guided navigation (`html.navigating`) keeps its own watch: two watches
+  // overlapping as one starts and the other stops can leave the new one
+  // without fixes, so navigation signals before it starts and after it stops.
+  document.addEventListener('navigationchange', sync);
+  // Already allowed: on with the page, and on or off as the permission changes.
+  let permission: PermissionStatus | null = null;
+  const follow = () => {
+    if (permission?.state === 'granted') {
+      if (!active) start(false, true);
+    } else if (permission?.state === 'denied' && active) stop();
+  };
+  void locationPermission().then((status) => {
+    permission = status;
+    follow();
+    status?.addEventListener('change', follow);
   });
   window.addEventListener('pagehide', stop);
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) follow();
+  });
   render();
 }

@@ -212,12 +212,21 @@
               plans, calculates and exports the route.
             </li>
             <li>
-              Use my location shows a blue dot that follows your position on the
-              map, with a circle for its margin of error and a grey dot when the
-              position stops updating; the map follows it until you move the
-              map, the button re-centers and a further press turns it off. The
-              card with Set as start and Add as stop was removed: My location in
-              a point's field sets a route point.
+              Once location is allowed for the site, a blue dot shows your
+              position on the map whenever the page is open, with a circle for
+              its margin of error and a grey dot when the position stops
+              updating; the first press of Use my location asks for permission.
+              The button centers the map on the dot and follows it until you
+              move the map; it no longer turns location off (block location for
+              the site in the browser to stop it). With location already
+              allowed, the map opens on your position at street zoom as soon as
+              the GPS finds it, however long that takes, instead of falling back
+              to the IP region. When the browser cannot tell whether location is
+              allowed, as iPhone browsers other than Safari, the map opens where
+              you last left it (kept in this browser only); the app never asks
+              for location when it opens. The card with Set as start and Add as
+              stop was removed: My location in a point's field sets a route
+              point.
             </li>
             <li>
               Add stop, Reverse and Round trip are tiles of the same size below
@@ -672,13 +681,22 @@
               rota.
             </li>
             <li>
-              Usar minha localização mostra um ponto azul que acompanha sua
-              posição no mapa, com um círculo para a margem de erro e o ponto
-              cinza quando a posição deixa de ser atualizada; o mapa acompanha o
-              ponto até você mover o mapa, o botão centraliza de novo e mais um
-              toque desliga. O cartão com Definir como início e Adicionar como
-              parada foi removido: Minha localização no campo de um ponto define
-              um ponto da rota.
+              Depois que a localização é permitida para o site, um ponto azul
+              mostra sua posição no mapa sempre que a página está aberta, com um
+              círculo para a margem de erro e o ponto cinza quando a posição
+              deixa de ser atualizada; o primeiro toque em Usar minha
+              localização pede a permissão. O botão centraliza o mapa no ponto e
+              o acompanha até você mover o mapa; ele não desliga mais a
+              localização (para parar, bloqueie a localização do site no
+              navegador). Com a localização já permitida, o mapa abre na sua
+              posição com zoom de rua assim que o GPS a encontra, por mais que
+              demore, em vez de usar a região por IP. Quando o navegador não
+              informa se a localização está permitida, como os navegadores do
+              iPhone fora o Safari, o mapa abre onde você o deixou da última vez
+              (guardado só neste navegador); o app nunca pede a localização ao
+              abrir. O cartão com Definir como início e Adicionar como parada
+              foi removido: Minha localização no campo de um ponto define um
+              ponto da rota.
             </li>
             <li>
               Adicionar parada, Inverter e Ida e volta são blocos do mesmo

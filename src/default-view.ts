@@ -1,4 +1,4 @@
-import type { Coord } from './core';
+import { validCoord, type Coord } from './core';
 
 export interface View {
   center: Coord;
@@ -92,15 +92,55 @@ export function defaultView(
   return view(20, 0, 1);
 }
 
+/** The planner map's view when the page was last left, on this device only. */
+export const LAST_VIEW_KEY = 'last-view';
+export function serializeView(view: View): string {
+  return JSON.stringify({
+    center: view.center.map((n) => Number(n.toFixed(5))),
+    zoom: Number(view.zoom.toFixed(2)),
+  });
+}
+export function parseView(text: string | null): View | null {
+  try {
+    const value = JSON.parse(text ?? 'null') as Partial<View> | null;
+    if (
+      !value ||
+      !validCoord(value.center) ||
+      typeof value.zoom !== 'number' ||
+      !Number.isFinite(value.zoom) ||
+      value.zoom < 0 ||
+      value.zoom > 22
+    )
+      return null;
+    return { center: [value.center[0], value.center[1]], zoom: value.zoom };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The startup view, never asking for location:
+ * - a route: none (it is fitted);
+ * - location allowed: none (the device's first fixes frame the map, however
+ *   long the GPS takes, and the IP region is never asked);
+ * - location denied: the IP region;
+ * - unknown (the browser would ask, or cannot tell, as iPhone browsers other
+ *   than Safari): where the map was last left on this device, else the IP
+ *   region;
+ * and the local default when nothing else answers.
+ */
 export async function initialView(options: {
   hasRoute: boolean;
-  authorizedPosition: () => Promise<View | null>;
+  permission: () => Promise<PermissionState | null>;
+  lastView: () => View | null;
   approximateRegion: () => Promise<View | null>;
   local: () => View;
 }): Promise<View | null> {
   if (options.hasRoute) return null;
+  const permission = await options.permission();
+  if (permission === 'granted') return null;
   return (
-    (await options.authorizedPosition()) ??
+    (permission === 'denied' ? null : options.lastView()) ??
     (await options.approximateRegion()) ??
     options.local()
   );

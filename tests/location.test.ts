@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { authorizedView, gpsPoint, positionView } from '../src/location';
+import { gpsPoint, locationPermission, positionView } from '../src/location';
 import {
   approximateRegion,
   defaultRegionUrl,
@@ -9,18 +9,26 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
-it('never requests GPS while permission is prompt or denied or unavailable', async () => {
+it('reads the location permission without requesting a position', async () => {
   const getCurrentPosition = vi.fn();
+  const watchPosition = vi.fn();
   vi.stubGlobal('isSecureContext', true);
   vi.stubGlobal('navigator', {
     permissions: { query: async () => ({ state: 'prompt' }) },
+    geolocation: { getCurrentPosition, watchPosition },
+  });
+  expect((await locationPermission())?.state).toBe('prompt');
+  // Without the Permissions API, or outside a secure context, it is unknown.
+  vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } });
+  expect(await locationPermission()).toBeNull();
+  vi.stubGlobal('isSecureContext', false);
+  vi.stubGlobal('navigator', {
+    permissions: { query: async () => ({ state: 'granted' }) },
     geolocation: { getCurrentPosition },
   });
-  expect(await authorizedView()).toBeNull();
+  expect(await locationPermission()).toBeNull();
   expect(getCurrentPosition).not.toHaveBeenCalled();
-  vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } });
-  expect(await authorizedView()).toBeNull();
-  expect(getCurrentPosition).not.toHaveBeenCalled();
+  expect(watchPosition).not.toHaveBeenCalled();
 });
 it('selects precision-dependent zoom and rejects invalid positions', () => {
   expect(

@@ -1365,10 +1365,7 @@ dialog.settings::backdrop {
   color: var(--color-primary);
   box-shadow: inset 0 0 0 2px var(--color-primary);
 }
-/* Use my location: pressed while the dot shows, outlined once the map is panned away. */
-.map-tool-group #locate.free {
-  background: var(--color-surface);
-}
+/* Use my location looks the same whether or not the map follows the dot. */
 .map-tool-group #locate.locating svg {
   animation: locating 1.2s ease-in-out infinite alternate;
 }
