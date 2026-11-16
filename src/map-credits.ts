@@ -109,10 +109,10 @@ export function setupMapCredits(map: PlannerMap) {
     isolate(element);
     map.container.append(element);
   }
-  return (layer: BaseLayer, vintage: SatelliteVintage, labels: boolean) =>
+  return (layer: BaseLayer, vintage: SatelliteVintage) =>
     setCredits(
       [
-        ...mapCredits(layer, vintage, labels),
+        ...mapCredits(layer, vintage),
         { text: 'Weather data by Open-Meteo', url: 'https://open-meteo.com/' },
         {
           text: 'Elevation data: Copernicus DEM GLO-90 via Open-Meteo',

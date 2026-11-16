@@ -13,7 +13,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 - **Navigate:** on a phone, follow the route on screen with your live position, the next turn and the one after it, the remaining distance and time and the arrival time, on a map that turns with your direction of travel, or with the compass when you stop; zoom, drag or turn the map to look around and Re-center to follow again; off the route, a straight-line hint points back to it.
 - **Weather:** conditions and risks along the route for a departure date, including recent past dates, in Celsius or Fahrenheit.
 
-- **Map layers:** one vector map for planning and navigation, as standard, topographic (relief shading and contour lines) and satellite maps, with optional labels, route coloring by daylight, grade or surface and route marks (direction arrows, separate out-and-back lines, weather icons on or off).
+- **Map layers:** one vector map for planning and navigation, as standard, topographic (relief shading and contour lines) and satellite maps (with the map's labels), route coloring by daylight, grade or surface and route marks (direction arrows, separate out-and-back lines, weather icons on or off).
 - **Save and share:** route links, named routes saved in this browser and JSON backup import/export.
 - **Interface:** available in English and Portuguese.
 

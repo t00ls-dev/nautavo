@@ -134,12 +134,6 @@ for (const width of [320, 360, 390, 430]) {
       await page.keyboard.press('Escape');
       await expect(page.locator('.map-credits-dialog')).toBeHidden();
       await expect(toggle).toBeFocused();
-      await page.locator('#layers-toggle').tap();
-      await page.locator('#map-labels').uncheck();
-      await expect(page.locator('.map-credits-dialog')).not.toContainText(
-        'OpenFreeMap',
-      );
-      await page.keyboard.press('Escape');
       await page.locator('#panel-toggle').tap();
       await page.locator('#location-0').fill('38.72, -9.14');
       await page.locator('#location-0').press('Tab');
