@@ -47,7 +47,7 @@ export class RequestQueue {
     isCurrent: () => boolean = () => true,
   ): Promise<T> {
     const task = this.tail
-      .catch(() => {})
+      .catch(() => undefined)
       .then(async () => {
         if (!isCurrent()) throw new DOMException('Cancelled', 'AbortError');
         await pause(Math.max(0, this.interval - (Date.now() - this.last)));
