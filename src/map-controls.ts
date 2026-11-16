@@ -1,5 +1,6 @@
 import { icon, iconControl } from './icons';
 import { isolate, type PlannerMap } from './planner-map';
+import { byId as $, optionalById } from './dom';
 
 /** A corner of the map holding controls, above the map's own layers. */
 export function mapCorner(
@@ -7,7 +8,7 @@ export function mapCorner(
   position: 'top-right' | 'bottom-left',
 ): HTMLElement {
   const id = `map-corner-${position}`;
-  let corner = document.getElementById(id);
+  let corner = optionalById(id);
   if (!corner) {
     corner = document.createElement('div');
     corner.id = id;
@@ -59,15 +60,14 @@ function compassControl(map: PlannerMap): HTMLElement {
 }
 
 export function setupMapControls(map: PlannerMap) {
-  const get = (id: string) => document.getElementById(id)!;
-  iconControl(get('locate'), 'locate', 'Use my location');
-  iconControl(get('layers-toggle'), 'layers', 'Map layers');
-  iconControl(get('fullscreen'), 'maximize', 'Full screen');
-  get('fullscreen').prepend(icon('minimize'));
-  iconControl(get('fit'), 'route', 'Fit route');
-  iconControl(get('undo'), 'undo', 'Undo');
-  iconControl(get('lock'), 'unlock', 'Lock editing');
-  get('lock').prepend(icon('lock'));
+  iconControl($('locate'), 'locate', 'Use my location');
+  iconControl($('layers-toggle'), 'layers', 'Map layers');
+  iconControl($('fullscreen'), 'maximize', 'Full screen');
+  $('fullscreen').prepend(icon('minimize'));
+  iconControl($('fit'), 'route', 'Fit route');
+  iconControl($('undo'), 'undo', 'Undo');
+  iconControl($('lock'), 'unlock', 'Lock editing');
+  $('lock').prepend(icon('lock'));
   const container = document.createElement('div');
   container.className = 'map-action-control map-control';
   // Two groups: the map view, then the route.
@@ -78,12 +78,8 @@ export function setupMapControls(map: PlannerMap) {
     return element;
   };
   container.append(
-    group(
-      get('locate'),
-      get('layers-toggle').parentElement!,
-      get('fullscreen'),
-    ),
-    group(get('fit'), get('lock'), get('undo')),
+    group($('locate'), $('layers-toggle').parentElement!, $('fullscreen')),
+    group($('fit'), $('lock'), $('undo')),
   );
   document.querySelector('.map-tools')?.remove();
   const zoom = zoomControl(map);

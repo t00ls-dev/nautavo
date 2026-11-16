@@ -14,7 +14,7 @@ import {
   type TerrainSources,
 } from './basemap';
 import { loadMapLibre } from './maplibre-loader';
-import { byId as element } from './dom';
+import { byId as $ } from './dom';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /** Contour intervals in meters per zoom: [minor, major]. */
@@ -95,7 +95,7 @@ export function setupMapLayers(map: PlannerMap) {
   };
   const loadBase = async () => {
     base ??= await fetchStyle(STYLE_URL);
-    element('map-no-style').hidden = Boolean(base);
+    $('map-no-style').hidden = Boolean(base);
   };
   // A style that failed (offline, for instance) is asked once more when the
   // connection returns, as routing does; never in a loop.
@@ -121,7 +121,7 @@ export function setupMapLayers(map: PlannerMap) {
   };
   const start = async () => {
     if (!webglSupported()) {
-      element('map-no-gl').hidden = false;
+      $('map-no-gl').hidden = false;
       return;
     }
     try {
@@ -136,16 +136,16 @@ export function setupMapLayers(map: PlannerMap) {
       // A layer chosen while terrain was still loading.
       if (active === 'topographic' && !terrain) void apply();
     } catch {
-      element('map-no-style').hidden = false;
+      $('map-no-style').hidden = false;
     }
   };
   const updateOverlay = () => {
-    element('label-option').hidden = active !== 'satellite';
+    $('label-option').hidden = active !== 'satellite';
     updateCredits(active, vintage, labels);
   };
   const render = () => {
     document.body.dataset.mapLayer = active;
-    element('satellite-license').hidden =
+    $('satellite-license').hidden =
       active !== 'satellite' || vintage !== '2025';
     document
       .querySelectorAll<HTMLButtonElement>('[data-layer]')
@@ -158,13 +158,13 @@ export function setupMapLayers(map: PlannerMap) {
     updateOverlay();
     void apply();
   };
-  const labelInput = element<HTMLInputElement>('map-labels');
-  const vintageInput = element<HTMLSelectElement>('satellite-vintage');
+  const labelInput = $<HTMLInputElement>('map-labels');
+  const vintageInput = $<HTMLSelectElement>('satellite-vintage');
   labelInput.checked = labels;
   labelInput.setAttribute('aria-checked', String(labels));
   vintageInput.value = vintage;
-  const button = element('layers-toggle'),
-    menu = element('layers-menu');
+  const button = $('layers-toggle'),
+    menu = $('layers-menu');
   const close = (focus = false) => {
     menu.hidden = true;
     button.setAttribute('aria-expanded', 'false');
@@ -175,7 +175,7 @@ export function setupMapLayers(map: PlannerMap) {
     menu.hidden = !opening;
     button.setAttribute('aria-expanded', String(opening));
     if (opening) {
-      element('point-menu').hidden = true;
+      $('point-menu').hidden = true;
       (menu.querySelector('[aria-checked=true]') as HTMLElement).focus();
     }
   };

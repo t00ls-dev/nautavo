@@ -11,7 +11,7 @@ import type { View } from './default-view';
 import { setupUserLocation } from './user-location';
 import { compactLayout } from './panel';
 import { approximateRegion, defaultRegionUrl, regionUrl } from './services';
-import { byId as element } from './dom';
+import { byId as $ } from './dom';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 export function setupMapView(
@@ -40,29 +40,27 @@ export function setupMapView(
   } catch {
     /* An invalid stored URL falls back to the default. */
   }
-  element<HTMLInputElement>('detect-region').checked = detectRegion;
-  element<HTMLInputElement>('region-url').value = ipRegionUrl;
-  element<HTMLInputElement>('detect-region').onchange = () => {
-    detectRegion = element<HTMLInputElement>('detect-region').checked;
+  $<HTMLInputElement>('detect-region').checked = detectRegion;
+  $<HTMLInputElement>('region-url').value = ipRegionUrl;
+  $<HTMLInputElement>('detect-region').onchange = () => {
+    detectRegion = $<HTMLInputElement>('detect-region').checked;
     interact();
     writePreference(PREFERENCE.detectRegion, String(detectRegion));
   };
-  element<HTMLInputElement>('region-url').onchange = () => {
+  $<HTMLInputElement>('region-url').onchange = () => {
     try {
-      ipRegionUrl = regionUrl(
-        element<HTMLInputElement>('region-url').value.trim(),
-      );
-      element<HTMLInputElement>('region-url').setCustomValidity('');
+      ipRegionUrl = regionUrl($<HTMLInputElement>('region-url').value.trim());
+      $<HTMLInputElement>('region-url').setCustomValidity('');
       writePreference(PREFERENCE.regionUrl, ipRegionUrl);
     } catch {
-      element<HTMLInputElement>('region-url').setCustomValidity(
+      $<HTMLInputElement>('region-url').setCustomValidity(
         t('Use an HTTPS service URL.'),
       );
-      element<HTMLInputElement>('region-url').reportValidity();
+      $<HTMLInputElement>('region-url').reportValidity();
     }
   };
   const layout = () => {
-    element('fullscreen').setAttribute(
+    $('fullscreen').setAttribute(
       'aria-pressed',
       String(document.body.classList.contains('map-fullscreen')),
     );
@@ -76,7 +74,7 @@ export function setupMapView(
     );
     layout();
   });
-  element('fullscreen').onclick = () => {
+  $('fullscreen').onclick = () => {
     const container = document.querySelector<HTMLElement>('.map-container')!;
     const fallback = () => {
       document.body.classList.toggle('map-fullscreen');
@@ -98,8 +96,8 @@ export function setupMapView(
   /** Show a startup view; on phones, in the part of the map above the sheet. */
   const frame = (view: View) => {
     const cover =
-      compactLayout() && !element('route-panel').hidden
-        ? element('sheet').getBoundingClientRect().height
+      compactLayout() && !$('route-panel').hidden
+        ? $('sheet').getBoundingClientRect().height
         : 0;
     map.setView(view.center, view.zoom, cover);
   };
