@@ -130,7 +130,7 @@ import {
   maneuverText,
   shortRoadName,
 } from './maneuvers';
-import { byId as $ } from './dom';
+import { byId as $, optionalById } from './dom';
 import {
   chosenDistanceUnits,
   chosenTemperatureUnits,
@@ -972,7 +972,7 @@ async function addDirections(route: Route) {
   const shown = () => current === route && revision === version;
   const show = (message: string) => {
     directionsStatus.set(route, message);
-    const element = document.getElementById('directions-status');
+    const element = optionalById('directions-status');
     if (element && shown()) {
       element.textContent = t(message);
       element.hidden = false;

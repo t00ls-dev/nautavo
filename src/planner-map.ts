@@ -8,6 +8,7 @@ import type {
 } from 'maplibre-gl';
 import type { Feature, FeatureCollection, LineString } from 'geojson';
 import type { Coord } from './core';
+import { optionalById } from './dom';
 
 /**
  * The planner map (#133): one MapLibre map, created after the first painted
@@ -599,8 +600,7 @@ export class MapPopup {
     if (!gl || !this.marker) return;
     const box = this.element.getBoundingClientRect(),
       map = this.map.container.getBoundingClientRect();
-    const tools =
-      document.getElementById('map-corner-top-right')?.offsetWidth ?? 0;
+    const tools = optionalById('map-corner-top-right')?.offsetWidth ?? 0;
     const dx =
       Math.min(0, box.left - map.left - 16) ||
       Math.max(0, box.right - map.right + 16 + tools);
