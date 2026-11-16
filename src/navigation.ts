@@ -173,6 +173,42 @@ export function navigationManeuvers(route: Route): NavigationManeuver[] {
   return out;
 }
 
+/** A row of the upcoming list (#137): a maneuver or a route point ahead. */
+export type UpcomingItem =
+  | { kind: 'maneuver'; at: number; step: Step }
+  | { kind: 'stop'; at: number; name: string; destination: boolean };
+/**
+ * What is still ahead of `progress`, in route order: the maneuvers past the
+ * next one's own rule (`PASSED`) and the route points not yet reached, the
+ * last being the destination. The arrival maneuver stands for the
+ * destination only when the destination is not on the track.
+ */
+export function upcomingItems(
+  maneuvers: NavigationManeuver[],
+  stops: { at: number | null; name: string }[],
+  progress: number,
+): UpcomingItem[] {
+  const points = stops.flatMap((s, i) =>
+    s.at !== null && s.at > progress + STOP_REACHED
+      ? [
+          {
+            kind: 'stop' as const,
+            at: s.at,
+            name: s.name,
+            destination: i === stops.length - 1,
+          },
+        ]
+      : [],
+  );
+  const hasDestination = stops.at(-1)?.at != null;
+  const turns = maneuvers.flatMap((m) =>
+    m.at > progress + PASSED && !(hasDestination && m.step.kind === 'arrive')
+      ? [{ kind: 'maneuver' as const, at: m.at, step: m.step }]
+      : [],
+  );
+  return [...turns, ...points].sort((a, b) => a.at - b.at);
+}
+
 /** Direction of the track from a distance to a point a little ahead. */
 function headingAt(index: TrackIndex, distance: number): number | null {
   const from = pointAtDistance(index, distance),
@@ -213,6 +249,7 @@ export function createNavigationTracker(
   return {
     total: index.total,
     hasManeuvers: maneuvers.length > 0,
+    maneuvers,
     /** Track from the start to an along-track distance, split at segment gaps. */
     travelled: (distance: number) => trackSlice(index, 0, distance),
     /**

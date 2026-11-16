@@ -3587,11 +3587,80 @@ dialog:modal:not(.nav-screen) {
   box-shadow: var(--shadow-control);
 }
 .nav-bar {
+  position: relative;
   z-index: 2;
   flex: none;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--color-surface);
   box-shadow: 0 -4px 20px #1b293426;
+}
+/* The upcoming list (#137): a handle on the bar, a panel over the map. */
+.nav-list-toggle {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 24px;
+  margin: 0 0 4px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+}
+.nav-list-grip {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+.nav-list-toggle[aria-expanded='true'] .nav-list-grip {
+  background: var(--color-primary);
+}
+.nav-list {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  max-height: 50dvh;
+  margin: 0;
+  padding: 8px 16px;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  background: var(--color-surface);
+  box-shadow: 0 -4px 20px #1b293426;
+  list-style: none;
+}
+.nav-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 17px;
+}
+.nav-list li:last-child {
+  border-bottom: 0;
+}
+.nav-list-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  color: var(--color-primary);
+}
+.nav-list-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-list-stop .nav-list-text {
+  font-weight: 700;
+}
+.nav-list-distance {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 .nav-bar-row {
   display: flex;

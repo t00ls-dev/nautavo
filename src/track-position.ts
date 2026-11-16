@@ -256,20 +256,29 @@ export function exactSlice(
 }
 
 /**
- * Along-track distance of each route point, in order (points farther than
- * 200 m from the track are left out). Sampling that restarts at these points
- * keeps the samples of unchanged legs identical after an edit.
+ * Along-track distance of each route point, in order, or null for a point
+ * farther than 200 m from the track.
  */
-export function legDistances(segments: Coord[][], points: Coord[]): number[] {
+export function legPositions(
+  segments: Coord[][],
+  points: Coord[],
+): (number | null)[] {
   const index = indexTrack(segments);
   let progress = 0;
-  return points.flatMap((coord) => {
+  return points.map((coord) => {
     const position = locateOnTrack(index, coord, { progress, backtrack: 0 });
-    if (!position || position.offTrack > 200) return [];
+    if (!position || position.offTrack > 200) return null;
     progress = position.distance;
-    return [position.distance];
+    return position.distance;
   });
 }
+/**
+ * Along-track distance of each route point on the track, in order. Sampling
+ * that restarts at these points keeps the samples of unchanged legs
+ * identical after an edit.
+ */
+export const legDistances = (segments: Coord[][], points: Coord[]): number[] =>
+  legPositions(segments, points).filter((d): d is number => d !== null);
 
 /** Roads are about this much longer than the straight line (circuity). */
 export const ROAD_DETOUR = 1.4;

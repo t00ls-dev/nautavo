@@ -982,6 +982,87 @@ test.describe('phone navigation', () => {
       expect(lines).toBeLessThanOrEqual(2.05);
     });
 
+  test('the bar opens a list of the turns and stops ahead', async ({
+    page,
+    context,
+  }) => {
+    await setup(page);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    const handle = page.getByRole('button', { name: 'Upcoming turns' });
+    const list = page.getByRole('list', { name: 'Upcoming turns' });
+    await expect(list).toBeHidden();
+    await handle.click();
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    const rows = list.locator('li');
+    await expect(rows).toHaveCount(3);
+    // Road names shortened as in the Itinerary; the full text in the title.
+    await expect(rows.nth(0)).toContainText('Estr. das Furnas');
+    await expect(rows.nth(0)).toHaveAttribute('title', /Estrada das Furnas/);
+    await expect(rows.nth(1)).toHaveAttribute('title', /Estrada do Joá/);
+    await expect(rows.nth(2)).toHaveClass(/nav-list-stop/);
+    // Past the first turn, it leaves the list.
+    await context.setGeolocation({ latitude: lat, longitude: lon(12) });
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toHaveAttribute('title', /Estrada do Joá/);
+    // Escape closes the list, not navigation; a second one ends it.
+    await page.keyboard.press('Escape');
+    await expect(list).toBeHidden();
+    await expect(page.locator('#nav-screen')).toBeVisible();
+    // A drag up on the handle opens it, a drag down closes it.
+    const box = (await handle.boundingBox())!;
+    const x = box.x + box.width / 2,
+      y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 80);
+    await page.mouse.up();
+    await expect(list).toBeVisible();
+    await page.mouse.move(x, y - 10);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 60);
+    await page.mouse.up();
+    await expect(list).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#nav-screen')).toBeHidden();
+  });
+
+  for (const [width, language] of [
+    [320, 'pt'],
+    [430, 'en'],
+  ] as const)
+    test(`the upcoming list fits at ${width}px in ${language} with long names`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await setup(page, longName);
+      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      await page.locator('#navigate').click();
+      await page.locator('#nav-notice-start').click();
+      await page.locator('#nav-list-toggle').click();
+      const list = page.locator('#nav-list');
+      await expect(list.locator('li')).toHaveCount(3);
+      const problems = await list.evaluate((ol) => {
+        const out: string[] = [];
+        const banner = document
+          .querySelector('.nav-banner')
+          ?.getBoundingClientRect();
+        const box = ol.getBoundingClientRect();
+        if (banner && box.top < banner.bottom) out.push('covers the banner');
+        for (const li of ol.querySelectorAll('li')) {
+          const r = li.getBoundingClientRect();
+          if (r.right > innerWidth + 0.5) out.push('row leaves the screen');
+          if (r.height > 60) out.push(`row wraps: ${li.textContent}`);
+          const distance = li.querySelector('.nav-list-distance')!;
+          if (distance.scrollWidth > distance.clientWidth + 1)
+            out.push('distance clipped');
+        }
+        return out;
+      });
+      expect(problems).toEqual([]);
+    });
+
   /** Records what the page would speak instead of speaking it. */
   async function recordSpeech(page: Page) {
     await page.addInitScript(() => {

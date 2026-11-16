@@ -1,5 +1,5 @@
 import { meters, type Coord, type Route } from './core';
-import { byId as $ } from './dom';
+import { byId as $, text } from './dom';
 import { mapCorner } from './map-controls';
 import { lineFeature, RANK, type PlannerMap } from './planner-map';
 import { icon, type IconName } from './icons';
@@ -222,12 +222,6 @@ export function setupRouteOverlays(
       mark.setAttribute('aria-hidden', 'true');
       return mark;
     };
-    const text = (value: string, className = '') => {
-      const span = document.createElement('span');
-      if (className) span.className = className;
-      span.textContent = value;
-      return span;
-    };
     legendBox.classList.toggle('route-legend-scale', !!coloring.scale);
     if (coloring.scale) {
       const { start, end, limits } = coloring.scale;
@@ -239,7 +233,7 @@ export function setupRouteOverlays(
       const ticks = document.createElement('span');
       ticks.className = 'route-legend-ticks';
       limits.forEach((limit, i) => {
-        const tick = text(limit, 'route-legend-tick');
+        const tick = text('span', limit, 'route-legend-tick');
         tick.style.left = `${((i + 1) * 100) / coloring.legend.length}%`;
         ticks.append(tick);
       });
@@ -251,13 +245,13 @@ export function setupRouteOverlays(
       // any other text); the drawn scale is hidden from them.
       legendBox.replaceChildren(
         scale,
-        ...coloring.legend.map(({ label }) => text(label, 'sr-only')),
+        ...coloring.legend.map(({ label }) => text('span', label, 'sr-only')),
       );
     } else
       legendBox.replaceChildren(
         ...coloring.legend.map(({ kind, label }) => {
           const item = document.createElement('span');
-          item.append(swatch(kind), text(label));
+          item.append(swatch(kind), text('span', label));
           return item;
         }),
       );

@@ -15,7 +15,9 @@ import {
   navigationDistanceLabel,
   navigationDurationLabel,
   navigationManeuvers,
+  upcomingItems,
 } from '../src/navigation';
+import { legPositions } from '../src/track-position';
 
 // About 111.2 m per 0.001° along the equator.
 const M = 111.195;
@@ -435,5 +437,55 @@ describe('navigation heading', () => {
     expect(turnToward(350, 10, 0.5)).toBeCloseTo(0, 6);
     expect(turnToward(10, 350, 0.5)).toBeCloseTo(0, 6);
     expect(turnToward(90, 180, 0.25)).toBeCloseTo(112.5, 6);
+  });
+});
+
+describe('upcoming list', () => {
+  const turns = navigationManeuvers(route());
+  const stops = [
+    { at: 12 * M, name: 'Café' },
+    { at: 20 * M, name: 'Destination' },
+  ];
+  const kinds = (progress: number) =>
+    upcomingItems(turns, stops, progress).map((i) =>
+      i.kind === 'stop' ? i.name : i.step.name,
+    );
+
+  it('lists the turns and stops ahead in order, the destination last', () => {
+    expect(kinds(0)).toEqual([
+      'Second road',
+      'Café',
+      'Third road',
+      'Destination',
+    ]);
+    expect(upcomingItems(turns, stops, 0).at(-1)).toMatchObject({
+      kind: 'stop',
+      destination: true,
+    });
+  });
+
+  it('drops what has been passed', () => {
+    expect(kinds(6 * M)).toEqual(['Café', 'Third road', 'Destination']);
+    expect(kinds(16 * M)).toEqual(['Destination']);
+  });
+
+  it('keeps the arrival when the destination is off the track', () => {
+    const off = [{ at: null, name: 'Destination' }];
+    expect(upcomingItems(turns, off, 16 * M).map((i) => i.kind)).toEqual([
+      'maneuver',
+    ]);
+  });
+
+  it('places route points on the track, null when far from it', () => {
+    expect(
+      legPositions(
+        [east(0, 20)],
+        [
+          [0, 0.01],
+          [0.01, 0.01],
+          [0, 0.02],
+        ],
+      ),
+    ).toEqual([expect.closeTo(10 * M, 0), null, expect.closeTo(20 * M, 0)]);
   });
 });
