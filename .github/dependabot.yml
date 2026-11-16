@@ -1,12 +1,12 @@
 version: 2
+# Every schedule in the repository is the same cron expression, in UTC
+# (the Lighthouse workflow uses it too).
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: '00:00'
-      timezone: Etc/UTC
+      interval: cron
+      cronjob: '0 9 * * 1' # Monday 09:00 UTC
     ignore:
       - dependency-name: '@types/node'
         update-types:
@@ -21,10 +21,8 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: '00:00'
-      timezone: Etc/UTC
+      interval: cron
+      cronjob: '0 9 * * 1' # Monday 09:00 UTC
     open-pull-requests-limit: 5
     groups:
       actions-minor-patch:
