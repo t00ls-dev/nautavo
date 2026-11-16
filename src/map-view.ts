@@ -3,7 +3,6 @@ import { t } from './i18n';
 import {
   defaultView,
   initialView,
-  LAST_VIEW_KEY,
   parseView,
   serializeView,
 } from './default-view';
@@ -13,6 +12,7 @@ import { setupUserLocation } from './user-location';
 import { compactLayout } from './panel';
 import { approximateRegion, defaultRegionUrl, regionUrl } from './services';
 import { byId as element } from './dom';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 export function setupMapView(
   map: PlannerMap,
@@ -32,24 +32,20 @@ export function setupMapView(
     });
   let detectRegion = true;
   let ipRegionUrl = defaultRegionUrl;
+  detectRegion = readPreference(PREFERENCE.detectRegion) !== 'false';
   try {
-    detectRegion = localStorage.getItem('detect-region') !== 'false';
     ipRegionUrl = regionUrl(
-      localStorage.getItem('region-url') ?? defaultRegionUrl,
+      readPreference(PREFERENCE.regionUrl) ?? defaultRegionUrl,
     );
   } catch {
-    /* Defaults work without persistent storage. */
+    /* An invalid stored URL falls back to the default. */
   }
   element<HTMLInputElement>('detect-region').checked = detectRegion;
   element<HTMLInputElement>('region-url').value = ipRegionUrl;
   element<HTMLInputElement>('detect-region').onchange = () => {
     detectRegion = element<HTMLInputElement>('detect-region').checked;
     interact();
-    try {
-      localStorage.setItem('detect-region', String(detectRegion));
-    } catch {
-      /* Optional preference. */
-    }
+    writePreference(PREFERENCE.detectRegion, String(detectRegion));
   };
   element<HTMLInputElement>('region-url').onchange = () => {
     try {
@@ -57,11 +53,7 @@ export function setupMapView(
         element<HTMLInputElement>('region-url').value.trim(),
       );
       element<HTMLInputElement>('region-url').setCustomValidity('');
-      try {
-        localStorage.setItem('region-url', ipRegionUrl);
-      } catch {
-        /* Optional preference. */
-      }
+      writePreference(PREFERENCE.regionUrl, ipRegionUrl);
     } catch {
       element<HTMLInputElement>('region-url').setCustomValidity(
         t('Use an HTTPS service URL.'),
@@ -121,16 +113,11 @@ export function setupMapView(
   });
   // Where the map is left, for the next visit when the browser cannot tell
   // whether location is allowed. On this device only; never sent.
-  const saveView = () => {
-    try {
-      localStorage.setItem(
-        LAST_VIEW_KEY,
-        serializeView({ center: map.getCenter(), zoom: map.getZoom() }),
-      );
-    } catch {
-      /* Optional. */
-    }
-  };
+  const saveView = () =>
+    writePreference(
+      PREFERENCE.lastView,
+      serializeView({ center: map.getCenter(), zoom: map.getZoom() }),
+    );
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) saveView();
   });
@@ -138,13 +125,7 @@ export function setupMapView(
   void initialView({
     hasRoute: route.hasRoute(),
     permission: async () => (await locationPermission())?.state ?? null,
-    lastView: () => {
-      try {
-        return parseView(localStorage.getItem(LAST_VIEW_KEY));
-      } catch {
-        return null;
-      }
-    },
+    lastView: () => parseView(readPreference(PREFERENCE.lastView)),
     approximateRegion: () =>
       !interacted && !route.hasRoute()
         ? approximateRegion(detectRegion, ipRegionUrl)

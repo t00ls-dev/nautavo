@@ -3,6 +3,7 @@ import { byId as $ } from './dom';
 import { mapCorner } from './map-controls';
 import { lineFeature, RANK, type PlannerMap } from './planner-map';
 import { icon, type IconName } from './icons';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /**
  * Route coloring: one active coloring of the route line at a time, chosen in
@@ -102,8 +103,6 @@ export function sliceByRanges(
   return out.map(({ kind, repeated, coords }) => ({ kind, repeated, coords }));
 }
 
-const STORAGE_KEY = 'route-coloring';
-
 /** A kind's color, from the stylesheet that also colors the legend. */
 function coloringColor(kind: string): string {
   const probe = document.createElement('i');
@@ -145,12 +144,7 @@ export function setupRouteOverlays(
     },
   ]);
   const colorings: Coloring[] = [];
-  let active = 'none';
-  try {
-    active = localStorage.getItem(STORAGE_KEY) ?? 'none';
-  } catch {
-    /* Optional device preference. */
-  }
+  let active = readPreference(PREFERENCE.routeColoring) ?? 'none';
   const menu = $('layers-menu');
   const group = document.createElement('div');
   group.className = 'coloring-group';
@@ -189,11 +183,7 @@ export function setupRouteOverlays(
     button.onclick = () => {
       if (button.getAttribute('aria-disabled') === 'true') return;
       active = id;
-      try {
-        localStorage.setItem(STORAGE_KEY, id);
-      } catch {
-        /* Optional device preference. */
-      }
+      writePreference(PREFERENCE.routeColoring, id);
       refresh();
       colorings.find((c) => c.id === id)?.activate?.();
     };

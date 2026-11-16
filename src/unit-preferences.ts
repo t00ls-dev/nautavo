@@ -1,10 +1,14 @@
 import type { DistanceUnits, TemperatureUnits } from './units';
+import {
+  PREFERENCE,
+  readPreference,
+  writePreference,
+  type PreferenceKey,
+} from './preferences';
 
 export type DistanceChoice = DistanceUnits | 'auto';
 export type TemperatureChoice = TemperatureUnits | 'auto';
 
-const DISTANCE_KEY = 'distance-units';
-const TEMPERATURE_KEY = 'temperature-units';
 /** Regions that use miles on roads, after CLDR's road length preferences. */
 const MILE_REGIONS = new Set(['US', 'GB', 'LR', 'MM']);
 /** Regions that read weather temperatures in Fahrenheit, after CLDR. */
@@ -80,33 +84,25 @@ export function detectedUnits() {
   return detectUnits(navigator.languages ?? [navigator.language], timeZone);
 }
 
-function read(key: string, allowed: readonly string[]): string {
-  try {
-    const value = localStorage.getItem(key);
-    if (value && allowed.includes(value)) return value;
-  } catch {
-    /* Optional preference. */
-  }
-  return 'auto';
+function read(key: PreferenceKey, allowed: readonly string[]): string {
+  const value = readPreference(key);
+  return value && allowed.includes(value) ? value : 'auto';
 }
-function write(key: string, value: string): void {
-  try {
-    if (value === 'auto') localStorage.removeItem(key);
-    else localStorage.setItem(key, value);
-  } catch {
-    /* Optional preference. */
-  }
-}
+const write = (key: PreferenceKey, value: string) =>
+  writePreference(key, value === 'auto' ? null : value);
 
 /** Device preferences: never part of links, saved routes or backups. */
 export const chosenDistanceUnits = (): DistanceChoice =>
-  read(DISTANCE_KEY, ['metric', 'imperial']) as DistanceChoice;
+  read(PREFERENCE.distanceUnits, ['metric', 'imperial']) as DistanceChoice;
 export const chosenTemperatureUnits = (): TemperatureChoice =>
-  read(TEMPERATURE_KEY, ['celsius', 'fahrenheit']) as TemperatureChoice;
+  read(PREFERENCE.temperatureUnits, [
+    'celsius',
+    'fahrenheit',
+  ]) as TemperatureChoice;
 export const rememberDistanceUnits = (choice: DistanceChoice): void =>
-  write(DISTANCE_KEY, choice);
+  write(PREFERENCE.distanceUnits, choice);
 export const rememberTemperatureUnits = (choice: TemperatureChoice): void =>
-  write(TEMPERATURE_KEY, choice);
+  write(PREFERENCE.temperatureUnits, choice);
 
 export function distanceUnits(): DistanceUnits {
   const choice = chosenDistanceUnits();

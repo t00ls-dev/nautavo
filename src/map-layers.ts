@@ -15,6 +15,7 @@ import {
 } from './basemap';
 import { loadMapLibre } from './maplibre-loader';
 import { byId as element } from './dom';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /** Contour intervals in meters per zoom: [minor, major]. */
 const CONTOUR_THRESHOLDS: Record<number, [number, number]> = {
@@ -41,19 +42,11 @@ export function setupMapLayers(map: PlannerMap) {
   let active: BaseLayer = 'standard',
     vintage: SatelliteVintage = '2025',
     labels = true;
-  try {
-    const saved = localStorage.getItem('map-layer');
-    if (
-      saved === 'standard' ||
-      saved === 'topographic' ||
-      saved === 'satellite'
-    )
-      active = saved;
-    if (localStorage.getItem('satellite-vintage') === '2016') vintage = '2016';
-    labels = localStorage.getItem('map-labels') !== 'false';
-  } catch {
-    /* Map selection is optional device state. */
-  }
+  const saved = readPreference(PREFERENCE.mapLayer);
+  if (saved === 'standard' || saved === 'topographic' || saved === 'satellite')
+    active = saved;
+  if (readPreference(PREFERENCE.satelliteVintage) === '2016') vintage = '2016';
+  labels = readPreference(PREFERENCE.mapLabels) !== 'false';
   let base: StyleSpecification | null = null,
     terrain: TerrainSources | null = null,
     terrainLoading: Promise<TerrainSources | null> | null = null,
@@ -170,13 +163,6 @@ export function setupMapLayers(map: PlannerMap) {
   labelInput.checked = labels;
   labelInput.setAttribute('aria-checked', String(labels));
   vintageInput.value = vintage;
-  const save = (key: string, value: string) => {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      /* Map remains usable without storage. */
-    }
-  };
   const button = element('layers-toggle'),
     menu = element('layers-menu');
   const close = (focus = false) => {
@@ -196,7 +182,7 @@ export function setupMapLayers(map: PlannerMap) {
   menu.querySelectorAll<HTMLButtonElement>('[data-layer]').forEach((option) => {
     option.onclick = () => {
       active = option.dataset.layer as BaseLayer;
-      save('map-layer', active);
+      writePreference(PREFERENCE.mapLayer, active);
       render();
       close(true);
     };
@@ -204,13 +190,13 @@ export function setupMapLayers(map: PlannerMap) {
   labelInput.onchange = () => {
     labels = labelInput.checked;
     labelInput.setAttribute('aria-checked', String(labels));
-    save('map-labels', String(labels));
+    writePreference(PREFERENCE.mapLabels, String(labels));
     updateOverlay();
     if (active === 'satellite') void apply();
   };
   vintageInput.onchange = () => {
     vintage = vintageInput.value === '2016' ? '2016' : '2025';
-    save('satellite-vintage', vintage);
+    writePreference(PREFERENCE.satelliteVintage, vintage);
     if (active === 'satellite') render();
   };
   menu.addEventListener('keydown', (event) => {

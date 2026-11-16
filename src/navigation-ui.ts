@@ -46,6 +46,7 @@ import {
 } from './navigation-replay';
 import { distanceLabel, shortDistanceLabel } from './units';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /**
  * Guided navigation screen (#31, first delivery): follows the route on screen
@@ -57,10 +58,6 @@ import { distanceUnits, temperatureUnits } from './unit-preferences';
  * them the route and position still draw over a neutral background.
  */
 
-/** Device preference: 'off' after "Don't show this notice again". */
-const NOTICE_KEY = 'navigation-notice';
-/** Device preference: 'off' when the traveler turns automatic recalculation off. */
-const AUTO_REROUTE_KEY = 'auto-reroute';
 /** How long the "Automatic recalculation on" chip stays at start, ms. */
 const AUTO_REROUTE_NOTICE = 10000;
 /**
@@ -129,36 +126,16 @@ type OrientationPermission = {
   requestPermission?: () => Promise<'granted' | 'denied'>;
 };
 
-function noticeWanted(): boolean {
-  try {
-    return localStorage.getItem(NOTICE_KEY) !== 'off';
-  } catch {
-    return true;
-  }
-}
-function autoRerouteWanted(): boolean {
-  try {
-    return localStorage.getItem(AUTO_REROUTE_KEY) !== 'off';
-  } catch {
-    return true;
-  }
-}
-function rememberAutoReroute(on: boolean): void {
-  try {
-    if (on) localStorage.removeItem(AUTO_REROUTE_KEY);
-    else localStorage.setItem(AUTO_REROUTE_KEY, 'off');
-  } catch {
-    /* Optional preference; this page still follows the choice. */
-  }
-}
-function rememberNotice(show: boolean): void {
-  try {
-    if (show) localStorage.removeItem(NOTICE_KEY);
-    else localStorage.setItem(NOTICE_KEY, 'off');
-  } catch {
-    /* Optional preference. */
-  }
-}
+// Device preferences, 'off' after "Don't show this notice again" or when the
+// traveler turns automatic recalculation off; absent means on.
+const noticeWanted = () =>
+  readPreference(PREFERENCE.navigationNotice) !== 'off';
+const autoRerouteWanted = () =>
+  readPreference(PREFERENCE.autoReroute) !== 'off';
+const rememberAutoReroute = (on: boolean) =>
+  writePreference(PREFERENCE.autoReroute, on ? null : 'off');
+const rememberNotice = (show: boolean) =>
+  writePreference(PREFERENCE.navigationNotice, show ? null : 'off');
 
 /** Road text shown for a maneuver: its name, its reference or the instruction. */
 function roadText(step: Step): string {
