@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { defaults, type Coord, type Route, type State } from '../src/core';
-import { locatePoints, routeKeepingLegs, splitLegs } from '../src/track-legs';
+import {
+  EDIT_WINDOW,
+  locatePoints,
+  routeKeepingLegs,
+  splitLegs,
+} from '../src/track-legs';
 
 const line = (n: number, lat = -22.9): Coord[] =>
   Array.from({ length: n }, (_, i) => [lat, -43.2 + i * 0.001] as Coord);
@@ -57,6 +62,44 @@ describe('track legs', () => {
     expect(route.duration).toBeNull();
     expect(route.steps).toHaveLength(1);
     expect(route.snapped).toHaveLength(4);
+  });
+  it('reroutes only a window around a point moved on a long leg', async () => {
+    // A 10 km leg: points every ~100 m between two stops 100 points apart.
+    const t = line(101);
+    const points = [t[0], t[50], t[100]];
+    const moved: Coord = [-22.9005, -43.15];
+    const calls: Coord[][] = [];
+    const route = (await routeKeepingLegs(
+      stateFor([t[0], moved, t[100]]),
+      { route: imported([t]), points },
+      router(calls),
+    ))!;
+    // One request from about 1 km before to about 1 km after the point.
+    expect(calls).toHaveLength(1);
+    const [a, , b] = calls[0];
+    expect(a[1]).toBeCloseTo(-43.15 - EDIT_WINDOW / 102_600, 2);
+    expect(b[1]).toBeCloseTo(-43.15 + EDIT_WINDOW / 102_600, 2);
+    // Everything outside the window is the recorded track, point for point.
+    const flat = route.segments.flat();
+    expect(route.segments).toHaveLength(1);
+    expect(flat.slice(0, 40)).toEqual(t.slice(0, 40));
+    expect(flat.slice(-40)).toEqual(t.slice(-40));
+    expect(flat).toContainEqual(moved);
+  });
+  it('reroutes only a window around a stop added to a long leg', async () => {
+    const t = line(101);
+    const added: Coord = [-22.9004, -43.13];
+    const calls: Coord[][] = [];
+    const route = (await routeKeepingLegs(
+      stateFor([t[0], added, t[100]]),
+      { route: imported([t]), points: [t[0], t[100]] },
+      router(calls),
+    ))!;
+    expect(calls).toHaveLength(1);
+    const flat = route.segments.flat();
+    expect(flat.slice(0, 50)).toEqual(t.slice(0, 50));
+    expect(flat.slice(-20)).toEqual(t.slice(-20));
+    expect(flat).toContainEqual(added);
   });
   it('keeps the imported format in the provider of a partly rerouted track', async () => {
     const t = line(30);

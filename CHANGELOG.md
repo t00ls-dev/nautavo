@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- Imported tracks follow the road actually taken: after an import, the track is aligned to the roads wherever they match it closely, without GPS noise and glitches, with Keep the recorded track to undo it, and stretches no road follows are listed and highlighted on the map as places where the route cannot be followed exactly.
 - Turn the planner map with two fingers, as the navigation map already turns (a pinch with a small twist only zooms), or on a computer with a right or Ctrl drag. A compass below the map tools shows on a turned map and puts north up again; labels and markers stay upright, and Fit route keeps the turn.
 - A point's field opens a menu with My location (your exact position) and Choose on map (move the map under a fixed marker and Confirm); place suggestions show their name, the rest of the address and the distance from the point before or after.
 - Moving a point on the map is precise on touch screens: while you drag a marker, a magnifier above your finger shows the exact spot under it. In Settings, Moving points on the map can instead be Tap, then move the map: tap a marker, move the map under a fixed marker and Confirm.
@@ -24,6 +25,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- On an imported track, Calculate route keeps that track and adds directions from its roads, instead of recalculating the whole route through its points; editing a point recalculates only about 1 km on each side of it; and Copy link says that the link recalculates the route, so share the GPX for the exact track.
 - Satellite always shows the map's labels: the Labels switch and the note about non-commercial imagery left the Map layers menu (the imagery license stays in the map credits, and Settings still offers the EOX 2016 edition).
 - The planner map is drawn by MapLibre GL JS alone, like the navigation map, instead of inside Leaflet: one map engine, with the route, colorings and arrows drawn by the map itself. A double tap and drag zooms with one finger as before. A browser without WebGL now shows a notice instead of the map, and the panel still plans, calculates and exports the route.
 - Once location is allowed for the site, a blue dot shows your position on the map whenever the page is open, with a circle for its margin of error and a grey dot when the position stops updating; the first press of Use my location asks for permission. The button centers the map on the dot and follows it until you move the map; it no longer turns location off (block location for the site in the browser to stop it). With location already allowed, the map opens on your position at street zoom as soon as the GPS finds it, however long that takes, instead of falling back to the IP region. When the browser cannot tell whether location is allowed, as iPhone browsers other than Safari, the map opens where you last left it (kept in this browser only); the app never asks for location when it opens. The card with Set as start and Add as stop was removed: My location in a point's field sets a route point.

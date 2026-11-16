@@ -37,3 +37,10 @@ export async function mockOsrm(
     r.fulfill({ json: osrmAnswer(r.request().url(), options) }),
   );
 }
+
+/** The `[lat, lon]` of every track point of a GPX text, in order. */
+export const gpxPoints = (xml: string): number[][] =>
+  [...xml.matchAll(/<trkpt lat="([^"]+)" lon="([^"]+)"/g)].map((m) => [
+    Number(m[1]),
+    Number(m[2]),
+  ]);
