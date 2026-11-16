@@ -889,3 +889,42 @@ test('the map view is kept on the device when the page is left', async ({
   expect(view.center[0]).toBeCloseTo(-22.95, 3);
   expect(view.center[1]).toBeCloseTo(-43.2, 3);
 });
+
+test('reopening on the last view keeps it in place above the sheet', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('seeded')) {
+      sessionStorage.setItem('seeded', '1');
+      localStorage.setItem(
+        'last-view',
+        JSON.stringify({ center: [-22.97, -43.18], zoom: 15 }),
+      );
+    }
+    navigator.permissions.query = async () =>
+      ({ state: 'prompt' }) as PermissionStatus;
+  });
+  const leave = () =>
+    page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', {
+        configurable: true,
+        get: () => true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+      return JSON.parse(localStorage.getItem('last-view')!) as {
+        center: [number, number];
+        zoom: number;
+      };
+    });
+  // Open and leave three times: the place must not move a little each time.
+  for (let visit = 0; visit < 3; visit++) {
+    await page.goto(base);
+    await mapReady(page);
+    await mapIdle(page);
+    const saved = await leave();
+    expect(saved.zoom).toBeCloseTo(15, 1);
+    expect(saved.center[0]).toBeCloseTo(-22.97, 4);
+    expect(saved.center[1]).toBeCloseTo(-43.18, 4);
+  }
+});
