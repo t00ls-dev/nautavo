@@ -139,7 +139,7 @@ import {
   maneuverText,
   shortRoadName,
 } from './maneuvers';
-import { byId as $, optionalById } from './dom';
+import { byId as $, optionalById, text } from './dom';
 import {
   chosenDistanceUnits,
   chosenTemperatureUnits,
@@ -150,12 +150,6 @@ import {
   type DistanceChoice,
   type TemperatureChoice,
 } from './unit-preferences';
-const text = (tag: string, value: string, className = '') => {
-  const e = document.createElement(tag);
-  e.textContent = value;
-  e.className = className;
-  return e;
-};
 // Footer links: Help, What's new and the repository, each with its icon.
 $('help').prepend(icon('help'));
 $('changelog').prepend(icon('news'));

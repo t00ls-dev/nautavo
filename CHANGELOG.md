@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- While navigating, tap or drag up the handle on the bottom bar to list the turns and route points ahead, with their distances and arrival times; navigation goes on underneath.
 - Spoken directions while navigating, off by default: turn them on in the start notice, in Settings or with the speaker button on the navigation screen, and the phone's own voice says each turn ahead, the arrival, leaving the route and a recalculated route, in the interface language, with no request.
 - If the page reloads during navigation (a phone discarding the tab, an accidental refresh), it offers to continue on the same route with one tap, even without a connection; this tab keeps the route and the distance travelled for that, never your position, until you end the navigation, arrive or after 30 minutes.
 - Imported tracks follow the road actually taken: after an import, the track is aligned to the roads wherever they match it closely, without GPS noise and glitches, with Keep the recorded track to undo it, and stretches no road follows are listed and highlighted on the map as places where the route cannot be followed exactly.

@@ -6,7 +6,7 @@ import type {
 } from 'maplibre-gl';
 import { meters, type Coord, type Route, type State, type Step } from './core';
 import { decimalYear, magneticDeclination } from './declination';
-import { byId as $ } from './dom';
+import { byId as $, text } from './dom';
 import { t } from './i18n';
 import { icon, iconControl, type IconName } from './icons';
 import { gpsPoint, locationError } from './location';
@@ -14,12 +14,18 @@ import { navigationRoute } from './services';
 import { creditsDialog } from './map-credits';
 import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
 import { loadMapLibre } from './maplibre-loader';
-import { maneuverIcon, maneuverText, stepRoad } from './maneuvers';
+import {
+  maneuverIcon,
+  maneuverText,
+  shortRoadName,
+  stepRoad,
+} from './maneuvers';
 import { navigationStyle } from './navigation-style';
 import {
   compassHeading,
   createNavigationTracker,
   createRerouteSchedule,
+  upcomingItems,
   spliceRoute,
   isMoving,
   turnToward,
@@ -30,7 +36,12 @@ import {
 } from './navigation';
 import { travelTimeSeconds } from './travel-time';
 import { departureOf } from './departure';
-import { indexTrack, locateOnTrack, type TrackIndex } from './track-position';
+import {
+  indexTrack,
+  legPositions,
+  locateOnTrack,
+  type TrackIndex,
+} from './track-position';
 import {
   weatherAlong,
   type RouteWeather,
@@ -118,6 +129,8 @@ const PIVOT = 0.7;
  * zoomed it there. Anything but following at the default zoom offers Resume.
  */
 type MapView = 'follow' | 'overview' | 'free';
+/** A drag on the upcoming list's handle longer than this (px) opens or closes it. */
+const LIST_DRAG = 30;
 /** Off the route by more than this (meters), the device heading is used. */
 const OFF_ROUTE_HEADING = 50;
 /** A compass reading older than this (ms) is not used. */
@@ -798,6 +811,7 @@ export function setupNavigation(deps: {
     announce(r, arrived, !!rejoin);
     say(voice.next(r, speedNow, units(), deps.locale()));
     renderBar(r);
+    renderList();
     renderWeather();
     renderSpeed();
     renderReplayClock();
@@ -1152,6 +1166,110 @@ export function setupNavigation(deps: {
     place();
     reroute(false);
   }
+  /**
+   * The upcoming list (#137): the bottom bar's handle opens a panel over the
+   * map with the turns and route points ahead, from the route and progress
+   * already in memory. Opening it changes nothing in navigation.
+   */
+  const listToggle = $<HTMLButtonElement>('nav-list-toggle'),
+    list = $<HTMLOListElement>('nav-list');
+  let listOpen = false,
+    stopPlaces: { at: number | null; name: string }[] = [];
+  function placeStops() {
+    if (!route) return;
+    const points = deps
+      .state()
+      .points.slice(1)
+      .filter((p) => p.coord);
+    const at = legPositions(
+      route.segments,
+      points.map((p) => p.coord!),
+    );
+    stopPlaces = points.map((p, i) => ({
+      at: at[i],
+      name:
+        p.name || (i === points.length - 1 ? 'Destination' : `Stop ${i + 1}`),
+    }));
+  }
+  function setList(open: boolean) {
+    listOpen = open;
+    list.hidden = !open;
+    listToggle.setAttribute('aria-expanded', String(open));
+    if (open) {
+      renderList();
+      list.scrollTop = 0;
+    }
+  }
+  function renderList() {
+    if (!listOpen || !tracker) return;
+    const progress = readout?.progress ?? plannedProgress;
+    const locale = deps.locale();
+    const rows = upcomingItems(tracker.maneuvers, stopPlaces, progress).map(
+      (item) => {
+        const li = document.createElement('li');
+        const ahead = navigationDistanceLabel(
+          item.at - progress,
+          units(),
+          locale,
+        );
+        let label: string, full: string, glyph: SVGSVGElement;
+        if (item.kind === 'maneuver') {
+          const instruction = t(maneuverText(item.step) ?? 'Continue');
+          const road = stepRoad(item.step);
+          label = road
+            ? `${instruction} · ${shortRoadName(road)}`
+            : instruction;
+          full = road ? `${instruction} · ${road}` : instruction;
+          glyph = maneuverGlyph(item.step);
+        } else {
+          const seconds = travelTimeSeconds(item.at - progress, arrivalSpeed());
+          const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
+            locale,
+            { hour: '2-digit', minute: '2-digit' },
+          );
+          label = full = `${t(item.name)} · ${clock}`;
+          glyph = icon('pin');
+          li.classList.add('nav-list-stop');
+        }
+        glyph.classList.add('nav-list-icon');
+        li.title = `${full} · ${ahead}`;
+        li.append(
+          glyph,
+          text('span', label, 'nav-list-text'),
+          text('span', ahead, 'nav-list-distance'),
+        );
+        return li;
+      },
+    );
+    list.replaceChildren(...rows);
+  }
+  // A tap toggles; a drag up opens and a drag down closes.
+  let dragFrom: number | null = null,
+    dragged = false;
+  listToggle.addEventListener('pointerdown', (e) => {
+    dragFrom = e.clientY;
+    dragged = false;
+    // The release counts even when the finger has left the handle.
+    listToggle.setPointerCapture(e.pointerId);
+  });
+  listToggle.addEventListener('pointerup', (e) => {
+    if (dragFrom === null) return;
+    const dy = e.clientY - dragFrom;
+    dragFrom = null;
+    if (Math.abs(dy) < LIST_DRAG) return;
+    dragged = true;
+    setList(dy < 0);
+  });
+  listToggle.onclick = () => {
+    if (dragged) dragged = false;
+    else setList(!listOpen);
+  };
+  // Escape closes the list first, and only then navigation.
+  screen.addEventListener('cancel', (e) => {
+    if (!listOpen) return;
+    e.preventDefault();
+    setList(false);
+  });
   /** Route points after the start, so neither hint nor reroute skips one. */
   function stops(): Coord[] {
     return deps
@@ -1197,6 +1315,7 @@ export function setupNavigation(deps: {
         if (!isCurrent() || route !== planned || !last) return;
         route = spliceRoute(planned, fresh, target.at);
         tracker = createNavigationTracker(route, stops());
+        placeStops();
         readout = tracker.update(last);
         announced = undefined;
         drawRoute(route);
@@ -1318,6 +1437,8 @@ export function setupNavigation(deps: {
     rerouting = 'idle';
     course = null;
     tracker = createNavigationTracker(route, stops(), progress);
+    placeStops();
+    setList(false);
     declinationAt(route.segments[0]?.[0]);
     last = null;
     readout = null;

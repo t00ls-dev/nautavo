@@ -113,6 +113,7 @@ const pt: Record<string, string> = {
     'Falar as instruções durante a navegação',
   'Voice on': 'Voz ligada',
   'Voice off': 'Voz desligada',
+  'Upcoming turns': 'Próximas curvas',
   'Straight line, not by road': 'Em linha reta, não pelas ruas',
   'No map. The route and your position still show.':
     'Sem mapa. A rota e sua posição continuam na tela.',
@@ -560,6 +561,7 @@ const pt: Record<string, string> = {
   Via: 'Passagem',
 };
 const patterns: [RegExp, (...args: string[]) => string][] = [
+  [/^Stop (\d+)$/, (n) => `Parada ${n}`],
   // Spoken directions (`src/navigation-voice.ts`): distance words and the
   // maneuver's own translation, mid-sentence.
   [
