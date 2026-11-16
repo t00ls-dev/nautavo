@@ -2,7 +2,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
 import { weatherResponse } from './weather-fixture';
 import { decimalYear, magneticDeclination } from '../src/declination';
-const base = 'http://127.0.0.1:5173/';
+import { base } from './app-helpers';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
 const lon = (i: number) => -43.24 + i * 0.001;

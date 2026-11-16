@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, decodeState } from '../src/core';
-const base = 'http://127.0.0.1:5173/';
+import { base, mockOsrm } from './app-helpers';
 const ipUrl = 'https://ipwho.is/**';
 const position = { latitude: 48.1234567, longitude: 11.7654321, accuracy: 35 };
 test.beforeEach(async ({ page }) => {
@@ -57,26 +57,7 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
   page,
   context,
 }) => {
-  await page.route('**/route/v1/driving/**', async (r) => {
-    const coords = new URL(r.request().url()).pathname
-      .split('/driving/')[1]
-      .split(';')
-      .map((p) => p.split(',').map(Number));
-    await r.fulfill({
-      json: {
-        code: 'Ok',
-        waypoints: coords.map((location) => ({ location, distance: 0 })),
-        routes: [
-          {
-            distance: 1000,
-            duration: 100,
-            geometry: { coordinates: coords },
-            legs: [],
-          },
-        ],
-      },
-    });
-  });
+  await mockOsrm(page, { distance: 1000, duration: 100 });
   await context.grantPermissions(['geolocation']);
   await context.setGeolocation(position);
   let ipRequests = 0;

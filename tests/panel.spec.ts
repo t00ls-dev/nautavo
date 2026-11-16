@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
-const base = 'http://127.0.0.1:5173/';
+import { base, mockOsrm } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
@@ -198,23 +198,10 @@ test.describe('phone summary', () => {
   }) => {
     // 23:20 local: the automatic departure is 23:30 and the arrival after midnight.
     await page.clock.setFixedTime(new Date('2026-11-11T02:20:00Z'));
-    await page.route('**/route/v1/driving/**', async (r) => {
-      const part = new URL(r.request().url()).pathname.split('/driving/')[1]!;
-      const coords = part.split(';').map((p) => p.split(',').map(Number));
-      await r.fulfill({
-        json: {
-          code: 'Ok',
-          waypoints: coords.map((location) => ({ location, distance: 0 })),
-          routes: [
-            {
-              distance: 30900,
-              duration: 2000,
-              geometry: { coordinates: coords },
-              legs: [{ steps: [] }],
-            },
-          ],
-        },
-      });
+    await mockOsrm(page, {
+      distance: 30900,
+      duration: 2000,
+      legs: [{ steps: [] }],
     });
     await page.addInitScript(() => localStorage.setItem('average-speed', '25'));
     await page.goto(base);

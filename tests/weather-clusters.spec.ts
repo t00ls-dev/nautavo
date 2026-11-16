@@ -2,8 +2,8 @@ import { mapCanvas, mapIdle } from './map-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { chooseUnits } from './unit-settings';
+import { base } from './app-helpers';
 
-const base = 'http://127.0.0.1:5173/';
 // A winding road of about 390 km, so the whole-route view clusters markers.
 const road: [number, number][] = [];
 for (let i = 0; i <= 240; i++) {

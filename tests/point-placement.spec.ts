@@ -1,8 +1,8 @@
 import { mockBasemap, mapCanvas } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
+import { base, mockOsrm } from './app-helpers';
 
-const base = 'http://127.0.0.1:5173/';
 const destination = '-23.050160, -43.535240';
 
 test.beforeEach(async ({ page }) => {
@@ -10,24 +10,7 @@ test.beforeEach(async ({ page }) => {
 });
 async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
   await mockBasemap(page);
-  await page.route('**/route/v1/driving/**', async (r) => {
-    const part = new URL(r.request().url()).pathname.split('/driving/')[1];
-    const coords = part.split(';').map((p) => p.split(',').map(Number));
-    await r.fulfill({
-      json: {
-        code: 'Ok',
-        waypoints: coords.map((location) => ({ location, distance: 0 })),
-        routes: [
-          {
-            distance: 42000,
-            duration: 2940,
-            geometry: { coordinates: coords },
-            legs: [{ steps: [] }],
-          },
-        ],
-      },
-    });
-  });
+  await mockOsrm(page, { legs: [{ steps: [] }] });
   const state = defaults();
   state.points = [
     { name: 'Start', coord: [-22.930929, -43.238286] },

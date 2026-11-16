@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { holdMap, mockBasemap, BASEMAP_STYLE, mapCanvas } from './map-helpers';
-const base = 'http://127.0.0.1:5173/';
+import { base } from './app-helpers';
 const features = {
   features: [
     {
