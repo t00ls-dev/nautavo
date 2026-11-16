@@ -16,6 +16,7 @@ jobs:
     name: Deploy to GitHub Pages
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -41,7 +42,7 @@ jobs:
       - uses: actions/setup-node@v7
         if: steps.current.outputs.publish == 'true'
         with:
-          node-version: 22.23.4
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
         if: steps.current.outputs.publish == 'true'
