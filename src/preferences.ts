@@ -18,7 +18,6 @@ export const PREFERENCE = {
   regionUrl: 'region-url',
   detectRegion: 'detect-region',
   mapLayer: 'map-layer',
-  mapLabels: 'map-labels',
   satelliteVintage: 'satellite-vintage',
   routeColoring: 'route-coloring',
   routeArrows: 'route-arrows',

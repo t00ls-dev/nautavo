@@ -206,10 +206,7 @@ const pt: Record<string, string> = {
   Standard: 'Padrão',
   Topographic: 'Topográfico',
   Satellite: 'Satélite',
-  Labels: 'Rótulos',
   'Satellite imagery': 'Imagem de satélite',
-  '2025 imagery is for non-commercial use. For commercial use, choose EOX 2016 in Settings.':
-    'As imagens de 2025 são para uso não comercial. Para uso comercial, escolha EOX 2016 em Configurações.',
   'Share GPX': 'Compartilhar GPX',
   'Map point': 'Ponto do mapa',
   'Photon server': 'Servidor Photon',

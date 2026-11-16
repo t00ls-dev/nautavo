@@ -77,7 +77,7 @@ it('puts terrain shading and contours under roads and labels on the topographic 
   expect(terrainIndex([{ id: 'background', type: 'background' }])).toBe(1);
 });
 
-it('draws the chosen imagery with only the labels on top, or nothing vector without them', () => {
+it('draws the chosen imagery with only the labels on top', () => {
   const labelled = basemapStyle(base(), 'satellite', { vintage: '2016' });
   expect(ids(labelled)).toEqual(['background', 'satellite', 'label_city']);
   expect(Object.keys(labelled.sources).sort()).toEqual([
@@ -90,22 +90,16 @@ it('draws the chosen imagery with only the labels on top, or nothing vector with
   });
   expect(satelliteUrl('2016')).toContain('s2cloudless_3857');
   expect(satelliteUrl('2025')).toContain('s2cloudless-2025_3857');
-  const plain = basemapStyle(base(), 'satellite', {
-    vintage: '2025',
-    labels: false,
-  });
-  expect(ids(plain)).toEqual(['background', 'satellite']);
-  expect(Object.keys(plain.sources)).toEqual(['satellite']);
 });
 
 it('credits each layer once, keeps OpenStreetMap and names the imagery license', () => {
-  for (const [layer, vintage, labels] of [
-    ['standard', '2016', true],
-    ['topographic', '2016', true],
-    ['satellite', '2016', true],
-    ['satellite', '2025', false],
+  for (const [layer, vintage] of [
+    ['standard', '2016'],
+    ['topographic', '2016'],
+    ['satellite', '2016'],
+    ['satellite', '2025'],
   ] as const) {
-    const credits = mapCredits(layer, vintage, labels);
+    const credits = mapCredits(layer, vintage);
     expect(new Set(credits.map((c) => c.text)).size).toBe(credits.length);
     expect(
       credits.filter((c) => c.url.includes('openstreetmap.org')),
@@ -119,7 +113,8 @@ it('credits each layer once, keeps OpenStreetMap and names the imagery license',
   const older = mapCredits('satellite', '2016');
   expect(older.some((c) => c.url.endsWith('/by/4.0/'))).toBe(true);
   expect(older.some((c) => c.text.endsWith('2016 & 2017'))).toBe(true);
-  const newer = mapCredits('satellite', '2025', false);
+  const newer = mapCredits('satellite', '2025');
   expect(newer.some((c) => c.url.endsWith('/by-nc-sa/4.0/'))).toBe(true);
-  expect(newer.some((c) => c.text === 'OpenFreeMap')).toBe(false);
+  // The labels drawn over the imagery are OpenFreeMap's.
+  expect(newer.some((c) => c.text === 'OpenFreeMap')).toBe(true);
 });

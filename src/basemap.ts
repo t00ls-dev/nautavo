@@ -46,16 +46,15 @@ export const NEUTRAL_STYLE: StyleSpecification = {
   ],
 };
 
-const osmCredit: MapCredit = {
-  text: '© OpenStreetMap contributors',
-  url: 'https://www.openstreetmap.org/copyright',
-};
 /** Credits of the vector map itself, shown on both maps. */
 export const vectorCredits: MapCredit[] = [
   { text: 'MapLibre GL JS', url: 'https://maplibre.org/' },
   { text: 'OpenFreeMap', url: 'https://openfreemap.org/' },
   { text: '© OpenMapTiles', url: 'https://www.openmaptiles.org/' },
-  osmCredit,
+  {
+    text: '© OpenStreetMap contributors',
+    url: 'https://www.openstreetmap.org/copyright',
+  },
 ];
 const terrainCredits: MapCredit[] = [
   {
@@ -71,7 +70,6 @@ const terrainCredits: MapCredit[] = [
 export function mapCredits(
   layer: BaseLayer,
   vintage: SatelliteVintage = '2025',
-  labels = true,
 ): MapCredit[] {
   if (layer === 'standard') return [...vectorCredits];
   if (layer === 'topographic') return [...vectorCredits, ...terrainCredits];
@@ -90,10 +88,8 @@ export function mapCredits(
       url: `https://creativecommons.org/licenses/${vintage === '2016' ? 'by' : 'by-nc-sa'}/4.0/`,
     },
   ];
-  // Route data comes from OpenStreetMap whether or not labels are drawn.
-  return labels
-    ? [...vectorCredits, ...imagery]
-    : [vectorCredits[0], ...imagery, osmCredit];
+  // Satellite always draws the vector map's labels over the imagery.
+  return [...vectorCredits, ...imagery];
 }
 
 /** Labels use the local name (what street signs show) instead of English. */
@@ -142,7 +138,7 @@ const clone = <T>(value: T): T => structuredClone(value);
 
 /**
  * The planner's style for a layer, from OpenFreeMap's style. Satellite keeps
- * only the base map's labels (when on); topographic adds shading and contours
+ * only the base map's labels; topographic adds shading and contours
  * under the roads. The base style is never modified.
  */
 export function basemapStyle(
@@ -150,7 +146,6 @@ export function basemapStyle(
   layer: BaseLayer,
   options: {
     vintage?: SatelliteVintage;
-    labels?: boolean;
     terrain?: TerrainSources;
   } = {},
 ): StyleSpecification {
@@ -208,10 +203,7 @@ export function basemapStyle(
       ],
     };
   }
-  const labels = options.labels ?? true;
-  const kept = labels
-    ? style.layers.filter((item) => item.type === 'symbol')
-    : [];
+  const kept = style.layers.filter((item) => item.type === 'symbol');
   const used = new Set(
     kept.map((item) => (item as { source?: string }).source ?? ''),
   );

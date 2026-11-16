@@ -1455,9 +1455,6 @@ dialog.settings::backdrop {
 #layers-menu .check {
   margin: 0 4px;
 }
-#satellite-license {
-  margin: 0 4px;
-}
 /* The compass, only on a turned map; its needle points to the map's north. */
 .map-compass {
   display: grid;

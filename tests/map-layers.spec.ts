@@ -54,16 +54,12 @@ test('draws one vector map, loads only the selected layer, updates credits and k
   await page
     .getByRole('menuitemradio', { name: 'Satellite', exact: true })
     .click();
-  // The 2025 edition is the default, with its non-commercial notice.
+  // The 2025 edition is the default; its license is in the credits.
   await expect(page.locator('.map-credits-dialog')).toContainText(
     'EOxCloudless',
   );
   await expect(page.locator('.map-credits-dialog')).toContainText(
     'Copernicus Sentinel data 2025',
-  );
-  // Its notice sits in the Map layers menu, shown when the menu opens.
-  await expect(page.locator('#satellite-license')).not.toHaveAttribute(
-    'hidden',
   );
   await expect.poll(() => watch.has('s2cloudless-2025_3857')).toBe(true);
   expect(watch.has('overlay_bright')).toBe(false);
@@ -76,15 +72,9 @@ test('draws one vector map, loads only the selected layer, updates credits and k
   await expect(page.locator('.map-credits-dialog')).toContainText(
     'OpenFreeMap',
   );
-  await page.locator('#layers-toggle').click();
-  await page.locator('#map-labels').uncheck();
-  await expect(page.locator('.map-credits-dialog')).not.toContainText(
-    'OpenFreeMap',
-  );
   await expect(page.locator('.map-credits-dialog')).toContainText(
     'OpenStreetMap',
   );
-  await page.keyboard.press('Escape');
   watch.requests.length = 0;
   await page.locator('#open-settings').click();
   await page.locator('#satellite-vintage').selectOption('2016');
@@ -97,7 +87,6 @@ test('draws one vector map, loads only the selected layer, updates credits and k
     '2016 & 2017',
   );
   await expect(page.locator('#satellite-vintage')).toHaveValue('2016');
-  await expect(page.locator('#satellite-license')).toHaveAttribute('hidden');
 });
 
 for (const [layer, attribute] of [
@@ -308,8 +297,10 @@ test('mobile layers stay accessible without overlapping other map controls or th
   await page
     .getByRole('menuitemradio', { name: 'Satellite', exact: true })
     .click();
+  // Satellite always shows the map's labels: no switch and no notice.
   await page.locator('#layers-toggle').click();
-  await expect(page.locator('#map-labels')).toBeChecked();
+  await expect(page.locator('#map-labels')).toHaveCount(0);
+  await expect(page.locator('#layers-menu')).not.toContainText('2025 imagery');
 });
 test('GPX bytes remain identical across map layers and saved state contains no layer choice', async ({
   page,
