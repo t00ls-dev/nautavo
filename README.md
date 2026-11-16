@@ -53,7 +53,7 @@ Providers, limits, terms, weather sampling and map layers are detailed in [servi
 ## Local development
 
 ```sh
-npm ci            # install with Node.js 22.23.4+ (Node 24.15+ and 26+ also supported)
+npm ci            # install with Node.js 22.23.4+ (.nvmrc; Node 24.15+ and 26+ also supported)
 npm run dev       # serve at http://localhost:5173/
 npm run build     # type-check and build the production version
 npm run preview   # preview the production build
