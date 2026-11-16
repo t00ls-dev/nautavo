@@ -498,6 +498,11 @@
             >Recalculate the route automatically while navigating</span
           ></label
         >
+        <label class="check"
+          ><input id="voice-setting" type="checkbox" /><span
+            >Speak the directions while navigating</span
+          ></label
+        >
         <label for="osrm">OSRM server</label><input id="osrm" type="url" />
         <label for="valhalla">Valhalla fallback</label
         ><input id="valhalla" type="url" />
@@ -571,6 +576,11 @@
       <label class="check"
         ><input id="nav-notice-reroute" type="checkbox" checked /><span
           >Recalculate the route automatically</span
+        ></label
+      >
+      <label class="check"
+        ><input id="nav-notice-voice" type="checkbox" /><span
+          >Speak the directions</span
         ></label
       >
       <label class="check nav-notice-hide"
@@ -711,6 +721,12 @@
             id="nav-overview"
             class="nav-map-button"
             type="button"
+          ></button
+          ><button
+            id="nav-voice"
+            class="nav-map-button"
+            type="button"
+            aria-pressed="false"
           ></button
           ><button
             id="nav-compass-button"

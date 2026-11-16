@@ -103,6 +103,16 @@ const pt: Record<string, string> = {
   'Route recalculated': 'Rota recalculada',
   'Could not recalculate the route': 'Não foi possível recalcular a rota',
   'Off the route': 'Fora da rota',
+  'You have arrived.': 'Você chegou.',
+  'You are off the route.': 'Você saiu da rota.',
+  'Back on the route.': 'De volta à rota.',
+  'Route recalculated.': 'Rota recalculada.',
+  'Navigation started.': 'Navegação iniciada.',
+  'Speak the directions': 'Falar as instruções',
+  'Speak the directions while navigating':
+    'Falar as instruções durante a navegação',
+  'Voice on': 'Voz ligada',
+  'Voice off': 'Voz desligada',
   'Straight line, not by road': 'Em linha reta, não pelas ruas',
   'No map. The route and your position still show.':
     'Sem mapa. A rota e sua posição continuam na tela.',
@@ -550,6 +560,22 @@ const pt: Record<string, string> = {
   Via: 'Passagem',
 };
 const patterns: [RegExp, (...args: string[]) => string][] = [
+  // Spoken directions (`src/navigation-voice.ts`): distance words and the
+  // maneuver's own translation, mid-sentence.
+  [
+    /^In (.+ (?:meters|kilometers|feet|miles)), you will arrive\.$/,
+    (d) => `Em ${spokenPt(d)}, você chega ao destino.`,
+  ],
+  [
+    /^In (.+ (?:meters|kilometers|feet|miles)), (.+?)(?: onto (.+))?\.$/,
+    (d, instruction, road) =>
+      `Em ${spokenPt(d)}, ${lowerPt(instruction)}${road ? ` na ${road}` : ''}.`,
+  ],
+  [
+    /^(.+?)(?: onto (.+))? now\.$/,
+    (instruction, road) =>
+      `${spokenInstruction(instruction)}${road ? ` na ${road}` : ''} agora.`,
+  ],
   [
     /^Contains modified Copernicus Sentinel data (2016 & 2017|2025)$/,
     (year) =>
@@ -695,6 +721,31 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     (code) => `O servidor respondeu HTTP ${code}.`,
   ],
 ];
+/** A spoken distance in Portuguese: the unit word translated. */
+function spokenPt(distance: string): string {
+  const words: Record<string, string> = {
+    meters: 'metros',
+    kilometers: 'quilômetros',
+    feet: 'pés',
+    miles: 'milhas',
+  };
+  return distance.replace(/[a-z]+$/, (w) => words[w] ?? w);
+}
+/**
+ * A maneuver instruction to be spoken: translated, with the banner's
+ * abbreviations (à dir., à esq.) in full.
+ */
+function spokenInstruction(instruction: string): string {
+  const source = instruction.charAt(0).toUpperCase() + instruction.slice(1);
+  return translate(source, 'pt')
+    .replace(/\bdir\./g, 'direita')
+    .replace(/\besq\./g, 'esquerda');
+}
+/** The same, mid-sentence: first letter lowercase. */
+function lowerPt(instruction: string): string {
+  const text = spokenInstruction(instruction);
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
 export function t(value: string): string {
   return translate(value, language);
 }

@@ -24,6 +24,8 @@ export const PREFERENCE = {
   weatherMarkers: 'weather-markers',
   navigationNotice: 'navigation-notice',
   autoReroute: 'auto-reroute',
+  /** Spoken directions while navigating: 'on', or absent for off (#190). */
+  navigationVoice: 'navigation-voice',
   pointPlacement: 'point-placement',
   /** The planner map's center and zoom when the page was last left. */
   lastView: 'last-view',

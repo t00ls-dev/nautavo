@@ -982,6 +982,99 @@ test.describe('phone navigation', () => {
       expect(lines).toBeLessThanOrEqual(2.05);
     });
 
+  /** Records what the page would speak instead of speaking it. */
+  async function recordSpeech(page: Page) {
+    await page.addInitScript(() => {
+      const said: string[][] = [];
+      (window as unknown as { said: string[][] }).said = said;
+      Object.defineProperty(window, 'speechSynthesis', {
+        value: {
+          speak: (u: SpeechSynthesisUtterance) => said.push([u.text, u.lang]),
+          cancel: () => undefined,
+        },
+      });
+    });
+    return () =>
+      page.evaluate(() => (window as unknown as { said: string[][] }).said);
+  }
+
+  test('voice is off by default and, turned on, speaks the turns', async ({
+    page,
+    context,
+  }) => {
+    const said = await recordSpeech(page);
+    await setup(page);
+    await page.locator('#navigate').click();
+    const voiceBox = page.getByRole('checkbox', {
+      name: 'Speak the directions',
+    });
+    await expect(voiceBox).not.toBeChecked();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    expect(await said()).toEqual([]);
+    await page.locator('#nav-stop').click();
+    // On from the start notice: the start, then the turn as it comes near.
+    await page.locator('#navigate').click();
+    await voiceBox.check();
+    await page.locator('#nav-notice-start').click();
+    await expect.poll(said).toEqual([['Navigation started.', 'en']]);
+    await context.setGeolocation({ latitude: lat, longitude: lon(9) });
+    await expect
+      .poll(async () => (await said()).at(-1)?.[0])
+      .toBe('In 100 meters, turn right onto Estrada das Furnas.');
+    // About 20 m before the turn.
+    await context.setGeolocation({ latitude: lat, longitude: lon(9.8) });
+    await expect
+      .poll(async () => (await said()).at(-1)?.[0])
+      .toBe('Turn right onto Estrada das Furnas now.');
+    // The screen button turns it off; Settings shows the same choice.
+    const button = page.locator('#nav-voice');
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await page.locator('#nav-stop').click();
+    await page.locator('#open-settings').click();
+    await expect(page.locator('#voice-setting')).not.toBeChecked();
+  });
+
+  test('voice speaks Portuguese in Portuguese', async ({ page, context }) => {
+    const said = await recordSpeech(page);
+    await setup(page);
+    await page.locator('#language').selectOption('pt');
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-voice').check();
+    await page.locator('#nav-notice-start').click();
+    await context.setGeolocation({ latitude: lat, longitude: lon(9) });
+    await expect
+      .poll(async () => (await said()).at(-1))
+      .toEqual([
+        'Em 100 metros, vire à direita na Estrada das Furnas.',
+        'pt-BR',
+      ]);
+  });
+
+  test('the voice switch fits on the navigation screen at 320px in pt', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await setup(page);
+    await page.locator('#language').selectOption('pt');
+    await page.locator('#navigate').click();
+    const box = page.locator('#nav-notice-voice').locator('..');
+    await expect(box).toContainText('Falar as instruções');
+    const notice = await box.evaluate((e) => ({
+      right: e.getBoundingClientRect().right,
+      overflow: e.scrollWidth > e.clientWidth + 1,
+    }));
+    expect(notice.right).toBeLessThanOrEqual(320.5);
+    expect(notice.overflow).toBe(false);
+    await page.locator('#nav-notice-start').click();
+    const button = page.locator('#nav-voice');
+    await expect(button).toHaveAttribute('aria-label', 'Voz desligada');
+    const b = await button.boundingBox();
+    expect(b!.x + b!.width).toBeLessThanOrEqual(320.5);
+  });
+
   /** Starts navigation, then counts the routing requests after a reload. */
   async function navigateAndReload(page: Page) {
     await setup(page);
