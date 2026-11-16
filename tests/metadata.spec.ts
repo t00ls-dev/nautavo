@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
-const base = 'http://127.0.0.1:5173/';
+import { base } from './app-helpers';
 test('SEO metadata stays localized and excludes private route state', async ({
   page,
 }) => {
@@ -142,9 +142,7 @@ test('help opens at a linked section and keeps the route hash for Back to map', 
   page,
 }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
-  await page.goto(
-    'http://127.0.0.1:5173/help.html?lang=pt&section=elevation#v2=abc',
-  );
+  await page.goto(`${base}help.html?lang=pt&section=elevation#v2=abc`);
   await expect(page.locator('#elevation-pt')).toBeInViewport();
   await expect(page.locator('#back')).toHaveAttribute(
     'href',

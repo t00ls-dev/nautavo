@@ -3,6 +3,7 @@ import { LongPress } from './long-press';
 import { t } from './i18n';
 import type { Coord } from './core';
 import { compactLayout } from './panel';
+import { byId as $ } from './dom';
 /**
  * Map point menu (right click, long press, ContextMenu key): the elevation of
  * that point, also while editing is locked, since viewing is not an edit.
@@ -104,8 +105,7 @@ export function setupPointMenu(
     const bounds = container.getBoundingClientRect();
     // On phones the bottom sheet covers the lower part of the map.
     const bottom = compactLayout()
-      ? document.getElementById('sheet')!.getBoundingClientRect().top -
-        bounds.top
+      ? $('sheet').getBoundingClientRect().top - bounds.top
       : bounds.height;
     menu.style.left = `${Math.max(8, Math.min(point.x, bounds.width - menu.offsetWidth - 8))}px`;
     menu.style.top = `${Math.max(8, Math.min(point.y, bottom - menu.offsetHeight - 8))}px`;

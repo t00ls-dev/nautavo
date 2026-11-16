@@ -29,6 +29,14 @@ import {
   type AttributePiece,
   type TraceAttributes,
 } from './road-attributes';
+import {
+  PREFERENCE,
+  readPreference,
+  readSession,
+  SESSION,
+  writePreference,
+  writeSession,
+} from './preferences';
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class RequestQueue {
   private tail: Promise<unknown> = Promise.resolve();
@@ -39,7 +47,7 @@ export class RequestQueue {
     isCurrent: () => boolean = () => true,
   ): Promise<T> {
     const task = this.tail
-      .catch(() => {})
+      .catch(() => undefined)
       .then(async () => {
         if (!isCurrent()) throw new DOMException('Cancelled', 'AbortError');
         await pause(Math.max(0, this.interval - (Date.now() - this.last)));
@@ -581,18 +589,9 @@ export async function searchAddress(
   return searching.run(async () => {
     const request = async () => {
       // Coordinate tabs where Web Locks is available. No location data stored.
-      let last = 0;
-      try {
-        last = Number(localStorage.getItem('route-gpx-last-search') || 0);
-      } catch {
-        /* storage can be disabled */
-      }
+      const last = Number(readPreference(PREFERENCE.lastSearch) || 0);
       await pause(Math.max(0, 1100 - (Date.now() - last)));
-      try {
-        localStorage.setItem('route-gpx-last-search', String(Date.now()));
-      } catch {
-        /* optional */
-      }
+      writePreference(PREFERENCE.lastSearch, String(Date.now()));
       if (cache.has(key)) return cache.get(key)!;
       const u = new URL(`${serverUrl(base)}/search`);
       u.search = new URLSearchParams({
@@ -630,12 +629,9 @@ export function approximateRegion(
   if (!enabled) return Promise.resolve(null);
   if (regionAttempt) return regionAttempt;
   regionAttempt = (async () => {
-    try {
-      if (sessionStorage.getItem('region-attempted')) return null;
-      sessionStorage.setItem('region-attempted', 'true');
-    } catch {
-      /* Memory still limits attempts if storage is blocked. */
-    }
+    // Memory still limits attempts if storage is blocked.
+    if (readSession(SESSION.regionAttempted)) return null;
+    writeSession(SESSION.regionAttempted, 'true');
     try {
       const url = new URL(regionUrl(endpoint));
       url.searchParams.set('fields', 'success,latitude,longitude,city,region');

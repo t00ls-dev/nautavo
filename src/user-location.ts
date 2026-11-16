@@ -2,7 +2,7 @@ import { metersPerPixel, type MapMarker, type PlannerMap } from './planner-map';
 import type { Coord } from './core';
 import type { View } from './default-view';
 import { locationError, locationPermission, positionView } from './location';
-import { byId as element } from './dom';
+import { byId as $ } from './dom';
 import { compactLayout } from './panel';
 
 /** A fix older than this greys the dot: the position may have moved on. */
@@ -25,8 +25,8 @@ export function setupUserLocation(
   /** Every fix while the map does not follow the dot (startup framing). */
   onFix: (view: View) => void,
 ): void {
-  const button = element<HTMLButtonElement>('locate');
-  const notice = element('location-notice');
+  const button = $<HTMLButtonElement>('locate');
+  const notice = $('location-notice');
   let accuracy: MapMarker | null = null;
   let dot: MapMarker | null = null;
   let radius = 0;
@@ -157,8 +157,7 @@ export function setupUserLocation(
 
   button.onclick = () => {
     interact();
-    if (!element('route-panel').hidden && compactLayout())
-      element('panel-toggle').click();
+    if (!$('route-panel').hidden && compactLayout()) $('panel-toggle').click();
     if (active) {
       following = true;
       if (last) map.setView(last.center, Math.max(map.getZoom(), last.zoom));

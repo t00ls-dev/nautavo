@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { Fit, le, name, recordFields, semi } from './fit-fixture';
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits, setSpeed } from './unit-settings';
-const base = 'http://127.0.0.1:5173/';
+import { base, mockOsrm, osrmAnswer, osrmPoints } from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
 test.beforeEach(async ({ page }) => {
@@ -18,35 +18,20 @@ test.beforeEach(async ({ page }) => {
 });
 async function setup(page: Page) {
   await mockBasemap(page);
-  await page.route('**/route/v1/driving/**', async (r) => {
-    const part = new URL(r.request().url()).pathname.split('/driving/')[1];
-    const coords = part.split(';').map((p) => p.split(',').map(Number));
-    await r.fulfill({
-      json: {
-        code: 'Ok',
-        waypoints: coords.map((location) => ({ location, distance: 0 })),
-        routes: [
+  await mockOsrm(page, {
+    legs: [
+      {
+        steps: [
           {
+            name: 'Main road',
+            ref: 'BR-101',
             distance: 42000,
             duration: 2940,
-            geometry: { coordinates: coords },
-            legs: [
-              {
-                steps: [
-                  {
-                    name: 'Main road',
-                    ref: 'BR-101',
-                    distance: 42000,
-                    duration: 2940,
-                    maneuver: { type: 'depart' },
-                  },
-                ],
-              },
-            ],
+            maneuver: { type: 'depart' },
           },
         ],
       },
-    });
+    ],
   });
   await page.goto(base);
   await page.locator('#language').selectOption('en');
@@ -316,8 +301,7 @@ test('the itinerary shows turn directions in both languages', async ({
   await setup(page);
   // Later routes override the shared mock: three steps with maneuvers.
   await page.route('**/route/v1/driving/**', async (r) => {
-    const part = new URL(r.request().url()).pathname.split('/driving/')[1];
-    const coords = part.split(';').map((p) => p.split(',').map(Number));
+    const coords = osrmPoints(r.request().url());
     const step = (name: string, maneuver: object) => ({
       name,
       distance: 1000,
@@ -325,38 +309,31 @@ test('the itinerary shows turn directions in both languages', async ({
       maneuver,
     });
     await r.fulfill({
-      json: {
-        code: 'Ok',
-        waypoints: coords.map((location) => ({ location, distance: 0 })),
-        routes: [
+      json: osrmAnswer(r.request().url(), {
+        distance: 3000,
+        duration: 180,
+        legs: [
           {
-            distance: 3000,
-            duration: 180,
-            geometry: { coordinates: coords },
-            legs: [
+            steps: [
+              step('Rua A', { type: 'depart', location: coords[0] }),
               {
-                steps: [
-                  step('Rua A', { type: 'depart', location: coords[0] }),
-                  {
-                    ...step('Rua B', {}),
-                    ref: 'RJ-116',
-                    maneuver: {
-                      type: 'turn',
-                      modifier: 'left',
-                      location: [
-                        (coords[0][0] + coords[1][0]) / 2,
-                        (coords[0][1] + coords[1][1]) / 2,
-                      ],
-                    },
-                  },
-                  // No location: plain text, positioned by step lengths.
-                  step('Rua C', { type: 'roundabout', exit: 2 }),
-                ],
+                ...step('Rua B', {}),
+                ref: 'RJ-116',
+                maneuver: {
+                  type: 'turn',
+                  modifier: 'left',
+                  location: [
+                    (coords[0][0] + coords[1][0]) / 2,
+                    (coords[0][1] + coords[1][1]) / 2,
+                  ],
+                },
               },
+              // No location: plain text, positioned by step lengths.
+              step('Rua C', { type: 'roundabout', exit: 2 }),
             ],
           },
         ],
-      },
+      }),
     });
   });
   await page.goto(base);

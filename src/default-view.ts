@@ -92,8 +92,6 @@ export function defaultView(
   return view(20, 0, 1);
 }
 
-/** The planner map's view when the page was last left, on this device only. */
-export const LAST_VIEW_KEY = 'last-view';
 export function serializeView(view: View): string {
   return JSON.stringify({
     center: view.center.map((n) => Number(n.toFixed(5))),

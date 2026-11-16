@@ -1,5 +1,6 @@
 import type { State } from './core';
 import { departureError, nextDepartureSlot } from './weather';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /**
  * Automatic departure: while the route has no departure of its own, it leaves
@@ -9,13 +10,7 @@ import { departureError, nextDepartureSlot } from './weather';
  * turns it off until the page reloads; a device preference turns it off.
  */
 
-const PREFERENCE = 'auto-departure';
-let enabled = true;
-try {
-  enabled = localStorage.getItem(PREFERENCE) !== 'off';
-} catch {
-  /* Optional preference. */
-}
+let enabled = readPreference(PREFERENCE.autoDeparture) !== 'off';
 let declined = false;
 
 /** The current automatic departure (ISO), or undefined when off or invalid. */
@@ -52,10 +47,5 @@ export function declineAutomaticDeparture() {
 export function setAutomaticDeparture(value: boolean) {
   enabled = value;
   if (value) declined = false;
-  try {
-    if (value) localStorage.removeItem(PREFERENCE);
-    else localStorage.setItem(PREFERENCE, 'off');
-  } catch {
-    /* Optional preference. */
-  }
+  writePreference(PREFERENCE.autoDeparture, value ? null : 'off');
 }

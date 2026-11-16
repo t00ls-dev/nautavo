@@ -8,25 +8,17 @@
 // Both only change how a point is moved; the point is set as before.
 import { isolate, type PlannerMap } from './planner-map';
 import type { Coord } from './core';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 export type PlacementMode = 'loupe' | 'crosshair';
-const KEY = 'point-placement';
 
 export function placementMode(): PlacementMode {
-  try {
-    if (localStorage.getItem(KEY) === 'crosshair') return 'crosshair';
-  } catch {
-    /* default below */
-  }
-  return 'loupe';
+  return readPreference(PREFERENCE.pointPlacement) === 'crosshair'
+    ? 'crosshair'
+    : 'loupe';
 }
 export function rememberPlacementMode(mode: PlacementMode): void {
-  try {
-    if (mode === 'loupe') localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, mode);
-  } catch {
-    /* Moving points still works without storage. */
-  }
+  writePreference(PREFERENCE.pointPlacement, mode === 'loupe' ? null : mode);
 }
 
 /** Loupe diameter, magnification and lift above the marker tip (CSS px). */

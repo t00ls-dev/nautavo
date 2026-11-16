@@ -1,34 +1,15 @@
 import { test, expect, type Page } from '@playwright/test';
 import { holdMap, mapIdle, mapReady, mockBasemap } from './map-helpers';
+import { base, mockOsrm } from './app-helpers';
 
 /** Turning the planner map (#133): gestures, compass and a turned map. */
-const base = 'http://127.0.0.1:5173/';
 const start = '-22.9068, -43.1729',
   end = '-22.99, -43.3';
 
 async function setup(page: Page) {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await mockBasemap(page);
-  await page.route('**/route/v1/driving/**', async (r) => {
-    const coords = new URL(r.request().url()).pathname
-      .split('/driving/')[1]
-      .split(';')
-      .map((p) => p.split(',').map(Number));
-    await r.fulfill({
-      json: {
-        code: 'Ok',
-        waypoints: coords.map((location) => ({ location, distance: 0 })),
-        routes: [
-          {
-            distance: 15000,
-            duration: 900,
-            geometry: { coordinates: coords },
-            legs: [],
-          },
-        ],
-      },
-    });
-  });
+  await mockOsrm(page, { distance: 15000, duration: 900 });
   await page.goto(base);
   await mapReady(page);
 }

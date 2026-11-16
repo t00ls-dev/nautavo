@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASEMAP_STYLE, mockBasemap, mapCanvas } from './map-helpers';
 import { readFile } from 'node:fs/promises';
-const base = 'http://127.0.0.1:5173/';
+import { base } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await mockBasemap(page);

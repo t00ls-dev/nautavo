@@ -6,21 +6,21 @@ import {
 } from './i18n';
 import { updateSeo } from './seo';
 import { markHomeScreenApp, registerServiceWorker } from './offline';
+import { byId as $ } from './dom';
 import './style.css';
 // Shared by the separate pages: help and What's new.
 const page = document.body.classList.contains('changelog-page')
   ? 'changelog'
   : 'help';
-const select = document.getElementById('language') as HTMLSelectElement;
+const select = $<HTMLSelectElement>('language');
 function apply() {
   const lang = select.value === 'pt' ? 'pt' : 'en';
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
-  document.getElementById(`${page}-en`)!.hidden = lang !== 'en';
-  document.getElementById(`${page}-pt`)!.hidden = lang !== 'pt';
-  document.getElementById('back')!.textContent = translate('Back to map', lang);
+  $(`${page}-en`).hidden = lang !== 'en';
+  $(`${page}-pt`).hidden = lang !== 'pt';
+  $('back').textContent = translate('Back to map', lang);
   updateSeo(lang, page);
-  (document.getElementById('back') as HTMLAnchorElement).href =
-    './index.html' + location.hash;
+  $<HTMLAnchorElement>('back').href = './index.html' + location.hash;
   // Links between the pages keep the language and the route for Back to map.
   document
     .querySelectorAll<HTMLAnchorElement>('a[data-page-link]')

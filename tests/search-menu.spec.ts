@@ -1,8 +1,8 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
+import { base } from './app-helpers';
 
-const base = 'http://127.0.0.1:5173/';
 const start = '-22.900000, -43.100000';
 
 test.beforeEach(async ({ page }) => {
@@ -147,17 +147,21 @@ test.describe('phone', () => {
   test('a tap still chooses when the field lost focus first, as on iPhones', async ({
     page,
   }) => {
+    // The page's clock is held while the tap arrives, so the 300 ms the list
+    // waits after a blur does not depend on how fast the test machine is.
+    await page.clock.install();
     await setup(page);
     await page.locator('#location-1').tap();
     const option = page
       .locator('#suggestions-1')
       .getByRole('option', { name: 'Choose on map' });
     await expect(option).toBeVisible();
-    // The keyboard closing blurs the field before the tap arrives.
-    await page.locator('#location-1').evaluate((input) => input.blur());
     const box = (await option.boundingBox())!;
     const cdp = await page.context().newCDPSession(page);
     const point = { x: box.x + 40, y: box.y + box.height / 2 };
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+    // The keyboard closing blurs the field before the tap arrives.
+    await page.locator('#location-1').evaluate((input) => input.blur());
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',
       touchPoints: [point],
@@ -166,6 +170,7 @@ test.describe('phone', () => {
       type: 'touchEnd',
       touchPoints: [],
     });
+    await page.clock.resume();
     await expect(page.locator('.placement-bar')).toContainText(
       'Move the map to place point 2',
     );

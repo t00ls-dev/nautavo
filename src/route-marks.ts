@@ -3,6 +3,12 @@ import { byId as $ } from './dom';
 import { indexTrack, pointAtDistance, type TrackIndex } from './track-position';
 import { PASS_OFFSET, sliceByRanges, type Range } from './route-overlays';
 import { lineFeature, RANK, type PlannerMap } from './planner-map';
+import {
+  PREFERENCE,
+  readPreference,
+  writePreference,
+  type PreferenceKey,
+} from './preferences';
 
 /**
  * Route marks: direction arrows, separate parallel lines where the route uses
@@ -212,13 +218,9 @@ function arrowImage(): ImageData {
   path();
   return ctx.getImageData(0, 0, size, size);
 }
-const isOn = (key: string, fallback: boolean) => {
-  try {
-    const value = localStorage.getItem(key);
-    return value === null ? fallback : value === 'true';
-  } catch {
-    return fallback;
-  }
+const isOn = (key: PreferenceKey, fallback: boolean) => {
+  const value = readPreference(key);
+  return value === null ? fallback : value === 'true';
 };
 
 export function setupRouteMarks(
@@ -250,8 +252,8 @@ export function setupRouteMarks(
     },
   ]);
   const settings = {
-    arrows: isOn('route-arrows', true),
-    weather: isOn('weather-markers', true),
+    arrows: isOn(PREFERENCE.routeArrows, true),
+    weather: isOn(PREFERENCE.weatherMarkers, true),
   };
   // Hiding weather icons keeps the cards and the forecast, and takes the
   // markers out of focus and screen readers too.
@@ -269,8 +271,8 @@ export function setupRouteMarks(
   heading.textContent = 'Route marks';
   group.append(heading);
   for (const [id, key, label] of [
-    ['arrows', 'route-arrows', 'Direction arrows'],
-    ['weather', 'weather-markers', 'Weather on the map'],
+    ['arrows', PREFERENCE.routeArrows, 'Direction arrows'],
+    ['weather', PREFERENCE.weatherMarkers, 'Weather on the map'],
   ] as const) {
     const wrapper = document.createElement('label');
     wrapper.className = 'check';
@@ -285,11 +287,7 @@ export function setupRouteMarks(
     input.onchange = () => {
       settings[id] = input.checked;
       input.setAttribute('aria-checked', String(input.checked));
-      try {
-        localStorage.setItem(key, String(input.checked));
-      } catch {
-        /* Optional device preference. */
-      }
+      writePreference(key, String(input.checked));
       showWeather();
       draw();
     };

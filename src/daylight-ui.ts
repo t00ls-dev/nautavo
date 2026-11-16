@@ -1,6 +1,6 @@
 import { departureOf } from './departure';
 import type { Route, State } from './core';
-import { byId as $ } from './dom';
+import { byId as $, optionalById } from './dom';
 import { icon } from './icons';
 import { distanceLabel } from './units';
 import { routeDaylight, sunTimes } from './daylight';
@@ -26,7 +26,7 @@ export function renderDaylight(
 ): void {
   const details = $('daylight-details'),
     list = $('daylight-list'),
-    line = document.getElementById('daylight-summary');
+    line = optionalById('daylight-summary');
   const start = route?.segments.find((segment) => segment.length)?.[0];
   list.replaceChildren();
   details.hidden = true;
