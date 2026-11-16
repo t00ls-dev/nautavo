@@ -93,14 +93,13 @@ export function setupMapView(
       layout();
     }
   });
+  /** On phones, the height of the open sheet covering the bottom of the map. */
+  const cover = () =>
+    compactLayout() && !$('route-panel').hidden
+      ? $('sheet').getBoundingClientRect().height
+      : 0;
   /** Show a startup view; on phones, in the part of the map above the sheet. */
-  const frame = (view: View) => {
-    const cover =
-      compactLayout() && !$('route-panel').hidden
-        ? $('sheet').getBoundingClientRect().height
-        : 0;
-    map.setView(view.center, view.zoom, cover);
-  };
+  const frame = (view: View) => map.setView(view.center, view.zoom, cover());
   // With location already allowed, the device's fixes open the map on it,
   // again as a fix gets more precise, until the traveler moves the map.
   let framedZoom = 0;
@@ -111,11 +110,17 @@ export function setupMapView(
   });
   // Where the map is left, for the next visit when the browser cannot tell
   // whether location is allowed. On this device only; never sent.
-  const saveView = () =>
+  // It keeps the middle of the visible part of the map, above the sheet on
+  // phones, which is where `frame` puts it back: the map's own center, under
+  // the sheet, would move the place half a sheet south on every visit.
+  const saveView = () => {
+    const { x, y } = map.size();
+    const center = map.unproject({ x: x / 2, y: (y - cover()) / 2 });
     writePreference(
       PREFERENCE.lastView,
-      serializeView({ center: map.getCenter(), zoom: map.getZoom() }),
+      serializeView({ center: center ?? map.getCenter(), zoom: map.getZoom() }),
     );
+  };
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) saveView();
   });
