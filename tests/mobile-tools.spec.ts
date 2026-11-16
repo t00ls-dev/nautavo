@@ -215,9 +215,13 @@ test('full geometry survives drawing and share uses the same GPX and custom file
         Promise.reject(new DOMException('Unavailable', 'NotAllowedError')),
     }),
   );
-  await page.locator('#share-gpx').click();
-  await expect(page.locator('#status')).toContainText('Use Download GPX');
-  await expect(page.locator('#download')).toBeEnabled();
+  // Any other failure downloads the same file instead.
+  const [fallback] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#share-gpx').click(),
+  ]);
+  expect(fallback.suggestedFilename()).toBe('custom-file.gpx');
+  await expect(page.locator('#status')).toHaveText('GPX downloaded.');
 });
 test('sharing is hidden without file support', async ({ page }) => {
   await page.addInitScript(() =>
@@ -427,3 +431,148 @@ test('one-finger zoom: double tap and drag down zooms in, up zooms out, without 
   await session.detach();
   await context.close();
 });
+
+// A touch device that can share files, as Firefox for iOS, which drops a
+// download's name: every export shares a named file instead.
+const shareMock = () => {
+  Object.defineProperty(navigator, 'canShare', { value: () => true });
+  Object.defineProperty(navigator, 'share', {
+    configurable: true,
+    value: async (data: ShareData) => {
+      const shared = ((window as unknown as { shared?: string[] }).shared ??=
+        []);
+      // Only the file: iOS saves a title or text as a second, text file.
+      if (Object.keys(data).join() !== 'files')
+        throw new Error('Share only the file');
+      shared.push(`${data.files![0].name} ${data.files![0].type}`);
+    },
+  });
+};
+const sharedFiles = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => (window as unknown as { shared?: string[] }).shared);
+for (const language of ['en', 'pt'] as const)
+  test(`on a touch device that can share files, exports share named files (${language})`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    const page = await context.newPage();
+    await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+    await mockBasemap(page);
+    await page.addInitScript(shareMock);
+    let downloads = 0;
+    page.on('download', () => downloads++);
+    await page.goto(base);
+    if (language === 'pt') await page.locator('#language').selectOption('pt');
+    const label = language === 'pt' ? 'Compartilhar GPX' : 'Share GPX';
+    await expect(page.locator('#download')).toHaveAccessibleName(label);
+    await page.locator('#import').setInputFiles({
+      name: 'dense.gpx',
+      mimeType: 'application/gpx+xml',
+      buffer: Buffer.from(gpx),
+    });
+    await expect(page.locator('#download')).toBeEnabled();
+    // The name is in More actions, where Share GPX merged into the main action.
+    await page.locator('#more-actions').click();
+    await expect(page.locator('#share-gpx')).toBeHidden();
+    await page.locator('#route-name').fill('Shared ride');
+    await page.locator('#route-name').press('Tab');
+    await page.locator('#download').click();
+    await expect
+      .poll(() => sharedFiles(page))
+      .toEqual(['shared-ride.gpx application/gpx+xml']);
+    // Saved routes and the backup share too.
+    await page.locator('#save-route').click();
+    await expect(page.locator('#saved-count')).toHaveText('(1)');
+    await page.locator('.saved-routes summary').click();
+    await page
+      .getByRole('button', {
+        name:
+          language === 'pt'
+            ? 'Compartilhar rota salva: Shared ride'
+            : 'Share saved route: Shared ride',
+        exact: true,
+      })
+      .click();
+    await expect(page.locator('#backup-routes')).toHaveText(
+      language === 'pt' ? 'Compartilhar backup' : 'Share backup',
+    );
+    await page.locator('#backup-routes').click();
+    await expect
+      .poll(async () => (await sharedFiles(page))?.slice(1))
+      .toEqual([
+        'shared-ride.gpx application/gpx+xml',
+        expect.stringMatching(
+          /^route-gpx-backup-\d{4}-\d\d-\d\d\.json application\/json$/,
+        ),
+      ]);
+    expect(downloads).toBe(0);
+    await context.close();
+  });
+
+test('a touch device without file sharing keeps Download GPX', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+  await mockBasemap(page);
+  await page.goto(base);
+  await expect(page.locator('#download')).toHaveAccessibleName('Download GPX');
+  await expect(page.locator('#backup-routes')).toHaveText('Export backup');
+  await page.locator('#import').setInputFiles({
+    name: 'dense.gpx',
+    mimeType: 'application/gpx+xml',
+    buffer: Buffer.from(gpx),
+  });
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#download').click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.gpx$/);
+  await context.close();
+});
+
+for (const width of [320, 360, 390, 430, 760])
+  for (const language of ['en', 'pt'] as const)
+    test(`Share GPX keeps its label on one line at ${width}px in ${language}`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        viewport: { width, height: 800 },
+        isMobile: true,
+        hasTouch: true,
+      });
+      const page = await context.newPage();
+      await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+      await mockBasemap(page);
+      await page.addInitScript(shareMock);
+      await page.goto(base);
+      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      const button = page.locator('#download');
+      await expect(button).toHaveAccessibleName(
+        language === 'pt' ? 'Compartilhar GPX' : 'Share GPX',
+      );
+      await page.locator('.saved-routes summary').click();
+      await expect(page.locator('#backup-routes')).toBeVisible();
+      for (const target of [button, page.locator('#backup-routes')]) {
+        const fits = await target.evaluate((e) => {
+          const label = e.querySelector('.button-label') ?? e;
+          const range = document.createRange();
+          range.selectNodeContents(label);
+          const lines = new Set(
+            [...range.getClientRects()].map((r) => Math.round(r.top)),
+          );
+          return lines.size <= 1 && e.scrollWidth <= e.clientWidth + 1;
+        });
+        expect(fits).toBe(true);
+      }
+      await context.close();
+    });

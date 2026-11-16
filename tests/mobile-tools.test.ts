@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from 'vitest';
-import { shareFile } from '../src/share-gpx';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { exportFile, JSON_TYPES, shareFile } from '../src/share-file';
 import { LongPress } from '../src/long-press';
 afterEach(() => vi.useRealTimers());
 it('chooses the first approved file MIME without changing the filename or bytes', () => {
@@ -17,6 +17,64 @@ it('chooses the first approved file MIME without changing the filename or bytes'
       throw new Error();
     }),
   ).toBeNull();
+});
+describe('exportFile', () => {
+  const options = {
+    share: true,
+    types: JSON_TYPES,
+    downloadType: 'application/json',
+  };
+  let downloads: string[];
+  beforeEach(() => {
+    downloads = [];
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloads.push(this.download);
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(navigator, 'canShare');
+    Reflect.deleteProperty(navigator, 'share');
+  });
+  const sharing = (share: (data: ShareData) => Promise<void>) => {
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: () => true,
+    });
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: vi.fn(share),
+    });
+    return navigator.share as ReturnType<typeof vi.fn>;
+  };
+  it('shares a named file of the first accepted type', async () => {
+    const share = sharing(async () => {});
+    expect(await exportFile('{}', 'backup.json', options)).toBe('shared');
+    // Only the file: a title or text would be saved as a second file on iOS.
+    expect(Object.keys(share.mock.calls[0][0])).toEqual(['files']);
+    const file = share.mock.calls[0][0].files[0] as File;
+    expect([file.name, file.type]).toEqual(['backup.json', 'application/json']);
+    expect(downloads).toEqual([]);
+  });
+  it('does nothing when the share sheet is cancelled', async () => {
+    sharing(() => Promise.reject(new DOMException('', 'AbortError')));
+    expect(await exportFile('{}', 'backup.json', options)).toBe('cancelled');
+    expect(downloads).toEqual([]);
+  });
+  it('downloads when sharing fails, is off or is unsupported', async () => {
+    sharing(() => Promise.reject(new DOMException('', 'NotAllowedError')));
+    expect(await exportFile('{}', 'a.json', options)).toBe('downloaded');
+    expect(await exportFile('{}', 'b.json', { ...options, share: false })).toBe(
+      'downloaded',
+    );
+    Reflect.deleteProperty(navigator, 'share');
+    expect(await exportFile('{}', 'c.json', options)).toBe('downloaded');
+    expect(downloads).toEqual(['a.json', 'b.json', 'c.json']);
+  });
 });
 it('long press requires 500 ms and cancels on movement or release', () => {
   vi.useFakeTimers();

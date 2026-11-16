@@ -52,6 +52,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- On a phone or tablet whose browser can share files, Download GPX becomes Share GPX: it opens the share sheet with the file named after the route, so Firefox on iPhone no longer saves it under a random name without .gpx. Saved routes share their GPX the same way and Export backup becomes Share backup; cancelling does nothing, and if sharing fails the file downloads. Sharing sends only the file, so Save to Files no longer adds a text file with its name. Share GPX left More actions on these devices.
 - On phones, the map opens on your location (when already allowed) or region above the route panel instead of under it, and the Daylight legend keeps Day, Twilight and Dark on one line on 320 px screens.
 - On narrow phones, the top of Help and What's new fits the screen: the language shows as EN or PT, Back to map no longer runs off the edge and long addresses in the text wrap, so the page no longer scrolls sideways.
 - After an update, the app no longer opens with plain text and no icons; opened again from the home screen, it switches to the new version by itself, without removing and adding the icon.
