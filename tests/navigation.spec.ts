@@ -981,6 +981,93 @@ test.describe('phone navigation', () => {
         );
       expect(lines).toBeLessThanOrEqual(2.05);
     });
+
+  /** Starts navigation, then counts the routing requests after a reload. */
+  async function navigateAndReload(page: Page) {
+    await setup(page);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    const requests = { routing: 0 };
+    page.on('request', (r) => {
+      if (r.url().includes('/route/v1/')) requests.routing++;
+    });
+    await page.reload();
+    return requests;
+  }
+
+  test('a reload during navigation offers to continue on the same route', async ({
+    page,
+  }) => {
+    const requests = await navigateAndReload(page);
+    const prompt = page.getByRole('dialog', { name: 'Continue navigation?' });
+    await expect(prompt).toBeVisible();
+    // Location waits for the tap; the route is the one kept, not recalculated.
+    await expect(page.locator('#nav-screen')).toBeHidden();
+    await prompt.getByRole('button', { name: 'Continue navigation' }).click();
+    await expect(
+      page.getByRole('dialog', { name: 'Navigation' }),
+    ).toBeVisible();
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    expect(requests.routing).toBe(0);
+  });
+
+  test('after End or Not now, a reload offers nothing', async ({ page }) => {
+    await navigateAndReload(page);
+    const prompt = page.getByRole('dialog', { name: 'Continue navigation?' });
+    await prompt.getByRole('button', { name: 'Not now' }).click();
+    await expect(prompt).toBeHidden();
+    await page.reload();
+    await expect(page.locator('#navigate')).toBeEnabled({ timeout: 15000 });
+    await expect(prompt).toBeHidden();
+    // End clears it too.
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    await page.locator('#nav-stop').click();
+    await page.reload();
+    await expect(page.locator('#navigate')).toBeEnabled({ timeout: 15000 });
+    await expect(prompt).toBeHidden();
+  });
+
+  for (const [width, language] of [
+    [320, 'pt'],
+    [430, 'en'],
+  ] as const)
+    test(`the continue prompt fits at ${width}px in ${language}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await navigateAndReload(page);
+      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      const prompt = page.locator('#nav-resume-notice');
+      await expect(prompt).toBeVisible();
+      await expect(prompt.locator('h2')).toHaveText(
+        language === 'pt' ? 'Continuar a navegação?' : 'Continue navigation?',
+      );
+      const problems = await prompt.evaluate((dialog) =>
+        [...dialog.querySelectorAll<HTMLElement>('h2, p, button')].flatMap(
+          (e) => {
+            const box = e.getBoundingClientRect();
+            return box.right > innerWidth + 0.5 ||
+              box.left < -0.5 ||
+              e.scrollWidth > e.clientWidth + 1
+              ? [e.textContent]
+              : [];
+          },
+        ),
+      );
+      expect(problems).toEqual([]);
+      // Each button stays on one line.
+      for (const button of await prompt.locator('button').all()) {
+        const lines = await button.evaluate(
+          (e) =>
+            e.getBoundingClientRect().height /
+            parseFloat(getComputedStyle(e).lineHeight || '24'),
+        );
+        expect(lines).toBeLessThan(2.5);
+      }
+    });
 });
 
 test('a denied location permission ends navigation with a message', async ({

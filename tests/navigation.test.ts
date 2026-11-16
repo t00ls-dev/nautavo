@@ -163,6 +163,17 @@ describe('navigation tracker', () => {
     expect(r.arrived).toBe(false);
     expect(r.progress).toBeLessThan(2 * M);
   });
+  it('continues on the pass it was on after a reload', () => {
+    const back = [...east(0, 10)].reverse();
+    const outAndBack = route({
+      segments: [[...east(0, 10), ...back.slice(1)]],
+      steps: [],
+    });
+    // Reloaded on the way back: the first fix is already on the return pass.
+    const tracker = createNavigationTracker(outAndBack, [], 15 * M);
+    const r = tracker.update({ coord: [0, 0.004], accuracy: 5 })!;
+    expect(r.progress).toBeCloseTo(16 * M, 0);
+  });
   it('without maneuvers counts down to the destination', () => {
     const r = createNavigationTracker(route({ steps: [] })).update({
       coord: [0, 0.005],

@@ -3029,11 +3029,20 @@ dialog.home-dialog::backdrop {
   width: 22px;
   height: 22px;
 }
-#nav-notice-start {
+#nav-notice-start,
+#nav-resume-continue,
+#nav-resume-dismiss {
   width: 100%;
   min-height: 52px;
   border-radius: var(--radius-large);
   font-size: 18px;
+}
+.nav-notice p {
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+#nav-resume-dismiss {
+  margin-top: 8px;
 }
 /* Add to home screen steps, a bottom sheet like the navigation notice. */
 .home-dialog h2 {

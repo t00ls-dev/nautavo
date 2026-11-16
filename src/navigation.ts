@@ -195,6 +195,12 @@ export function createNavigationTracker(
   route: Route,
   /** Route points after the start, so hints never skip one. */
   stops: Coord[] = [],
+  /**
+   * Distance already travelled: 0 at the start, so where the route passes
+   * near the start again (a loop ending where it began) the first fix takes
+   * the start, not the arrival; more when continuing after a reload.
+   */
+  initial = 0,
 ) {
   const index = indexTrack(route.segments);
   const maneuvers = navigationManeuvers(route);
@@ -202,9 +208,7 @@ export function createNavigationTracker(
   const stopsAt = legDistances(route.segments, stops);
   const nextStop = (at: number) =>
     stopsAt.find((d) => d > at + STOP_REACHED) ?? index.total;
-  // Navigation starts at the start: where the route passes near it again (a
-  // loop ending where it began), the first fix takes the start, not the end.
-  let progress = 0,
+  let progress = initial,
     offSince: number | null = null;
   return {
     total: index.total,

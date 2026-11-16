@@ -40,6 +40,11 @@ export const SESSION = {
   panelOpen: 'panel-open',
   panelSize: 'panel-size',
   regionAttempted: 'region-attempted',
+  /**
+   * The route being navigated and the distance travelled along it (never a
+   * position), so a reload can continue the navigation (`navigation-resume`).
+   */
+  navigation: 'navigation',
 } as const;
 export type SessionKey = (typeof SESSION)[keyof typeof SESSION];
 
@@ -66,5 +71,6 @@ export const writePreference = (key: PreferenceKey, value: string | null) =>
   write(() => localStorage, key, value);
 export const readSession = (key: SessionKey): string | null =>
   read(() => sessionStorage, key);
-export const writeSession = (key: SessionKey, value: string) =>
+/** Store page-session state; null removes it. */
+export const writeSession = (key: SessionKey, value: string | null) =>
   write(() => sessionStorage, key, value);

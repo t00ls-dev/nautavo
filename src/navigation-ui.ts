@@ -38,6 +38,11 @@ import {
 } from './navigation-weather';
 import { weatherDescription } from './i18n';
 import { arrivalSpeedKmh, createSpeedMeter } from './navigation-speed';
+import {
+  forgetNavigation,
+  rememberNavigation,
+  rememberProgress,
+} from './navigation-resume';
 import { speedFromKmh } from './travel-time';
 import {
   METERS_PER_SECOND,
@@ -721,6 +726,8 @@ export function setupNavigation(deps: {
     const r = readout;
     const turn = $('nav-turn');
     const arrived = !!r?.arrived;
+    // Arrived: nothing left to continue after a reload.
+    if (arrived && !replaying) forgetNavigation();
     const rejoin = !arrived ? (r?.rejoin ?? null) : null;
     screen.classList.toggle('off-route', !!rejoin);
     $('nav-hint').hidden = !rejoin;
@@ -1062,6 +1069,7 @@ export function setupNavigation(deps: {
         backtrack: 50,
       });
       if (position) plannedProgress = position.distance;
+      rememberProgress(plannedProgress, Date.now());
       meter.update({
         time,
         progress: plannedProgress,
@@ -1212,8 +1220,11 @@ export function setupNavigation(deps: {
       if (document.visibilityState === 'hidden') setReplayPlaying(false);
       return;
     }
-    if (document.visibilityState === 'hidden') stopWatching();
-    else {
+    if (document.visibilityState === 'hidden') {
+      stopWatching();
+      // A hidden tab may be discarded: keep the latest progress now.
+      rememberProgress(plannedProgress, Date.now(), true);
+    } else {
       startWatching();
       void keepScreenOn();
     }
@@ -1227,11 +1238,13 @@ export function setupNavigation(deps: {
    * `remind`: the notice was skipped, so a chip says recalculation is on.
    * `replay`: simulated positions along the route, with no location.
    */
-  function start(remind: boolean, replay = false) {
+  function start(remind: boolean, replay = false, progress = 0) {
     route = deps.route();
     if (!route) return;
     plannedIndex = indexTrack(route.segments);
-    plannedProgress = 0;
+    plannedProgress = progress;
+    // Kept in this tab so a reload can continue it (#138); a replay is not.
+    if (!replay) rememberNavigation(route, location.hash, Date.now(), progress);
     meter = createSpeedMeter();
     weatherShown = '';
     weatherOpen(false);
@@ -1250,7 +1263,7 @@ export function setupNavigation(deps: {
     schedule = createRerouteSchedule();
     rerouting = 'idle';
     course = null;
-    tracker = createNavigationTracker(route, stops());
+    tracker = createNavigationTracker(route, stops(), progress);
     declinationAt(route.segments[0]?.[0]);
     last = null;
     readout = null;
@@ -1315,6 +1328,7 @@ export function setupNavigation(deps: {
   function cleanup() {
     // A recalculation still under way belongs to this navigation only.
     session++;
+    forgetNavigation();
     const wasReplay = replaying;
     if (replaying) {
       setReplayPlaying(false);
@@ -1394,6 +1408,18 @@ export function setupNavigation(deps: {
     start(false);
   };
   $('nav-stop').onclick = stop;
+  // After a reload during navigation (#138): location starts only after
+  // this tap, as it does after Start navigation.
+  const resumeNotice = $<HTMLDialogElement>('nav-resume-notice');
+  let resumeAt = 0;
+  $('nav-resume-continue').onclick = () => {
+    resumeNotice.close();
+    start(false, false, resumeAt);
+  };
+  $('nav-resume-dismiss').onclick = () => {
+    forgetNavigation();
+    resumeNotice.close();
+  };
   /**
    * The pressed button hides, so focus moves on: to the other button from a
    * keyboard, to the screen after a tap, so no button looks selected.
@@ -1574,6 +1600,11 @@ export function setupNavigation(deps: {
   };
 
   return {
+    /** Offers to continue the navigation a reload interrupted (#138). */
+    offerResume(progress: number) {
+      resumeAt = progress;
+      resumeNotice.showModal();
+    },
     /** Settings opened: show the stored notice choice. */
     syncSetting() {
       setting.checked = noticeWanted();

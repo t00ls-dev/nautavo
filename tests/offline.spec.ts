@@ -119,6 +119,36 @@ test('a saved route opens offline, without routing requests, and downloads', asy
   expect(routing).toBe(0);
 });
 
+test.describe('on a phone', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    permissions: ['geolocation'],
+    geolocation: { latitude: -22.931, longitude: -43.239, accuracy: 6 },
+  });
+
+  test('a reload without a connection during navigation continues it', async ({
+    page,
+    context,
+  }) => {
+    await mockServices(context);
+    await controlled(page);
+    await routedPair(page);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-screen')).toBeVisible();
+    await goOffline(context, true);
+    const before = network.routing;
+    await page.reload();
+    const prompt = page.getByRole('dialog', { name: 'Continue navigation?' });
+    await expect(prompt).toBeVisible();
+    await prompt.getByRole('button', { name: 'Continue navigation' }).click();
+    await expect(page.locator('#nav-screen')).toBeVisible();
+    expect(network.routing).toBe(before);
+  });
+});
+
 test('the service worker caches only same-origin files and never answers cross-origin requests', async ({
   page,
   context,
