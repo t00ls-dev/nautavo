@@ -3,7 +3,10 @@ name: Lighthouse
 # required check; it never builds or publishes.
 on:
   schedule:
-    - cron: '0 9 * * 1' # Monday 09:00 UTC
+    # Minute 17, not 0: GitHub delays scheduled runs at the top of the hour,
+    # when most schedules fire, and may drop them (the 09:00 run of
+    # 2026-11-16 never started). Same expression as Dependabot.
+    - cron: '17 9 * * 1' # Monday 09:17 UTC
   workflow_dispatch:
 permissions:
   contents: read
