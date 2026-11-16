@@ -146,6 +146,23 @@ describe('navigation tracker', () => {
     expect(r.progress).toBeCloseTo(16 * M, 0);
     expect(r.heading).toBeCloseTo(270, 3);
   });
+  it('starts a loop at its start, not at its end in the same place', () => {
+    // Out 1.1 km and back a meter beside it: start and end at the same spot.
+    const back = east(0, 10)
+      .reverse()
+      .map(([lat, lon]): Coord => [lat + 0.00001, lon]);
+    const loop = route({
+      segments: [[...east(0, 10), ...back.slice(1)]],
+      steps: [],
+    });
+    // GPS a few meters off, nearer the way back than the way out.
+    const r = createNavigationTracker(loop).update({
+      coord: [0.00001, 0.0001],
+      accuracy: 10,
+    })!;
+    expect(r.arrived).toBe(false);
+    expect(r.progress).toBeLessThan(2 * M);
+  });
   it('without maneuvers counts down to the destination', () => {
     const r = createNavigationTracker(route({ steps: [] })).update({
       coord: [0, 0.005],

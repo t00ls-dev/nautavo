@@ -202,7 +202,9 @@ export function createNavigationTracker(
   const stopsAt = legDistances(route.segments, stops);
   const nextStop = (at: number) =>
     stopsAt.find((d) => d > at + STOP_REACHED) ?? index.total;
-  let progress: number | undefined,
+  // Navigation starts at the start: where the route passes near it again (a
+  // loop ending where it began), the first fix takes the start, not the end.
+  let progress = 0,
     offSince: number | null = null;
   return {
     total: index.total,
@@ -216,7 +218,7 @@ export function createNavigationTracker(
     rerouteTarget(rejoin: RejoinPoint): { coord: Coord; at: number } | null {
       const at = Math.min(
         rejoin.at + REROUTE_AHEAD,
-        nextStop(progress ?? 0),
+        nextStop(progress),
         index.total,
       );
       const point = pointAtDistance(index, at);

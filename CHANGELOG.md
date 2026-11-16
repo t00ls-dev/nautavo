@@ -55,6 +55,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- Navigation on a route that ends where it starts no longer says you have arrived as it begins: the first position counts from the start of the route.
 - On iPhones with a notch or Dynamic Island, the route panel at full height stops below the header instead of covering the logo, language and Settings when the page is drawn under the status bar, as in a home-screen web app or an app's web view.
 - On a phone or tablet whose browser can share files, Download GPX becomes Share GPX: it opens the share sheet with the file named after the route, so Firefox on iPhone no longer saves it under a random name without .gpx. Saved routes share their GPX the same way and Export backup becomes Share backup; cancelling does nothing, and if sharing fails the file downloads. Sharing sends only the file, so Save to Files no longer adds a text file with its name. Share GPX left More actions on these devices.
 - On phones, the map opens on your location (when already allowed) or region above the route panel instead of under it, and the Daylight legend keeps Day, Twilight and Dark on one line on 320 px screens.
