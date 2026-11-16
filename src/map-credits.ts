@@ -6,6 +6,7 @@ import {
   type MapCredit,
   type SatelliteVintage,
 } from './basemap';
+import { optionalById } from './dom';
 
 /**
  * A round info button that opens a modal list of credits, shared by the
@@ -102,7 +103,7 @@ export function setupMapCredits(map: PlannerMap) {
   const { elements, setCredits } = creditsDialog({
     id: 'map-credits-dialog',
     name: 'map-credits',
-    fallback: () => document.getElementById('panel-toggle'),
+    fallback: () => optionalById('panel-toggle'),
   });
   for (const element of elements) {
     isolate(element);
