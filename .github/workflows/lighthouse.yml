@@ -1,9 +1,9 @@
 name: Lighthouse
-# Audits the published site on Dependabot's schedule (Monday 00:00 UTC) and on
-# demand. Not a required check; it never builds or publishes.
+# Audits the published site on Dependabot's schedule and on demand. Not a
+# required check; it never builds or publishes.
 on:
   schedule:
-    - cron: '0 0 * * 1'
+    - cron: '0 9 * * 1' # Monday 09:00 UTC
   workflow_dispatch:
 permissions:
   contents: read
