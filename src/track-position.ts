@@ -72,15 +72,20 @@ export function indexTrack(segments: Coord[][]): TrackIndex {
   return { edges, total };
 }
 
-/** Projection on one edge in a local planar frame centered on the position. */
-function project(edge: Edge, [lat, lon]: Coord) {
-  const scale = Math.cos(lat * RAD) * EARTH_RADIUS * RAD;
+/** Meters per degree of latitude (and of longitude at the equator). */
+export const METERS_PER_DEGREE = EARTH_RADIUS * RAD;
+/**
+ * Projection of a position on segment a–b in a local planar frame centered
+ * on it: the fraction along the segment and the distance to it, in meters.
+ */
+export function toSegment([lat, lon]: Coord, a: Coord, b: Coord) {
+  const scale = Math.cos(lat * RAD) * METERS_PER_DEGREE;
   const x = (c: Coord) => longitudeDelta(lon, c[1]) * scale,
-    y = (c: Coord) => (c[0] - lat) * EARTH_RADIUS * RAD;
-  const ax = x(edge.a),
-    ay = y(edge.a),
-    dx = x(edge.b) - ax,
-    dy = y(edge.b) - ay;
+    y = (c: Coord) => (c[0] - lat) * METERS_PER_DEGREE;
+  const ax = x(a),
+    ay = y(a),
+    dx = x(b) - ax,
+    dy = y(b) - ay;
   const squared = dx * dx + dy * dy;
   const t = squared
     ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / squared))
@@ -89,6 +94,8 @@ function project(edge: Edge, [lat, lon]: Coord) {
     py = ay + t * dy;
   return { t, offTrack: Math.hypot(px, py) };
 }
+const project = (edge: Edge, position: Coord) =>
+  toSegment(position, edge.a, edge.b);
 
 export function locateOnTrack(
   index: TrackIndex,
@@ -194,6 +201,57 @@ export function trackSlice(
     if (edge.from + edge.length < to) out.at(-1)!.push(edge.b);
   }
   out.at(-1)!.push(end.coord);
+  return out.filter((part) => part.length >= 2);
+}
+
+/** A track point with its along-track distance, in meters. */
+export interface AlongPoint {
+  coord: Coord;
+  d: number;
+}
+/**
+ * Track between two along-track distances, split at GPX segment gaps,
+ * keeping every recorded point exactly: only the points at the two cuts are
+ * interpolated, so geometry kept around an edit or a repair exports byte for
+ * byte as it was imported.
+ */
+/** Overlaps shorter than this (meters) are left out of a slice. */
+const SLICE_EPSILON = 0.001;
+export function exactSlice(
+  index: TrackIndex,
+  from: number,
+  to: number,
+): AlongPoint[][] {
+  const out: AlongPoint[][] = [];
+  let segment = -1;
+  const between = (
+    edge: TrackIndex['edges'][number],
+    d: number,
+  ): AlongPoint => {
+    const f = (d - edge.from) / edge.length;
+    return {
+      coord: [
+        edge.a[0] + (edge.b[0] - edge.a[0]) * f,
+        edge.a[1] + (edge.b[1] - edge.a[1]) * f,
+      ],
+      d,
+    };
+  };
+  for (const edge of index.edges) {
+    const end = edge.from + edge.length;
+    // An overlap under a millimeter is rounding between sums, not track.
+    if (end <= from + SLICE_EPSILON || edge.from >= to - SLICE_EPSILON)
+      continue;
+    if (edge.segment !== segment) {
+      out.push([
+        edge.from >= from
+          ? { coord: edge.a, d: edge.from }
+          : between(edge, from),
+      ]);
+      segment = edge.segment;
+    }
+    out.at(-1)!.push(end <= to ? { coord: edge.b, d: end } : between(edge, to));
+  }
   return out.filter((part) => part.length >= 2);
 }
 

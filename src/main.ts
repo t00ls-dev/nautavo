@@ -64,6 +64,7 @@ import {
   meters,
   parseCoordinates,
   serverUrl,
+  trackStops,
   validateState,
   type Coord,
   type Point,
@@ -105,7 +106,14 @@ import {
   setupRouteMarks,
   splitByRepeat,
 } from './route-marks';
-import { lineFeature, PlannerMap, RANK, type MapMarker } from './planner-map';
+import {
+  highlightLayers,
+  lineFeature,
+  PlannerMap,
+  RANK,
+  type MapMarker,
+} from './planner-map';
+import { checkTrack, type TrackCheck } from './track-check';
 import { PASS_OFFSET } from './route-overlays';
 import { routeDaylight } from './daylight';
 import { addressAutocomplete } from './autocomplete';
@@ -247,6 +255,20 @@ if (import.meta.env.DEV)
   (window as unknown as { plannerMap: PlannerMap }).plannerMap = map;
 /** Route point markers on the map. */
 let markers: MapMarker[] = [];
+/**
+ * What checking an imported track against the roads found, per route shown:
+ * the track aligned to the roads (with the recording it replaced) and the
+ * stretches it cannot follow exactly
+ * (highlighted on the map, listed in the summary). Page memory only.
+ */
+const trackChecks = new WeakMap<
+  Route,
+  TrackCheck & { raw?: { route: Route; points: Point[] } }
+>();
+let checkRevision = 0;
+const setOffTrack = map.overlay('rg-unfollowable', RANK.highlight, () =>
+  highlightLayers('rg-unfollowable-line'),
+);
 /** The route line: a white casing under the route color, per base map. */
 const ROUTE_COLORS: Record<string, string> = {
   standard: '#12796e',
@@ -1247,6 +1269,194 @@ function renderSummary(route: Route) {
       );
   }
 }
+/** The summary's notes about an imported track checked against the roads. */
+function trackNotes(route: Route) {
+  const check = trackChecks.get(route);
+  if (!check) return;
+  const notes = $('summary-notes');
+  const locale = state.language === 'pt' ? 'pt-BR' : 'en';
+  if (check.raw) {
+    const fixed = text('p', 'Track aligned to the roads.', 'track-fixed');
+    const keep = text('button', 'Keep the recorded track') as HTMLButtonElement;
+    keep.type = 'button';
+    keep.className = 'link-button';
+    keep.onclick = () => keepRecorded(route);
+    fixed.append(' ', keep);
+    notes.append(fixed);
+  }
+  if (check.off.length) {
+    const box = document.createElement('div');
+    box.className = 'warning unfollowable';
+    box.append(
+      text(
+        'p',
+        check.off.length === 1
+          ? 'This route cannot be followed exactly in 1 place:'
+          : `This route cannot be followed exactly in ${check.off.length} places:`,
+      ),
+    );
+    const list = document.createElement('ul');
+    for (const stretch of check.off) {
+      const label = `${milepostLabel(stretch.from, distanceUnits(), locale)}–${milepostLabel(stretch.to, distanceUnits(), locale)}`;
+      const item = document.createElement('li');
+      const show = text('button', label) as HTMLButtonElement;
+      show.type = 'button';
+      show.className = 'link-button';
+      show.setAttribute('aria-label', `${t('Show on map')}: ${label}`);
+      show.onclick = () => {
+        if (!$('route-panel').hidden && compactLayout())
+          $('panel-toggle').click();
+        map.fit(stretch.coords.flat(), { maxZoom: 16 });
+      };
+      item.append(show);
+      list.append(item);
+    }
+    box.append(list);
+    notes.append(box);
+  }
+}
+/** Back to the track as recorded, before it was aligned to the roads. */
+function keepRecorded(route: Route) {
+  const raw = trackChecks.get(route)?.raw;
+  if (!raw || editBlocked() || current !== route) return;
+  checkRevision++;
+  state.points = structuredClone(raw.points);
+  current = raw.route;
+  syncUrl();
+  renderPoints();
+  renderRoute(raw.route);
+  status('Recorded track restored.');
+}
+/**
+ * After an import: checks the track against the roads and replaces its GPS
+ * glitches with the road taken. Offline, it waits for the connection once.
+ */
+async function checkImported(raw: Route, autoStops: boolean) {
+  const token = ++checkRevision;
+  const fresh = () => token === checkRevision && current === raw;
+  if (!navigator.onLine) {
+    status(
+      'Route imported. No connection: the track will be checked against the roads when the connection returns.',
+    );
+    window.addEventListener(
+      'online',
+      () => {
+        if (fresh()) void checkImported(raw, autoStops);
+      },
+      { once: true },
+    );
+    return;
+  }
+  status('Checking the track against the roads…');
+  // Waypoints from the file are the traveler's own and protect their
+  // stretch; automatic stops do not, since they are placed again after.
+  const stops = autoStops
+    ? []
+    : state.points.flatMap((p) => (p.coord ? [p.coord] : []));
+  const outcome = await checkTrack(
+    raw,
+    state.valhalla,
+    'repair',
+    stops,
+    recordedElevation.get(raw),
+    fresh,
+  );
+  if (!fresh()) return;
+  // The check is an extra: when it cannot run, the import stands as it is.
+  if (outcome.kind !== 'checked') {
+    status(
+      outcome.kind === 'limit'
+        ? 'Route imported. The track could not be checked against the roads now.'
+        : 'Route imported. Edits recalculate only the changed sections.',
+    );
+    return;
+  }
+  const { check } = outcome;
+  if (!check.glitches && !check.aligned) {
+    trackChecks.set(raw, check);
+    renderRoute(raw);
+    status('Route imported. Edits recalculate only the changed sections.');
+    return;
+  }
+  const points = structuredClone(state.points);
+  adoptAligned(check, { route: raw, points }, autoStops);
+  status('Track aligned to the roads.');
+}
+/**
+ * Shows a track aligned to the roads, keeping the recording for Keep the
+ * recorded track. Automatic stops are placed again on it, so none sits on a
+ * removed glitch; otherwise the start and end follow it onto the street.
+ */
+function adoptAligned(
+  check: TrackCheck,
+  raw: { route: Route; points: Point[] },
+  autoStops: boolean,
+) {
+  const route = check.route;
+  trackChecks.set(route, { ...check, raw });
+  if (check.elevations) recordedElevation.set(route, check.elevations);
+  const flat = route.segments.flat();
+  if (autoStops) {
+    const stops = trackStops(flat);
+    state.points = stops.points;
+    rememberLegs(route, legsAt(route.segments, stops.indices));
+  } else {
+    const ends = [state.points[0], state.points.at(-1)];
+    if (ends[0]?.coord) ends[0].coord = flat[0];
+    if (ends[1]?.coord) ends[1].coord = flat.at(-1)!;
+  }
+  current = route;
+  syncUrl();
+  renderPoints();
+  renderRoute(route);
+}
+/**
+ * Calculate route on an imported track: the road it follows, from map
+ * matching, with its directions; stretches no road explains stay as
+ * recorded and are flagged. Never a different road in place of the track.
+ */
+async function followImported(base: Route) {
+  const token = ++checkRevision;
+  const fresh = () => token === checkRevision && current === base;
+  status('Calculating…');
+  $<HTMLButtonElement>('calculate').disabled = true;
+  // A track already aligned is matched again from its recording, whose
+  // pieces are cached: the same road, now with its directions.
+  const raw = trackChecks.get(base)?.raw;
+  const source = raw?.route ?? base;
+  const outcome = await checkTrack(
+    source,
+    state.valhalla,
+    'follow',
+    state.points.flatMap((p) => (p.coord ? [p.coord] : [])),
+    recordedElevation.get(source),
+    fresh,
+  );
+  if (!fresh()) return;
+  updateSelection();
+  if (outcome.kind !== 'checked' || !outcome.check.complete) {
+    status(
+      outcome.kind === 'limit'
+        ? 'Valhalla usage limit reached. Try again later.'
+        : 'The route could not be calculated along the imported track now. The imported track is kept.',
+      true,
+    );
+    return;
+  }
+  const { check } = outcome;
+  if (raw || check.aligned || check.glitches)
+    adoptAligned(
+      check,
+      raw ?? { route: base, points: structuredClone(state.points) },
+      false,
+    );
+  else {
+    trackChecks.set(check.route, check);
+    current = check.route;
+    renderRoute(check.route);
+  }
+  status('Route calculated along the imported track.');
+}
 function renderRoute(route: Route) {
   undoHistory.attach(route);
   trackBase =
@@ -1254,7 +1464,13 @@ function renderRoute(route: Route) {
       ? { route, points: state.points.map((p) => p.coord!) }
       : null;
   drawRoute(route);
+  setOffTrack(
+    (trackChecks.get(route)?.off ?? []).flatMap((o) =>
+      o.coords.map((c) => lineFeature(c)),
+    ),
+  );
   renderSummary(route);
+  trackNotes(route);
   $<HTMLButtonElement>('download').disabled = false;
   updateSaveButton();
   weather.render();
@@ -1366,6 +1582,11 @@ $('calculate').onclick = () => {
     status(
       'No connection. The route on screen is kept; calculate it again when you are back online.',
     );
+    return;
+  }
+  // An imported track is matched to the roads it follows, never rerouted.
+  if (current && isImportedRoute(current)) {
+    void followImported(current);
     return;
   }
   changed(false, true);
@@ -1563,7 +1784,13 @@ $('share').onclick = () => {
   syncUrl();
   void navigator.clipboard
     .writeText(location.href)
-    .then(() => status('Link copied.'))
+    .then(() =>
+      status(
+        current && isImportedRoute(current)
+          ? 'Link copied. Opening it recalculates the route, which can differ from the imported track; share the GPX for the exact track.'
+          : 'Link copied.',
+      ),
+    )
     .catch(() => status('Copy the link from your address bar.'));
 };
 $<HTMLInputElement>('import').onchange = () => {
@@ -1601,6 +1828,7 @@ $<HTMLInputElement>('import').onchange = () => {
       renderRoute(current);
       fit();
       status('Route imported. Edits recalculate only the changed sections.');
+      void checkImported(current, imported.indices !== undefined);
     })
     .catch((e) => status((e as Error).message, true))
     .finally(() => {

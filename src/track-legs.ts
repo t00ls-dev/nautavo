@@ -5,6 +5,13 @@ import {
   type Route,
   type State,
 } from './core';
+import { exactSlice, indexTrack, locateOnTrack } from './track-position';
+
+/**
+ * Recorded track kept on each side of an edited point: only this much before
+ * and after it is rerouted, so an edit never replaces kilometers of the track.
+ */
+export const EDIT_WINDOW = 1000;
 
 /**
  * Geometry between two consecutive route points. Inner arrays are pieces of
@@ -161,17 +168,27 @@ function stitch(legs: Leg[]): Coord[][] {
   return out.filter((s) => s.length >= 2);
 }
 
+/** Two consecutive geometries, the last piece of `a` continuing into `b`. */
+function join(a: Leg, b: Leg): Leg {
+  if (!a.length) return b.map((p) => [...p]);
+  if (!b.length) return a.map((p) => [...p]);
+  const out = a.map((p) => [...p]);
+  const tail = out.at(-1)!,
+    head = b[0];
+  const last = tail.at(-1)!;
+  tail.push(
+    ...(head[0] && last[0] === head[0][0] && last[1] === head[0][1]
+      ? head.slice(1)
+      : head),
+  );
+  return [...out, ...b.slice(1).map((p) => [...p])];
+}
+
 const reversed = (leg: Leg): Leg =>
   leg
     .slice()
     .reverse()
     .map((piece) => piece.slice().reverse());
-
-const length = (segments: Coord[][]) =>
-  segments.reduce(
-    (sum, s) => sum + s.slice(1).reduce((n, p, i) => n + meters(s[i], p), 0),
-    0,
-  );
 
 /**
  * Imported geometry between two points of the new point list, if the base
@@ -222,6 +239,61 @@ function keptLeg(
 }
 
 /**
+ * New points between two points still on the imported track: the track
+ * between those two (`span`) is kept except about `EDIT_WINDOW` around the
+ * new points, and one request routes from the track before them, through
+ * them, back to the track after them. Null when there is no such span, so
+ * the caller routes the legs between the two points.
+ */
+async function routeWindow(
+  state: State,
+  coords: Coord[],
+  k: number,
+  end: number,
+  span: Leg | null,
+  route: (state: State) => Promise<Route>,
+): Promise<{ legs: Leg[]; steps: Route['steps']; provider: string } | null> {
+  if (!span || end - k < 2) return null;
+  const index = indexTrack(span);
+  if (!index.total) return null;
+  const inner = coords.slice(k + 1, end);
+  const along = inner.map((c) => locateOnTrack(index, c)?.distance);
+  if (along.some((d) => d === undefined)) return null;
+  // A window that nearly reaches an end of the span takes it whole.
+  let from = Math.min(...(along as number[])) - EDIT_WINDOW,
+    to = Math.max(...(along as number[])) + EDIT_WINDOW;
+  if (from < 100) from = 0;
+  if (to > index.total - 100) to = index.total;
+  const cut = (a: number, b: number): Leg =>
+    exactSlice(index, a, b).map((part) => part.map((p) => p.coord));
+  const before = from > 0 ? cut(0, from) : [];
+  const after = to < index.total ? cut(to, index.total) : [];
+  const anchorA = before.length ? before.at(-1)!.at(-1)! : coords[k],
+    anchorB = after.length ? after[0][0] : coords[end];
+  const points = [anchorA, ...inner, anchorB];
+  const part = await route({
+    ...state,
+    points: [
+      { ...state.points[k], coord: anchorA },
+      ...state.points.slice(k + 1, end),
+      { ...state.points[end], coord: anchorB },
+    ],
+  });
+  const routed = routedLegs(part, points);
+  if (!routed || routed.length !== end - k) return null;
+  // The kept track before and after joins the first and last routed legs;
+  // GPX segment gaps inside the kept track stay gaps.
+  const legs = routed.map((leg) => leg.map((piece) => [...piece]));
+  if (before.length) legs[0] = join(before, legs[0]);
+  if (after.length) legs[legs.length - 1] = join(legs.at(-1)!, after);
+  return {
+    legs,
+    steps: part.steps,
+    provider: part.provider,
+  };
+}
+
+/**
  * Reroutes only the legs the imported geometry cannot provide and keeps every
  * other leg exactly: unchanged legs, legs traversed in reverse (reverse, round
  * trip) and legs joined across removed points. Returns null when no leg can be
@@ -239,7 +311,12 @@ export async function routeKeepingLegs(
   const kept = coords
     .slice(1)
     .map((c, k) => keptLeg(coords[k], c, base.points, baseLegs, present));
-  if (kept.every((leg) => !leg)) return null;
+  // Nothing to keep, not even the track around new points: route it all.
+  if (
+    kept.every((leg) => !leg) &&
+    !keptLeg(coords[0], coords.at(-1)!, base.points, baseLegs, present)
+  )
+    return null;
 
   const legs: Leg[] = [];
   const steps: Route['steps'] = [];
@@ -255,6 +332,21 @@ export async function routeKeepingLegs(
     }
     let end = k;
     while (end < kept.length && !kept[end]) end++;
+    const window = await routeWindow(
+      state,
+      coords,
+      k,
+      end,
+      keptLeg(coords[k], coords[end], base.points, baseLegs, present),
+      route,
+    );
+    if (window) {
+      providers.add(window.provider);
+      steps.push(...window.steps);
+      legs.push(...window.legs);
+      k = end;
+      continue;
+    }
     const part = await route({
       ...state,
       points: state.points.slice(k, end + 1),
@@ -275,7 +367,7 @@ export async function routeKeepingLegs(
   const result: Route = {
     segments,
     steps,
-    distance: length(segments),
+    distance: indexTrack(segments).total,
     duration: null,
     provider: [
       importedProvider(base.route.provider) ?? 'Imported GPX',

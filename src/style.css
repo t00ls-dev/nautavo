@@ -896,6 +896,25 @@ header button.icon-control {
 #summary-notes:not(:empty) {
   margin-top: 10px;
 }
+/* An imported track checked against the roads: corrected glitches, and the
+   stretches it cannot follow exactly, each a link that shows it. */
+.track-fixed {
+  margin: 0;
+}
+.unfollowable p {
+  margin: 0 0 4px;
+}
+.unfollowable ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.unfollowable li {
+  white-space: nowrap;
+}
 /* The road-review warning is a button that opens the itinerary. */
 .planner .review-link {
   display: block;

@@ -73,6 +73,8 @@ export interface EdgeRange {
 export function attributePlan(
   segments: Coord[][],
   legs: number[] = [],
+  /** Along-track distances where a piece must end (map matching's U-turns). */
+  breaks: number[] = [],
 ): AttributePiece[] | null {
   const pieces: AttributePiece[] = [];
   let total = 0;
@@ -87,7 +89,8 @@ export function attributePlan(
     // Route points a few meters from a segment end or from each other (a
     // destination snapped just before the track's end) add no tiny piece.
     const stops = [start];
-    for (const d of [...legs].sort((a, b) => a - b))
+    const forced = new Set(breaks);
+    for (const d of [...legs, ...breaks].sort((a, b) => a - b))
       if (d - stops.at(-1)! >= MIN_PIECE && end - d >= MIN_PIECE) stops.push(d);
     stops.push(end);
     // Greedy: each piece takes whole legs while it stays within MAX_PIECE.
@@ -104,6 +107,7 @@ export function attributePlan(
       const n = Math.ceil((stop - from) / MAX_PIECE);
       for (let k = 1; k < n; k++) cuts.push(from + ((stop - from) * k) / n);
       reached = stop;
+      if (forced.has(stop) && stop > cuts.at(-1)!) cuts.push(stop);
     }
     cuts.push(end);
     const at = (x: number): Coord => {

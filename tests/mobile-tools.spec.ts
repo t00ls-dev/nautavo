@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { holdMap, mockBasemap, BASEMAP_STYLE, mapCanvas } from './map-helpers';
-import { base } from './app-helpers';
+import { base, gpxPoints } from './app-helpers';
 const features = {
   features: [
     {
@@ -187,19 +187,16 @@ test('full geometry survives drawing and share uses the same GPX and custom file
     page.locator('#download').click(),
   ]);
   const xml = await readFile((await download.path())!, 'utf8');
-  const points = (value: string) =>
-    [...value.matchAll(/<trkpt lat="([^"]+)" lon="([^"]+)"/g)].map((m) => [
-      Number(m[1]),
-      Number(m[2]),
-    ]);
-  expect(points(xml)).toEqual(coords);
-  expect(points(shared.xml)).toEqual(coords);
+  expect(gpxPoints(xml)).toEqual(coords);
+  expect(gpxPoints(shared.xml)).toEqual(coords);
   await page.locator('.map-zoom-in').click();
   const [after] = await Promise.all([
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  expect(points(await readFile((await after.path())!, 'utf8'))).toEqual(coords);
+  expect(gpxPoints(await readFile((await after.path())!, 'utf8'))).toEqual(
+    coords,
+  );
   await page.evaluate(() =>
     Object.defineProperty(navigator, 'share', {
       configurable: true,

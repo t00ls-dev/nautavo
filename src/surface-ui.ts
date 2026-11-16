@@ -12,7 +12,7 @@ import {
   MAX_PIECES,
   type EdgeRange,
 } from './road-attributes';
-import { AttributeLimitError, valhallaAttributes } from './services';
+import { ValhallaLimitError, valhallaAttributes } from './services';
 import {
   sectionsToCheck,
   surfaceRanges,
@@ -111,7 +111,7 @@ export function setupSurface(
     } catch (error) {
       if (!current() || (error as Error).name === 'AbortError') return;
       message(
-        error instanceof AttributeLimitError
+        error instanceof ValhallaLimitError
           ? error.message
           : 'Surface unavailable. Try again.',
         true,

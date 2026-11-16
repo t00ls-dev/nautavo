@@ -15,4 +15,5 @@ Related issue: <!-- #123, or "none" -->
 - [ ] User-visible changes have an entry in `CHANGELOG.md` and in both languages of `changelog.html` (or not applicable).
 - [ ] SEO checked: metadata in both languages, `src/seo.ts`, sitemap entries and `lastmod`, still accurate for this change (or not applicable; say why it changed or not).
 - [ ] Service, privacy and credit texts are updated for new or changed external services (or not applicable).
+- [ ] Consistency reviewed on the diff: no copied blocks, no names borrowed from another feature, no duplicated test helpers; findings and fixes listed above.
 - [ ] No UI screenshots or generated files are committed.
