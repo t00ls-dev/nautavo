@@ -71,6 +71,7 @@ import {
   type ServerUrls,
   type State,
 } from './core';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 import {
   calculate,
   defaultPhotonUrl,
@@ -229,9 +230,11 @@ let libraryRevision = 0;
 let savingRoute = false;
 let photonUrl = defaultPhotonUrl;
 try {
-  photonUrl = serverUrl(localStorage.getItem('photon-url') ?? defaultPhotonUrl);
+  photonUrl = serverUrl(
+    readPreference(PREFERENCE.photonUrl) ?? defaultPhotonUrl,
+  );
 } catch {
-  /* Optional preference. */
+  /* An invalid stored URL falls back to the default. */
 }
 $<HTMLInputElement>('photon').value = photonUrl;
 let autocompleteCleanups: (() => void)[] = [];
@@ -1500,11 +1503,7 @@ $('save-settings').onclick = () => {
     weather.applyServer(); // Validates its own URL before changing anything.
     for (const [key, url] of servers) state[key] = url;
     photonUrl = photon;
-    try {
-      localStorage.setItem('photon-url', photonUrl);
-    } catch {
-      /* Optional preference. */
-    }
+    writePreference(PREFERENCE.photonUrl, photonUrl);
     state.name = $<HTMLInputElement>('route-name').value.trim();
     // Only a routing server change needs a new route; names and search servers do not.
     if (reroute) changed();

@@ -1,8 +1,8 @@
 import { updateSeo } from './seo';
 import type { IconName } from './icons';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 export type Language = 'en' | 'pt';
 let language: Language = 'en';
-const languageKey = 'language';
 export function isLanguage(value: unknown): value is Language {
   return value === 'en' || value === 'pt';
 }
@@ -19,20 +19,12 @@ export function detectLanguage(
   return 'en';
 }
 export function storedLanguage(): Language | undefined {
-  try {
-    const value = localStorage.getItem(languageKey);
-    return isLanguage(value) ? value : undefined;
-  } catch {
-    return undefined;
-  }
+  const value = readPreference(PREFERENCE.language);
+  return isLanguage(value) ? value : undefined;
 }
 export function rememberLanguage(lang: Language): void {
   if (!isLanguage(lang)) return;
-  try {
-    localStorage.setItem(languageKey, lang);
-  } catch {
-    /* Optional preference. */
-  }
+  writePreference(PREFERENCE.language, lang);
 }
 export function preferredLanguage(): Language {
   return storedLanguage() ?? detectLanguage();

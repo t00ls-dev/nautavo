@@ -1,9 +1,9 @@
 import type { DistanceUnits } from './units';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 /** First-use average speed; afterwards the traveler's own value is kept. */
 export const DEFAULT_SPEED_KMH = 20;
 /** The same default in miles: 20 km/h is 12.4 mph, rounded up. */
 export const DEFAULT_SPEED_MPH = 13;
-const SPEED_KEY = 'average-speed';
 export function speedInputBounds(units: DistanceUnits = 'metric'): {
   min: number;
   max: number;
@@ -88,23 +88,15 @@ export function travelTimeSeconds(
  * default of the units in use.
  */
 export function storedSpeedKmh(units: DistanceUnits = 'metric'): number {
-  try {
-    const stored = localStorage.getItem(SPEED_KEY);
-    const value = stored === null || stored === '' ? NaN : Number(stored);
-    if (Number.isFinite(value) && value > 0) {
-      const top = speedToKmh(speedInputBounds(units).max, units),
-        bottom = speedToKmh(1, units);
-      return Math.max(bottom, Math.min(top, value));
-    }
-  } catch {
-    /* Optional preference. */
+  const stored = readPreference(PREFERENCE.averageSpeed);
+  const value = stored === null || stored === '' ? NaN : Number(stored);
+  if (Number.isFinite(value) && value > 0) {
+    const top = speedToKmh(speedInputBounds(units).max, units),
+      bottom = speedToKmh(1, units);
+    return Math.max(bottom, Math.min(top, value));
   }
   return defaultSpeedKmh(units);
 }
 export function rememberSpeedKmh(speedKmh: number): void {
-  try {
-    localStorage.setItem(SPEED_KEY, String(speedKmh));
-  } catch {
-    /* Optional preference. */
-  }
+  writePreference(PREFERENCE.averageSpeed, String(speedKmh));
 }

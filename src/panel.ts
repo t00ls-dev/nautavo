@@ -2,6 +2,7 @@ import type { PlannerMap } from './planner-map';
 import { icon, iconControl } from './icons';
 import { byId as $ } from './dom';
 import { sharesFirst } from './share-file';
+import { readSession, SESSION, writeSession } from './preferences';
 
 /** Width below which the route panel is a bottom sheet over the map. */
 const COMPACT = '(max-width: 759px)';
@@ -53,19 +54,11 @@ export function setupPanel(map: PlannerMap): void {
   handle.title = 'Route panel';
   let open = true,
     size: SheetSize = 'half';
-  try {
-    open = sessionStorage.getItem('panel-open') !== 'false';
-    if (sessionStorage.getItem('panel-size') === 'full') size = 'full';
-  } catch {
-    /* Optional preference. */
-  }
+  open = readSession(SESSION.panelOpen) !== 'false';
+  if (readSession(SESSION.panelSize) === 'full') size = 'full';
   const remember = () => {
-    try {
-      sessionStorage.setItem('panel-open', String(open));
-      sessionStorage.setItem('panel-size', size);
-    } catch {
-      /* Optional preference. */
-    }
+    writeSession(SESSION.panelOpen, String(open));
+    writeSession(SESSION.panelSize, size);
   };
   const layout = () => {
     document.body.classList.toggle('panel-closed', !open);

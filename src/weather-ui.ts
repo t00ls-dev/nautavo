@@ -45,6 +45,7 @@ import {
   clusterWeather,
   markerBox,
 } from './weather-clusters';
+import { PREFERENCE, readPreference, writePreference } from './preferences';
 const AUTOMATIC = 'automatic-departure';
 /**
  * Runs a change that resizes content above `element` (weather cards, arrival)
@@ -107,9 +108,9 @@ export function setupWeather(
   map.ready(() => requestAnimationFrame(() => layoutClusters()));
   let endpoint = DEFAULT_WEATHER_URL;
   try {
-    endpoint = serverUrl(localStorage.getItem('weather-server') ?? endpoint);
+    endpoint = serverUrl(readPreference(PREFERENCE.weatherServer) ?? endpoint);
   } catch {
-    /* Optional server preference, no route data. */
+    /* An invalid stored URL falls back to the default. */
   }
   $<HTMLInputElement>('weather-server').value = endpoint;
   let forecast: WeatherForecast | undefined,
@@ -973,11 +974,7 @@ export function setupWeather(
       );
       if (value !== endpoint) invalidate();
       endpoint = value;
-      try {
-        localStorage.setItem('weather-server', endpoint);
-      } catch {
-        /* Optional preference. */
-      }
+      writePreference(PREFERENCE.weatherServer, endpoint);
     },
   };
 }
