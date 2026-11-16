@@ -11,9 +11,12 @@ type SheetSize = 'half' | 'full';
 /** Snap heights of the open sheet; the same numbers are in `style.css`. */
 function sheetHeights(): Record<SheetSize, number> {
   const view = window.innerHeight;
+  // `--safe-top` as the stylesheet resolves it: the status strip is that tall.
+  const safeTop =
+    document.querySelector('.top-edge')?.getBoundingClientRect().height ?? 0;
   return {
     half: Math.min(0.55 * view, Math.max(260, view - 310)),
-    full: view - 60,
+    full: view - 60 - safeTop,
   };
 }
 const DRAG_THRESHOLD = 8;
