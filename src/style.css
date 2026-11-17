@@ -3178,6 +3178,13 @@ dialog.home-dialog::backdrop {
   margin: 0 0 16px;
   line-height: 1.4;
 }
+/* Start navigation stays in view at the bottom of the notice, with the
+   notice's background around it, however short the screen (#209). */
+#nav-notice-start {
+  position: sticky;
+  bottom: 0;
+  box-shadow: 0 0 0 12px var(--color-surface);
+}
 #nav-resume-dismiss,
 #favorite-cancel {
   margin-top: 8px;
@@ -3652,11 +3659,14 @@ dialog:modal:not(.nav-screen) {
 .nav-speed[hidden] {
   display: none;
 }
-.nav-speed:has(~ .nav-resume:not([hidden])),
-.nav-speed:has(~ .nav-reroute:not([hidden])) {
+/* Recalculate route comes before the badge in the page, so the stage, not
+   a later sibling, says which buttons show (#207). */
+.nav-stage:has(.nav-resume:not([hidden])) .nav-speed,
+.nav-stage:has(.nav-reroute:not([hidden])) .nav-speed {
   bottom: 92px;
 }
-.nav-speed:has(~ .nav-reroute:not([hidden])):has(~ .nav-resume:not([hidden])) {
+.nav-stage:has(.nav-reroute:not([hidden])):has(.nav-resume:not([hidden]))
+  .nav-speed {
   bottom: 152px;
 }
 .nav-speed-value {
@@ -3812,14 +3822,21 @@ dialog:modal:not(.nav-screen) {
   background: var(--color-surface);
   box-shadow: 0 -4px 20px #1b293426;
 }
+/* With the upcoming list open, the bar and its list cover the map's
+   buttons and badges instead of slipping under them (#207). */
+.nav-bar:has(.nav-list:not([hidden])) {
+  z-index: 4;
+}
 /* The upcoming list (#137): a handle on the bar, a panel over the map. */
 .nav-list-toggle {
   display: flex;
+  align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 24px;
-  margin: 0 0 4px;
-  padding: 8px 0;
+  /* A 44 px touch target around the drawn grip (#207). */
+  min-height: var(--control);
+  margin: -4px 0 0;
+  padding: 0;
   border: 0;
   background: none;
   cursor: pointer;

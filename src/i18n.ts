@@ -58,15 +58,15 @@ const pt: Record<string, string> = {
     'A página recarregou durante a navegação. Continuar na mesma rota?',
   'Continue navigation': 'Continuar navegação',
   'Not now': 'Agora não',
-  'Avoid handling the phone while moving. Put it in a mount you can see and check the route before you leave.':
-    'Evite mexer no celular em movimento. Prenda-o num suporte à vista e confira a rota antes de sair.',
-  'Keep this tab open and the screen on. With the screen off or in another tab, the browser stops following you.':
-    'Deixe esta aba aberta e a tela acesa. Com a tela apagada ou em outra aba, o navegador para de acompanhar você.',
+  'Avoid handling the phone while moving: use a mount in view and check the route before you leave.':
+    'Evite mexer no celular em movimento: use um suporte à vista e confira a rota antes de sair.',
+  'Keep this tab open and the screen on, or the browser stops following you.':
+    'Deixe esta aba aberta e a tela acesa, ou o navegador para de acompanhar você.',
   "Don't show this notice again": 'Não exibir mais este aviso',
   'Show the notice when navigation starts':
     'Mostrar o aviso ao iniciar a navegação',
-  'Off the route, a way back to it is recalculated automatically when online. Turn this off to follow the planned track exactly, as in an event.':
-    'Fora da rota, um caminho de volta é recalculado automaticamente quando há conexão. Desative para seguir exatamente o trajeto planejado, como numa prova.',
+  'Off the route, a way back is recalculated when online; turn it off to follow the planned track exactly.':
+    'Fora da rota, um caminho de volta é recalculado com conexão; desative para seguir exatamente o trajeto planejado.',
   'Recalculate the route automatically': 'Recalcular a rota automaticamente',
   'Recalculate the route automatically while navigating':
     'Recalcular a rota automaticamente ao navegar',

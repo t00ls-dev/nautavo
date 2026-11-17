@@ -946,6 +946,96 @@ test.describe('phone navigation', () => {
     expect(await fits(page)).toEqual([]);
   });
 
+  /** Visible boxes of the map's overlays that overlap one another. */
+  async function overlaps(page: Page) {
+    return page.evaluate(() => {
+      const boxes = [
+        '#nav-speed',
+        '#nav-reroute',
+        '#nav-resume',
+        '.nav-credits-toggle',
+        '#nav-list-toggle',
+      ].flatMap((selector) => {
+        const element = document.querySelector(selector);
+        const box = element?.getBoundingClientRect();
+        return box && box.width && element!.checkVisibility()
+          ? [[selector, box] as const]
+          : [];
+      });
+      const hits: string[] = [];
+      boxes.forEach(([a, p], i) =>
+        boxes.slice(i + 1).forEach(([b, q]) => {
+          if (
+            p.left < q.right &&
+            q.left < p.right &&
+            p.top < q.bottom &&
+            q.top < p.bottom
+          )
+            hits.push(`${a} over ${b}`);
+        }),
+      );
+      return hits;
+    });
+  }
+  for (const width of [320, 360, 390, 430])
+    for (const language of ['en', 'pt'] as const)
+      test(`off the route and with the list open, nothing covers anything at ${width}px in ${language}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({
+          width,
+          height: width === 320 ? 568 : 844,
+        });
+        await rerouting(page, {
+          ok: false,
+          before: () => page.locator('#language').selectOption(language).then(),
+        });
+        // Moving off the route for 5.5 s: the badge and Recalculate show.
+        await sendFix(page, offRoute(), t0 + 2000, 5, 8);
+        await sendFix(page, offRoute(0.00001), t0 + 7500, 5, 8);
+        await expect(page.locator('#nav-reroute')).toBeVisible();
+        await expect(page.locator('#nav-speed')).toBeVisible();
+        expect(await overlaps(page)).toEqual([]);
+        // The list's grip is a 44 px touch target (#207).
+        const grip = page.locator('#nav-list-toggle');
+        expect((await grip.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        await grip.click();
+        const rows = page.locator('#nav-list li');
+        await expect(rows.first()).toBeVisible();
+        // Every row answers at its text and at its distance, uncovered.
+        for (const row of await rows.all()) {
+          const box = (await row.boundingBox())!;
+          for (const x of [box.x + 8, box.x + box.width - 8])
+            expect(
+              await row.evaluate(
+                (li, [px, py]) =>
+                  li.contains(document.elementFromPoint(px, py)),
+                [x, box.y + box.height / 2],
+              ),
+            ).toBe(true);
+        }
+      });
+
+  for (const [width, height] of [
+    [320, 568],
+    [390, 844],
+  ])
+    for (const language of ['en', 'pt'] as const)
+      test(`Start navigation shows without scrolling at ${width}x${height} in ${language}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height });
+        await setup(page);
+        await page.locator('#language').selectOption(language);
+        await page.locator('#navigate').click();
+        const start = page.locator('#nav-notice-start');
+        await expect(start).toBeVisible();
+        const box = (await start.boundingBox())!;
+        expect(box.y + box.height).toBeLessThanOrEqual(height);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(await fits(page)).toEqual([]);
+      });
+
   test('without map tiles the route still shows with a notice', async ({
     page,
   }) => {

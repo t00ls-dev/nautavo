@@ -63,6 +63,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- On the navigation screen, the speed badge no longer covers Recalculate route, the upcoming list opens above the map's buttons and badges instead of under them, its handle is easier to tap, and on small phones Start navigation shows at once in the shorter start notice.
 - Favorite messages show in Favorite places instead of Saved routes, saving a route says so once, and deleting the saved route on screen no longer leaves its status saying it is saved.
 - Accessibility on touch screens: the language selector of Help and What's new no longer zooms the page on iPhone, disabled buttons keep enough contrast, the point number and remove buttons answer across 44 px, and Navigate is announced by the name it shows.
 - A fitted route (a new, opened or imported route, and Fit route) now stays clear of the map tools, the header and the route panel with its markers and weather icons whole, and is fitted again when the panel opens, closes or changes height, unless you have moved the map since.
