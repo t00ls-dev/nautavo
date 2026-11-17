@@ -195,8 +195,9 @@ export function setupNavigation(deps: {
     overview = $<HTMLButtonElement>('nav-overview'),
     resume = $<HTMLButtonElement>('nav-resume'),
     compassButton = $<HTMLButtonElement>('nav-compass-button');
+  // The accessible name starts with the visible label, so voice control
+  // finds it by what it shows (#217); the tooltip says more.
   iconControl(button, 'navigate', 'Navigate');
-  button.setAttribute('aria-label', 'Start navigation');
   button.title = 'Start navigation';
   iconControl(resume, 'navigate', 'Re-center');
   iconControl(compassButton, 'compass', 'North up', true);

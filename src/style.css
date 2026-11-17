@@ -16,6 +16,8 @@
   --color-soft: #edf5f1;
   --color-text: #1b2934;
   --color-text-muted: #52616d;
+  /* Text of disabled controls: dimmed, still 5:1 on light surfaces. */
+  --color-text-disabled: #586673;
   --color-border: #cbd4dc;
   --color-border-strong: #8795a1;
   --color-primary: #126447;
@@ -126,7 +128,7 @@ button:hover,
 button:disabled {
   border-color: var(--color-border);
   background: #e8edf1;
-  color: #586673;
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 .primary {
@@ -153,7 +155,7 @@ button:disabled {
 .ghost:disabled {
   border-color: transparent;
   background: none;
-  color: #6b7780;
+  color: var(--color-text-disabled);
 }
 button:focus-visible,
 a:focus-visible,
@@ -199,7 +201,7 @@ textarea:focus-visible {
 }
 .file-button:has(input:disabled) {
   border-color: var(--color-border);
-  color: #586673;
+  color: var(--color-text-disabled);
 }
 .file-button input:disabled {
   cursor: not-allowed;
@@ -565,6 +567,14 @@ header button.icon-control {
 .selected .point-number {
   color: #fff;
 }
+/* 44 px touch targets reaching into the column gap, without moving the
+   drawn circle or the field (#217). */
+.point-number::after,
+.point-remove::after {
+  content: '';
+  position: absolute;
+  inset: 0 -6px;
+}
 .selected .point-number::before {
   background: var(--color-primary);
 }
@@ -613,8 +623,12 @@ header button.icon-control {
   color: var(--color-text);
 }
 .point-remove {
+  position: relative;
   width: 40px;
   min-width: 40px;
+}
+.point-remove::after {
+  inset: 0 -3px;
 }
 .point-grip:disabled,
 .point-remove:disabled {
@@ -883,9 +897,10 @@ header button.icon-control {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
-/* A value never wraps: a block too narrow for it moves to the next row. */
+/* The blocks share one row; a value never wraps: a block too narrow for it
+   moves to the next row (#206). */
 .stats > div {
-  flex: 1 1 96px;
+  flex: 1 1 0;
   min-width: fit-content;
   padding: 8px 10px;
   border: 1px solid var(--color-border);
@@ -1790,11 +1805,15 @@ dialog.settings::backdrop {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* The status shows on the handle; Calculate route stays compact at the
+     end of its row (#206). */
+  .status-row {
+    justify-content: flex-end;
+    min-height: 0;
+  }
   #calculate,
   #calculate:disabled {
-    flex: 1 1 auto;
-    justify-content: center;
-    min-height: 48px;
+    min-height: 44px;
     border-radius: var(--radius-large);
     background: var(--color-soft);
   }
@@ -1803,10 +1822,10 @@ dialog.settings::backdrop {
   }
   /* Summary values follow the screen width so each stays on one line. */
   .stats > div {
-    padding: 8px;
+    padding: 8px 6px;
   }
   .stats strong {
-    font-size: clamp(16px, 5vw, 20px);
+    font-size: clamp(15px, 4.7vw, 20px);
   }
   .action-bar,
   .planner.panel-closed .action-bar {
@@ -1860,7 +1879,7 @@ dialog.settings::backdrop {
   #download.primary:disabled {
     border-color: var(--color-border);
     background: #e8edf1;
-    color: #586673;
+    color: var(--color-text-disabled);
   }
   .map-note,
   .planner.panel-closed .map-note {
@@ -2614,7 +2633,7 @@ input[type='range'].range-input:disabled {
     input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
   .planner textarea,
   .planner select,
-  .planner #language,
+  #language,
   .planner .point-fields .point-location-form input {
     font-size: 16px;
   }
@@ -2676,7 +2695,7 @@ input[type='range'].range-input:disabled {
   margin-top: 6px;
 }
 .coloring-group button[aria-disabled='true'] {
-  color: #586673;
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 .coloring-reason {

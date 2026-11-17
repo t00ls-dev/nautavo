@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
-import { base } from './app-helpers';
+import { base, boxSettled } from './app-helpers';
 test.use({ isMobile: true, hasTouch: true });
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -137,6 +137,8 @@ for (const width of [320, 360, 390, 430]) {
       await page.locator('#panel-toggle').tap();
       await page.locator('#location-0').fill('38.72, -9.14');
       await page.locator('#location-0').press('Tab');
+      // The field raised the sheet and Tab lowers it again (#204).
+      await boxSettled(page, '#sheet');
       const input = (await page.locator('#location-0').boundingBox())!,
         form = (await page
           .locator('#points li')
@@ -164,8 +166,8 @@ for (const width of [320, 360, 390, 430]) {
         input.x + input.width + 1,
       );
       expect(remove.x).toBeGreaterThanOrEqual(input.x + input.width);
-      // Add stop, Reverse and Round trip: equal tiles below the list, on the
-      // same edges as the list and Calculate route.
+      // Add stop, Reverse and Round trip: equal tiles below the list, on its
+      // edges; Calculate route is compact, at its right edge (#206).
       const tiles = await page.evaluate(() => {
         const box = (e: Element) => e.getBoundingClientRect();
         // Rounded, without negative zero.
@@ -180,10 +182,7 @@ for (const width of [320, 360, 390, 430]) {
           tops: new Set(buttons.map((b) => Math.round(b.top))).size,
           left: px(buttons[0].left - list.left),
           right: px(buttons[2].right - list.right),
-          calculate: [
-            px(calculate.left - list.left),
-            px(calculate.right - list.right),
-          ],
+          calculate: px(calculate.right - list.right),
           gap: px(buttons[0].top - list.bottom),
         };
       });
@@ -192,7 +191,7 @@ for (const width of [320, 360, 390, 430]) {
         tops: 1,
         left: 0,
         right: 0,
-        calculate: [0, 0],
+        calculate: 0,
         gap: 16,
       });
       for (const control of ['.point-grip', '.point-remove', '.point-number'])

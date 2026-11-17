@@ -56,7 +56,12 @@ export function setupPanel(map: PlannerMap): void {
     size: SheetSize = 'half';
   open = readSession(SESSION.panelOpen) !== 'false';
   if (readSession(SESSION.panelSize) === 'full') size = 'full';
+  /** The height a focused point field raised the sheet from (#204). */
+  let raisedFrom: SheetSize | null = null;
+  let lowerTimer = 0;
+  // Called when the traveler moves the sheet: their height wins.
   const remember = () => {
+    raisedFrom = null;
     writeSession(SESSION.panelOpen, String(open));
     writeSession(SESSION.panelSize, size);
   };
@@ -158,6 +163,58 @@ export function setupPanel(map: PlannerMap): void {
   layout();
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', layout);
+
+  // On the sheet the route's numbers come first, above the points (#206).
+  // The element moves rather than being reordered by CSS, so the focus order
+  // follows what is seen.
+  const summary = $('summary'),
+    points = panel.querySelector('.points-section')!,
+    afterSummary = $('trip-options');
+  const placeSummary = () =>
+    compactLayout() ? points.before(summary) : afterSummary.before(summary);
+  placeSummary();
+  matchMedia(COMPACT).addEventListener('change', placeSummary);
+
+  // A point field brings its menu into view (#204): on the sheet, focusing
+  // it raises the sheet to full height and scrolls the field to the top of
+  // the panel. Leaving the point fields puts the sheet back, unless the
+  // traveler moved it meanwhile: at once when focus moves elsewhere, and a
+  // moment later when it just goes (a tap on the menu that blurred the field
+  // first, as on iOS), so that tap still lands where it was aimed.
+  const fields = $('points');
+  const inField = (element: Element | null) =>
+    !!element && fields.contains(element) && element.matches('input');
+  const lower = () => {
+    clearTimeout(lowerTimer);
+    if (raisedFrom === null || inField(document.activeElement)) return;
+    if (open && size === 'full') {
+      size = raisedFrom;
+      layout();
+    }
+    raisedFrom = null;
+  };
+  fields.addEventListener('focusin', (event) => {
+    const field = event.target as HTMLElement;
+    if (!compactLayout() || !open || !inField(field)) return;
+    clearTimeout(lowerTimer);
+    if (raisedFrom === null && size !== 'full') {
+      raisedFrom = size;
+      size = 'full';
+      layout();
+    }
+    const top =
+      field.getBoundingClientRect().top -
+      panel.getBoundingClientRect().top +
+      panel.scrollTop;
+    panel.scrollTo({ top: top - 8 });
+  });
+  fields.addEventListener('focusout', (event) => {
+    if (raisedFrom === null) return;
+    clearTimeout(lowerTimer);
+    if (event.relatedTarget) {
+      if (!inField(event.relatedTarget as Element)) lower();
+    } else lowerTimer = window.setTimeout(lower, 300);
+  });
 
   const more = $('more-actions');
   more.onclick = () => {
