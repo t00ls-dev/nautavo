@@ -3827,29 +3827,43 @@ dialog:modal:not(.nav-screen) {
 .nav-bar:has(.nav-list:not([hidden])) {
   z-index: 4;
 }
-/* The upcoming list (#137): a handle on the bar, a panel over the map. */
-.nav-list-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  /* A 44 px touch target around the drawn grip (#207). */
-  min-height: var(--control);
-  margin: -4px 0 0;
-  padding: 0;
-  border: 0;
-  background: none;
+/* The upcoming list (#137): the whole bar opens it, a chevron beside the
+   time says so, and it shows as a panel over the map. */
+.nav-bar {
   cursor: pointer;
+}
+/* Drags on the bar open and close the list, not the page. */
+.nav-bar-row,
+.nav-status {
   touch-action: none;
 }
-.nav-list-grip {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--color-border);
+/* Upcoming, at the end of the status line where there is room at 320 px
+   whatever the time and distance: a labelled pill with a chevron, while the
+   whole bar stays its touch target. */
+.nav-list-toggle {
+  flex: none;
+  gap: 2px;
+  min-width: 0;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 8px 0 12px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-soft);
+  color: var(--color-primary-strong);
+  font-size: 15px;
+  font-weight: 650;
 }
-.nav-list-toggle[aria-expanded='true'] .nav-list-grip {
-  background: var(--color-primary);
+.nav-list-toggle:hover {
+  background: var(--color-soft);
+}
+.nav-list-toggle .button-icon {
+  width: 20px;
+  height: 20px;
+  transition: transform 150ms ease;
+}
+.nav-list-toggle[aria-expanded='true'] .button-icon {
+  transform: rotate(180deg);
 }
 .nav-list {
   position: absolute;
@@ -3941,7 +3955,7 @@ dialog:modal:not(.nav-screen) {
   margin-top: 10px;
 }
 .nav-replay[hidden],
-.nav-screen.replaying .nav-status {
+.nav-screen.replaying #nav-fix {
   display: none;
 }
 .nav-replay button {
@@ -3962,6 +3976,7 @@ dialog:modal:not(.nav-screen) {
 }
 .nav-status {
   display: flex;
+  align-items: center;
   gap: 14px;
   margin-top: 8px;
   color: var(--color-text-muted);

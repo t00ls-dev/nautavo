@@ -996,10 +996,8 @@ test.describe('phone navigation', () => {
         await expect(page.locator('#nav-reroute')).toBeVisible();
         await expect(page.locator('#nav-speed')).toBeVisible();
         expect(await overlaps(page)).toEqual([]);
-        // The list's grip is a 44 px touch target (#207).
-        const grip = page.locator('#nav-list-toggle');
-        expect((await grip.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-        await grip.click();
+        // The whole bar is the list's touch target (#207).
+        await page.locator('#nav-time').click();
         const rows = page.locator('#nav-list li');
         await expect(rows.first()).toBeVisible();
         // Every row answers at its text and at its distance, uncovered.
@@ -1167,8 +1165,14 @@ test.describe('phone navigation', () => {
     await page.keyboard.press('Escape');
     await expect(list).toBeHidden();
     await expect(page.locator('#nav-screen')).toBeVisible();
-    // A drag up on the handle opens it, a drag down closes it.
-    const box = (await handle.boundingBox())!;
+    // The whole bar opens and closes it, not only its chevron.
+    await page.locator('#nav-time').click();
+    await expect(list).toBeVisible();
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('#nav-rest').click();
+    await expect(list).toBeHidden();
+    // A drag up on the bar opens it, a drag down closes it.
+    const box = (await page.locator('#nav-time').boundingBox())!;
     const x = box.x + box.width / 2,
       y = box.y + box.height / 2;
     await page.mouse.move(x, y);
@@ -1465,7 +1469,9 @@ test.describe('replay on the navigation screen', () => {
     );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
-    await expect(page.locator('.nav-status')).toBeHidden();
+    // No GPS status in a replay; Upcoming stays (#207).
+    await expect(page.locator('#nav-fix')).toBeHidden();
+    await expect(page.locator('#nav-list-toggle')).toBeVisible();
     // About 610 m along (30 % of 2 km): the right turn at 1 km comes next.
     await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
     await expect(page.locator('#nav-distance')).toHaveText('400 m');

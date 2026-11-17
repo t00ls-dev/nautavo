@@ -9,7 +9,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 ### Added
 
 - Favorite places: choose Save as favorite in a point's field menu, or Add favorite in Favorite places, name it and pick its icon (Home, Work or Favorite), then pick the place in any point's menu, with its address and distance, no search and offline; edit or delete them in Favorite places. Backups now include favorites (format version 2); older backups still import.
-- While navigating, tap or drag up the handle on the bottom bar to list the turns and route points ahead, with their distances and arrival times; navigation goes on underneath.
+- While navigating, tap or drag up the bottom bar, or tap its Upcoming button, to list the turns and route points ahead, with their distances and arrival times; navigation goes on underneath.
 - Spoken directions while navigating, off by default: turn them on in the start notice, in Settings or with the speaker button on the navigation screen, and the phone's own voice says each turn ahead, the arrival, leaving the route and a recalculated route, in the interface language, with no request.
 - If the page reloads during navigation (a phone discarding the tab, an accidental refresh), it offers to continue on the same route with one tap, even without a connection; this tab keeps the route and the distance travelled for that, never your position, until you end the navigation, arrive or after 30 minutes.
 - Imported tracks follow the road actually taken: after an import, the track is aligned to the roads wherever they match it closely, without GPS noise and glitches, with Keep the recorded track to undo it, and stretches no road follows are listed and highlighted on the map as places where the route cannot be followed exactly.
@@ -63,7 +63,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
-- On the navigation screen, the speed badge no longer covers Recalculate route, the upcoming list opens above the map's buttons and badges instead of under them, its handle is easier to tap, and on small phones Start navigation shows at once in the shorter start notice.
+- On the navigation screen, the speed badge no longer covers Recalculate route, the upcoming list opens above the map's buttons and badges instead of under them, the whole bottom bar opens it, and on small phones Start navigation shows at once in the shorter start notice.
 - Favorite messages show in Favorite places instead of Saved routes, saving a route says so once, and deleting the saved route on screen no longer leaves its status saying it is saved.
 - Accessibility on touch screens: the language selector of Help and What's new no longer zooms the page on iPhone, disabled buttons keep enough contrast, the point number and remove buttons answer across 44 px, and Navigate is announced by the name it shows.
 - A fitted route (a new, opened or imported route, and Fit route) now stays clear of the map tools, the header and the route panel with its markers and weather icons whole, and is fitted again when the panel opens, closes or changes height, unless you have moved the map since.

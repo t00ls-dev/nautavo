@@ -1244,16 +1244,26 @@ export function setupNavigation(deps: {
     );
     list.replaceChildren(...rows);
   }
-  // A tap toggles; a drag up opens and a drag down closes.
+  // The whole bottom bar opens the list, its Upcoming button saying so; End,
+  // the replay controls and the list itself keep their own taps. A tap
+  // toggles; a drag up opens and a drag down closes.
+  const bar = listToggle.closest<HTMLElement>('.nav-bar')!;
+  listToggle.append(icon('chevron'));
+  const ownTap = (target: EventTarget | null) =>
+    target instanceof Element &&
+    !!target.closest(
+      'button:not(#nav-list-toggle), input, select, a, #nav-list',
+    );
   let dragFrom: number | null = null,
     dragged = false;
-  listToggle.addEventListener('pointerdown', (e) => {
+  bar.addEventListener('pointerdown', (e) => {
+    if (ownTap(e.target)) return;
     dragFrom = e.clientY;
     dragged = false;
-    // The release counts even when the finger has left the handle.
-    listToggle.setPointerCapture(e.pointerId);
+    // The release counts even when the finger has left the bar.
+    bar.setPointerCapture(e.pointerId);
   });
-  listToggle.addEventListener('pointerup', (e) => {
+  bar.addEventListener('pointerup', (e) => {
     if (dragFrom === null) return;
     const dy = e.clientY - dragFrom;
     dragFrom = null;
@@ -1261,10 +1271,11 @@ export function setupNavigation(deps: {
     dragged = true;
     setList(dy < 0);
   });
-  listToggle.onclick = () => {
+  bar.addEventListener('click', (e) => {
+    if (ownTap(e.target)) return;
     if (dragged) dragged = false;
     else setList(!listOpen);
-  };
+  });
   // Escape closes the list first, and only then navigation.
   screen.addEventListener('cancel', (e) => {
     if (!listOpen) return;
