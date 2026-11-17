@@ -2,7 +2,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
 import { weatherResponse } from './weather-fixture';
 import { decimalYear, magneticDeclination } from '../src/declination';
-import { base } from './app-helpers';
+import { base, osrmFirst } from './app-helpers';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
 const lon = (i: number) => -43.24 + i * 0.001;
@@ -69,7 +69,8 @@ async function setup(page: Page, road = 'Estrada das Furnas') {
       },
     }),
   );
-  await page.goto(base);
+  // The maneuvers come from the OSRM mock, so OSRM routes first.
+  await page.goto(osrmFirst());
   await page.locator('#language').selectOption('en');
   await page.locator('#location-0').fill(start);
   await page.locator('#location-0').press('Tab');

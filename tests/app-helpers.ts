@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test';
+import { defaults, encodeState } from '../src/core';
 import { encodePolyline } from '../src/road-attributes';
 
 /** The development server Playwright starts (playwright.config.ts). */
@@ -78,6 +79,15 @@ export function valhallaAnswer(
     },
   };
 }
+/**
+ * The app with no points and Prefer main roads off, so OSRM routes first:
+ * for specs whose OSRM mock carries the maneuvers they test.
+ */
+export const osrmFirst = () => {
+  const state = defaults();
+  state.prefer = false;
+  return base + encodeState(state);
+};
 /** The number of points of an OSRM or Valhalla route request, else null. */
 export function routedPoints(url: string): number | null {
   if (url.includes('/route/v1/driving/')) return osrmPoints(url).length;
