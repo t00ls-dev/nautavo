@@ -92,6 +92,49 @@ async function operation<T>(
 export function libraryKey(name: string): string {
   return name.trim().normalize('NFKC').toLocaleLowerCase('en');
 }
+/** Deletes an entry and returns it as it was, in one transaction. */
+async function take<T>(name: Store, id: string): Promise<T | undefined> {
+  const db = await database();
+  return new Promise<T | undefined>((resolve, reject) => {
+    const tx = db.transaction(name, 'readwrite');
+    const store = tx.objectStore(name);
+    let taken: T | undefined;
+    const read = store.get(id);
+    read.onsuccess = () => {
+      taken = read.result as T | undefined;
+      if (taken) store.delete(id);
+    };
+    tx.oncomplete = () => resolve(taken);
+    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+/**
+ * A deleted entry can come back only to a free name: one saved again
+ * meanwhile is never overwritten (#205).
+ */
+export const canRestore = (existing: unknown): boolean =>
+  existing === undefined;
+/**
+ * Puts a deleted entry back exactly as it was (undo), unless its name was
+ * taken meanwhile; says whether it did.
+ */
+async function putBack(name: Store, record: { id: string }): Promise<boolean> {
+  const db = await database();
+  return new Promise<boolean>((resolve, reject) => {
+    const tx = db.transaction(name, 'readwrite');
+    const store = tx.objectStore(name);
+    let restored = false;
+    const read = store.get(record.id);
+    read.onsuccess = () => {
+      restored = canRestore(read.result);
+      if (restored) store.put(record);
+    };
+    tx.oncomplete = () => resolve(restored);
+    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error);
+  });
+}
 export async function listSavedRoutes(): Promise<SavedRoute[]> {
   const rows = await operation<SavedRoute[]>('routes', 'readonly', (s) =>
     s.getAll(),
@@ -163,9 +206,10 @@ export async function markDirectionsChecked(id: string): Promise<void> {
     );
 }
 
-export async function deleteSavedRoute(id: string): Promise<void> {
-  await operation('routes', 'readwrite', (s) => s.delete(id));
-}
+/** Deletes a saved route and returns it, so it can be restored. */
+export const deleteSavedRoute = (id: string) => take<SavedRoute>('routes', id);
+export const restoreSavedRoute = (record: SavedRoute) =>
+  putBack('routes', record);
 export async function listFavorites(): Promise<Favorite[]> {
   const rows = await operation<Favorite[]>('favorites', 'readonly', (s) =>
     s.getAll(),
@@ -247,9 +291,10 @@ export async function editFavorite(
     tx.onabort = () => reject(tx.error);
   });
 }
-export async function deleteFavorite(id: string): Promise<void> {
-  await operation('favorites', 'readwrite', (s) => s.delete(id));
-}
+/** Deletes a favorite and returns it, so it can be restored. */
+export const deleteFavorite = (id: string) => take<Favorite>('favorites', id);
+export const restoreFavorite = (record: Favorite) =>
+  putBack('favorites', record);
 
 /** A backup's contents: saved routes and, from version 2, favorites. */
 export interface Library {

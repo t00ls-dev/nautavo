@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockRouting } from './app-helpers';
+import { base, libraryEntry, mockRouting } from './app-helpers';
 import { mockBasemap } from './map-helpers';
 
 const start = '-22.930929, -43.238286',
@@ -91,10 +91,16 @@ test('a point saved as a favorite is reused, renamed and deleted, never in the l
   const edit = page.getByRole('dialog', { name: 'Edit favorite' });
   await edit.locator('#favorite-name').fill('My home');
   await edit.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.locator('.favorite-name')).toHaveText('My home');
+  await expect(page.locator('#favorite-list .library-open strong')).toHaveText(
+    'My home',
+  );
   await page.getByRole('button', { name: 'Delete favorite: My home' }).click();
   await expect(page.locator('#favorite-count')).toHaveText('(0)');
-  await expect(page.locator('#library-status')).toHaveText('Favorite deleted.');
+  // Said in Favorite places, not in Saved routes (#205).
+  await expect(page.locator('#favorite-status')).toContainText(
+    'Favorite deleted.',
+  );
+  await expect(page.locator('#library-status')).toBeEmpty();
 });
 
 test('editing a favorite moves it by search or coordinates, and typing filters the menu', async ({
@@ -133,7 +139,9 @@ test('editing a favorite moves it by search or coordinates, and typing filters t
   await expect(where).toHaveValue(/Padaria Real/);
   await sheet.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet).toBeHidden();
-  const home = page.locator('.favorite-row').filter({ hasText: 'Home' });
+  const home = page
+    .locator('#favorite-list .library-row')
+    .filter({ hasText: 'Home' });
   await expect(home.locator('small')).toContainText('Padaria Real');
   // Text typed but not chosen is refused; pasted coordinates are taken.
   await page.getByRole('button', { name: 'Edit favorite: Home' }).click();
@@ -155,7 +163,7 @@ test('Add favorite in Favorite places starts an empty sheet, and the menu lists 
 }) => {
   await routed(page);
   await page.locator('.favorites > summary').click();
-  await expect(page.locator('.favorites .hint')).toHaveText(
+  await expect(page.locator('#favorite-list .hint')).toHaveText(
     "No favorites. Add one here or from a point's menu.",
   );
   await page.getByRole('button', { name: 'Add favorite' }).click();
@@ -173,7 +181,7 @@ test('Add favorite in Favorite places starts an empty sheet, and the menu lists 
   await sheet.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet).toBeHidden();
   await expect(page.locator('#favorite-count')).toHaveText('(1)');
-  await expect(page.locator('#library-status')).toHaveText('Favorite saved.');
+  await expect(page.locator('#favorite-status')).toHaveText('Favorite saved.');
   // The route is unchanged, and the point menu shows the favorite under
   // its heading, below the commands, with its place on a second line.
   await expect(page.locator('#location-0')).toHaveValue(start);
@@ -310,9 +318,13 @@ for (const [width, language] of [
     expect(await fits('#suggestions-1 [role=option]')).toEqual([]);
     await page.locator('.saved-routes > summary').click();
     await page.locator('.favorites > summary').click();
-    expect(await fits('.favorite-row, .favorite-row button')).toEqual([]);
+    expect(await fits('.library-row, .library-row button')).toEqual([]);
     // The sheet fits too, with its three icon choices on one row.
-    await page.locator('.favorite-row button').first().click();
+    // Edit: the first action after the name, in either language.
+    await page
+      .locator('#favorite-list .library-row button:not(.library-open)')
+      .first()
+      .click();
     expect(
       await fits('#favorite-dialog, #favorite-dialog .favorite-kind'),
     ).toEqual([]);
@@ -322,13 +334,45 @@ for (const [width, language] of [
         e.map((k) => Math.round(k.getBoundingClientRect().top)),
       );
     expect(new Set(tops).size).toBe(1);
-    // The name stays on one line (shortened), beside its buttons.
+    // The name takes at most two lines (then shortened), beside its buttons.
     const lines = await page
-      .locator('.favorite-name')
+      .locator('#favorite-list .library-open strong')
       .evaluate(
         (e) =>
           e.getBoundingClientRect().height /
           parseFloat(getComputedStyle(e).lineHeight),
       );
-    expect(lines).toBeLessThan(1.5);
+    expect(lines).toBeLessThan(2.5);
   });
+
+test('a deleted favorite comes back exactly with Undo, said in Favorite places', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await routed(page);
+  await saveFavorite(page, 1, 'Grumari beach');
+  const saved = await libraryEntry(page, 'favorites', 'grumari beach');
+  expect(saved).toMatchObject({ name: 'Grumari beach', kind: 'place' });
+  await page.locator('.favorites > summary').click();
+  // Each row: the name as its main button, and 44 px icon actions.
+  const row = page.locator('#favorite-list .library-row');
+  await expect(row.locator('.library-open')).toHaveAccessibleName(
+    'Show on map: Grumari beach',
+  );
+  for (const button of await row.getByRole('button').all()) {
+    const box = (await button.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
+  }
+  await page
+    .getByRole('button', { name: 'Delete favorite: Grumari beach' })
+    .click();
+  await expect(page.locator('#favorite-count')).toHaveText('(0)');
+  expect(await libraryEntry(page, 'favorites', 'grumari beach')).toBeNull();
+  const message = page.locator('#favorite-status');
+  await expect(message).toContainText('Favorite deleted.');
+  await message.getByRole('button', { name: 'Undo' }).click();
+  await expect(message).toHaveText('Favorite restored.');
+  await expect(page.locator('#favorite-count')).toHaveText('(1)');
+  expect(await libraryEntry(page, 'favorites', 'grumari beach')).toEqual(saved);
+});

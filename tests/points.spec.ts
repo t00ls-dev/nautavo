@@ -15,6 +15,7 @@ import {
   mockRouting,
   osrmAnswer,
   osrmPoints,
+  libraryEntry,
   routedPoints,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
@@ -960,13 +961,13 @@ test.describe('servers suggested by a link', () => {
   });
 });
 
-test('GPX name is visible and names the downloaded file, metadata and track', async ({
+test('the route name is visible and names the downloaded file, metadata and track', async ({
   page,
 }) => {
   await setup(page);
   await fillPair(page);
   const name = 'Passeio <Alto> & Grumari';
-  await expect(page.locator('#route-name')).toBeVisible();
+  await expect(page.getByLabel('Route name')).toBeVisible();
   await page.locator('#route-name').fill(name);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -991,6 +992,91 @@ test('GPX name is visible and names the downloaded file, metadata and track', as
     page.locator('#download').click(),
   ]);
   expect(fallback.suggestedFilename()).toBe('start-to-destination.gpx');
+});
+
+const saveTexts = {
+  en: {
+    saved: 'Route saved on this device.',
+    ready: 'Route ready.',
+    delete: 'Delete saved route: Weekend route',
+    deleted: 'Saved route deleted.',
+    undo: 'Undo',
+    restored: 'Saved route restored.',
+  },
+  pt: {
+    saved: 'Rota salva neste dispositivo.',
+    ready: 'Rota pronta.',
+    delete: 'Excluir rota salva: Weekend route',
+    deleted: 'Rota salva excluída.',
+    undo: 'Desfazer',
+    restored: 'Rota salva restaurada.',
+  },
+};
+for (const language of ['en', 'pt'] as const)
+  test(`a deleted saved route comes back exactly with Undo, at 320 px in ${language}`, async ({
+    page,
+  }) => {
+    const say = saveTexts[language];
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.clock.install();
+    await setup(page);
+    await page.locator('#language').selectOption(language);
+    await fillPair(page);
+    await page.locator('#more-actions').click();
+    await page.locator('#route-name').fill('Weekend route');
+    await page.locator('#save-route').click();
+    await expect(page.locator('#status')).toHaveText(say.saved);
+    const saved = await libraryEntry(page, 'routes', 'weekend route');
+    expect(saved).not.toBeNull();
+    await page.locator('.saved-routes > summary').click();
+    const message = page.locator('#library-status');
+    // The save is said once, at the top (#213).
+    await expect(message).toBeEmpty();
+    await page.getByRole('button', { name: say.delete, exact: true }).click();
+    await expect(page.locator('#saved-count')).toHaveText('(0)');
+    expect(await libraryEntry(page, 'routes', 'weekend route')).toBeNull();
+    // The route on screen is no longer said to be saved.
+    await expect(page.locator('#status')).toHaveText(say.ready);
+    await expect(message).toContainText(say.deleted);
+    await message.getByRole('button', { name: say.undo }).click();
+    await expect(message).toHaveText(say.restored);
+    await expect(page.locator('#saved-count')).toHaveText('(1)');
+    expect(await libraryEntry(page, 'routes', 'weekend route')).toEqual(saved);
+    // Undo goes after 8 s; the message stays.
+    await page.getByRole('button', { name: say.delete, exact: true }).click();
+    const undo = message.getByRole('button', { name: say.undo });
+    await expect(undo).toBeVisible();
+    await page.clock.runFor(8100);
+    await expect(undo).toBeHidden();
+    await expect(message).toHaveText(say.deleted);
+  });
+
+test('Undo never overwrites a route saved again under the same name', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await setup(page);
+  await fillPair(page);
+  await page.locator('#more-actions').click();
+  await page.locator('#route-name').fill('Weekend route');
+  await page.locator('#save-route').click();
+  await expect(page.locator('#saved-count')).toHaveText('(1)');
+  await page.locator('.saved-routes > summary').click();
+  await page
+    .getByRole('button', { name: 'Delete saved route: Weekend route' })
+    .click();
+  await expect(page.locator('#saved-count')).toHaveText('(0)');
+  await page.locator('#save-route').click();
+  await expect(page.locator('#saved-count')).toHaveText('(1)');
+  const again = await libraryEntry(page, 'routes', 'weekend route');
+  await page
+    .locator('#library-status')
+    .getByRole('button', { name: 'Undo' })
+    .click();
+  await expect(page.locator('#library-status')).toHaveText(
+    'A saved route with this name already exists.',
+  );
+  expect(await libraryEntry(page, 'routes', 'weekend route')).toEqual(again);
 });
 
 test('only explicitly saved named routes persist, and reopening does not reroute', async ({

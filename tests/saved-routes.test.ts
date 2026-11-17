@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { defaults, type Route } from '../src/core';
 import {
+  canRestore,
   exportLibraryBackup,
   libraryKey,
   parseLibraryBackup,
@@ -181,4 +182,10 @@ it("keeps a favorite's address, and rejects one too long", () => {
   expect(() => parseLibraryBackup(JSON.stringify(backup))).toThrow(
     'Invalid favorite in the backup.',
   );
+});
+
+it('restores a deleted entry only to a free name (#205)', () => {
+  expect(canRestore(undefined)).toBe(true);
+  // Saved again under that name meanwhile: Undo leaves it as it is.
+  expect(canRestore(record())).toBe(false);
 });
