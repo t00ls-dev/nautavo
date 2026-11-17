@@ -3833,19 +3833,17 @@ dialog:modal:not(.nav-screen) {
   cursor: pointer;
 }
 /* Drags on the bar open and close the list, not the page. */
-.nav-bar-row,
-.nav-status {
+.nav-eta,
+#nav-fix {
   touch-action: none;
 }
 /* Upcoming, at the end of the status line where there is room at 320 px
    whatever the time and distance: a labelled pill with a chevron, while the
    whole bar stays its touch target. */
 .nav-list-toggle {
-  flex: none;
   gap: 2px;
   min-width: 0;
   min-height: 32px;
-  margin-left: auto;
   padding: 0 8px 0 12px;
   border: 0;
   border-radius: 16px;
@@ -3911,10 +3909,29 @@ dialog:modal:not(.nav-screen) {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
-.nav-bar-row {
-  display: flex;
+/* Two columns: the time and the GPS status on the left; End and Upcoming
+   share the right one, so their edges line up in both languages. The rows'
+   wrappers step aside for the grid; the replay controls span both. */
+.nav-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
   align-items: center;
-  gap: 12px;
+}
+.nav-bar-row,
+.nav-status {
+  display: contents;
+}
+.nav-eta,
+#nav-fix {
+  grid-column: 1;
+}
+.nav-stop,
+.nav-list-toggle {
+  grid-column: 2;
+}
+.nav-replay {
+  grid-column: 1 / -1;
 }
 .nav-eta {
   flex: 1;
@@ -3974,11 +3991,10 @@ dialog:modal:not(.nav-screen) {
   min-height: 44px;
   font-size: 16px;
 }
-.nav-status {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+.nav-status > * {
   margin-top: 8px;
+}
+#nav-fix {
   color: var(--color-text-muted);
   font-size: 13px;
   white-space: nowrap;

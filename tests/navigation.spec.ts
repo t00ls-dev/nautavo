@@ -996,6 +996,11 @@ test.describe('phone navigation', () => {
         await expect(page.locator('#nav-reroute')).toBeVisible();
         await expect(page.locator('#nav-speed')).toBeVisible();
         expect(await overlaps(page)).toEqual([]);
+        // End and Upcoming share the right column: their edges line up.
+        const end = (await page.locator('#nav-stop').boundingBox())!,
+          upcoming = (await page.locator('#nav-list-toggle').boundingBox())!;
+        expect(Math.abs(end.x - upcoming.x)).toBeLessThanOrEqual(1);
+        expect(Math.abs(end.width - upcoming.width)).toBeLessThanOrEqual(1);
         // The whole bar is the list's touch target (#207).
         await page.locator('#nav-time').click();
         const rows = page.locator('#nav-list li');
