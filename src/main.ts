@@ -1044,7 +1044,14 @@ async function addDirections(route: Route) {
         (done, all) => show(`Finding directions… ${done}/${all}`),
       );
     else {
-      const fresh = await calculate(structuredClone(state), shown);
+      // The router that made the saved route is asked first, so the fresh
+      // route can follow the same road.
+      const fresh = await calculate(
+        structuredClone(state),
+        shown,
+        null,
+        route.provider.startsWith('Valhalla') ? 'valhalla' : 'osrm',
+      );
       steps = sameRoad(route, fresh) ? fresh.steps : null;
     }
     if (!shown()) return;

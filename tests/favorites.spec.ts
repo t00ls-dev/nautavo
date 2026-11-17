@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockOsrm } from './app-helpers';
+import { base, mockRouting } from './app-helpers';
 import { mockBasemap } from './map-helpers';
 
 const start = '-22.930929, -43.238286',
@@ -9,7 +9,7 @@ const start = '-22.930929, -43.238286',
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await mockBasemap(page);
-  await mockOsrm(page);
+  await mockRouting(page);
 });
 
 /** A routed pair of points, then the point menu of field `i` opened. */

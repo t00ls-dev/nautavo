@@ -144,6 +144,7 @@ export function osrmUrl(state: State, startHeading?: number | null): string {
 export async function osrmRoute(
   state: State,
   startHeading?: number | null,
+  provider = 'OSRM',
 ): Promise<Route> {
   const d = (await json(osrmUrl(state, startHeading))) as OsrmResponse;
   if (d.code !== 'Ok' || !d.routes?.length)
@@ -174,7 +175,7 @@ export async function osrmRoute(
       ),
       distance: r.distance,
       duration: r.duration,
-      provider: 'OSRM',
+      provider,
       snapped: d.waypoints.map((w) => [w.location[1], w.location[0]]),
     };
   });
@@ -287,6 +288,7 @@ interface ValhallaResponse {
 export async function valhallaRoute(
   state: State,
   startHeading?: number | null,
+  provider = 'Valhalla',
 ): Promise<Route> {
   const heading =
     typeof startHeading === 'number' && Number.isFinite(startHeading)
@@ -311,7 +313,14 @@ export async function valhallaRoute(
   )) as ValhallaResponse;
   if (!d.trip || d.trip.status !== 0)
     throw new Error(d.error || 'Valhalla could not find a route.');
-  return tripRoute(d.trip, 'Valhalla (fallback)');
+  const route = tripRoute(d.trip, provider);
+  // Each leg starts and ends where Valhalla placed the route points on the
+  // road, as OSRM's waypoints say.
+  route.snapped = [
+    route.segments[0][0],
+    ...route.segments.map((segment) => segment.at(-1)!),
+  ];
+  return route;
 }
 /**
  * A route from a Valhalla trip (`/route` or `/trace_route`): legs, maneuvers
@@ -353,21 +362,36 @@ function tripRoute(
     };
   });
 }
+/** The router asked first; the other one is the fallback. */
+export type Router = 'osrm' | 'valhalla';
+const ROUTERS = {
+  osrm: [osrmRoute, 'OSRM'],
+  valhalla: [valhallaRoute, 'Valhalla'],
+} as const;
+/**
+ * One route on the routing queue: the primary router, then the other one
+ * once after a pause, with no retries. Prefer main roads asks Valhalla first,
+ * since only its costing can favor highways (`use_highways`); otherwise OSRM
+ * is the primary.
+ */
 export async function calculate(
   state: State,
   isCurrent: () => boolean = () => true,
   startHeading?: number | null,
+  primary: Router = state.prefer ? 'valhalla' : 'osrm',
 ): Promise<Route> {
+  const [first, firstName] = ROUTERS[primary],
+    [second, secondName] = ROUTERS[primary === 'osrm' ? 'valhalla' : 'osrm'];
   return routing.run(async () => {
     if (!isCurrent()) throw new Error('Superseded route');
     try {
-      return await osrmRoute(state, startHeading);
+      return await first(state, startHeading, firstName);
     } catch (e) {
       if (!isCurrent()) throw e;
       await pause(1500);
       if (!isCurrent()) throw e;
       try {
-        return await valhallaRoute(state, startHeading);
+        return await second(state, startHeading, `${secondName} (fallback)`);
       } catch {
         throw new Error(
           `No route available. Check the points or try again later. ${routingFailure(e)} The fallback server also failed.`,
@@ -1270,8 +1294,9 @@ export function valhallaTrace(
 /**
  * A navigation recalculation (#31): one route from the traveler's position
  * (from `gpsPoint`) to a point on the planned route,
- * with the route's servers and options, on the routing queue with the usual
- * OSRM → Valhalla fallback and no retries. The caller limits how often.
+ * with the route's servers and options, on the routing queue with the
+ * OSRM → Valhalla fallback and no retries, whatever Prefer main roads says:
+ * the way back is short and needed fast. The caller limits how often.
  */
 export function navigationRoute(
   state: State,
@@ -1290,5 +1315,6 @@ export function navigationRoute(
     },
     isCurrent,
     heading,
+    'osrm',
   );
 }

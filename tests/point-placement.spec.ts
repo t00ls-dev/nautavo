@@ -1,7 +1,7 @@
 import { mockBasemap, mapCanvas } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockOsrm } from './app-helpers';
+import { base, mockRouting } from './app-helpers';
 
 const destination = '-23.050160, -43.535240';
 
@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 });
 async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
   await mockBasemap(page);
-  await mockOsrm(page, { legs: [{ steps: [] }] });
+  await mockRouting(page, { legs: [{ steps: [] }] });
   const state = defaults();
   state.points = [
     { name: 'Start', coord: [-22.930929, -43.238286] },

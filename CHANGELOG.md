@@ -29,6 +29,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Prefer main roads now changes the route, not only the review: with it on (the default), routes come from the Valhalla router favoring highways, where OSRM sometimes cut through local roads, with OSRM if Valhalla fails. Turn it off for OSRM's route. In Settings, Valhalla fallback is now Valhalla server.
 - Export backup and Import backup moved from Saved routes to Settings, where one file keeps your saved routes and favorite places.
 - On an imported track, Calculate route keeps that track and adds directions from its roads, instead of recalculating the whole route through its points; editing a point recalculates only about 1 km on each side of it; and Copy link says that the link recalculates the route, so share the GPX for the exact track.
 - Satellite always shows the map's labels: the Labels switch and the note about non-commercial imagery left the Map layers menu (the imagery license stays in the map credits, and Settings still offers the EOX 2016 edition).
