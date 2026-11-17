@@ -3,7 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { defaults, decodeState, encodeState } from '../src/core';
 import { weatherResponse } from './weather-fixture';
 import { chooseUnits, setSpeed } from './unit-settings';
-import { coloringKinds, holdMap, overlayCount } from './map-helpers';
+import {
+  closePanel,
+  coloringKinds,
+  holdMap,
+  overlayCount,
+} from './map-helpers';
 import { base } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
@@ -898,7 +903,7 @@ for (const mobile of [false, true])
     if (mobile) {
       // The sheet closed shows the map; a long press opens the menu.
       if (await page.locator('#route-panel').isVisible())
-        await page.locator('#panel-toggle').click();
+        await closePanel(page);
       await holdMap(page, 160, 200);
     } else
       await page

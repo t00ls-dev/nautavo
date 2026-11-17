@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from '@playwright/test';
+import { expect, type BrowserContext, type Page } from '@playwright/test';
 
 /** 256 px tiles: Terrarium sea level for terrain, a green field for imagery. */
 const TERRAIN_PNG =
@@ -146,4 +146,17 @@ export async function coloringKinds(page: Page): Promise<string[]> {
 /** Number of lines an overlay draws (a highlighted stretch, the coloring). */
 export async function overlayCount(page: Page, source: string) {
   return (await overlayFeatures(page, source)).length;
+}
+/**
+ * Closes the route panel on a phone and waits until the fitted route is
+ * framed again in the map it uncovers, so the map then stays put.
+ */
+export async function closePanel(page: Page) {
+  const marker = page.locator('.route-marker').first();
+  const before = (await marker.boundingBox())!.y;
+  await page.locator('#panel-toggle').click();
+  await expect
+    .poll(async () => (await marker.boundingBox())!.y)
+    .not.toBe(before);
+  await mapIdle(page);
 }

@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mapIdle, mapReady, mockBasemap } from './map-helpers';
+import { closePanel, mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, decodeState } from '../src/core';
 import { base, mockRouting } from './app-helpers';
+import { weatherResponse } from './weather-fixture';
 const ipUrl = 'https://ipwho.is/**';
 const position = { latitude: 48.1234567, longitude: 11.7654321, accuracy: 35 };
 test.beforeEach(async ({ page }) => {
@@ -388,22 +389,95 @@ test('IP detection can be disabled in Settings and stays disabled after reload',
   expect(calls).toBe(0);
 });
 
-test('mobile route endpoints fit above the open sheet', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.route('**/route/v1/driving/**', (r) => r.abort());
+/** Boxes of the route and weather markers that overlap what covers the map. */
+async function coveredMarkers(page: Page) {
+  return page.evaluate(() => {
+    const covers = [
+      '#map-corner-top-right',
+      '.map-credits',
+      ...(innerWidth < 900 ? ['#sheet', '#sheet > header'] : []),
+    ]
+      .flatMap((s) => [...document.querySelectorAll(s)])
+      .filter((e) => e.getClientRects().length)
+      .map((e) => [e.id || e.className, e.getBoundingClientRect()] as const);
+    const map = document.getElementById('map')!.getBoundingClientRect();
+    const problems: string[] = [];
+    for (const marker of document.querySelectorAll(
+      '.route-marker, .weather-marker',
+    )) {
+      const r = marker.getBoundingClientRect(),
+        kind = marker.className.split(' ')[0];
+      if (r.left < map.left || r.right > map.right || r.top < map.top)
+        problems.push(`${kind} outside the map`);
+      for (const [name, c] of covers)
+        if (
+          r.left < c.right &&
+          c.left < r.right &&
+          r.top < c.bottom &&
+          c.top < r.bottom
+        )
+          problems.push(`${kind} under ${name}`);
+    }
+    return problems;
+  });
+}
+/** A route with three points and its weather markers, fitted. */
+async function fittedRoute(page: Page) {
+  await page.clock.install({ time: new Date('2026-11-07T10:00:00Z') });
+  await mockRouting(page);
+  await page.route('**/v1/forecast?**', (r) =>
+    r.fulfill({ json: weatherResponse(new URL(r.request().url())) }),
+  );
   const state = defaults();
+  state.departure = '2026-11-07T11:00:00.000Z';
   state.points = [
-    { name: 'Start', coord: [-22.93, -43.23] },
-    { name: 'End', coord: [-23.05, -43.53] },
+    { name: 'Start', coord: [-22.97, -43.18] },
+    { name: 'Stop', coord: [-22.98, -43.21] },
+    { name: 'End', coord: [-23.02, -43.48] },
   ];
   await page.goto(base + encodeState(state));
-  await expect(page.locator('.route-marker')).toHaveCount(2);
-  const sheet = await page.locator('#route-panel').boundingBox();
-  for (const marker of await page.locator('.route-marker').all()) {
-    const box = await marker.boundingBox();
-    expect(box!.y).toBeGreaterThan(100);
-    expect(box!.y + box!.height).toBeLessThan(sheet!.y);
-  }
+  await mapReady(page);
+  await expect(page.locator('.weather-marker').first()).toBeVisible();
+  await mapIdle(page);
+}
+
+for (const [width, height] of [
+  [320, 568],
+  [360, 740],
+  [390, 844],
+  [430, 932],
+  [1280, 800],
+])
+  test(`the fitted route stays clear of the map tools, header and sheet at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await fittedRoute(page);
+    await expect.poll(() => coveredMarkers(page)).toEqual([]);
+    if (width >= 900) return;
+    // Closed, the sheet leaves more map, and the route is fitted to it.
+    await closePanel(page);
+    expect(await coveredMarkers(page)).toEqual([]);
+  });
+
+test('a moved map is not fitted again when the sheet changes', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fittedRoute(page);
+  const box = (await page.locator('#map').boundingBox())!;
+  await page.mouse.move(box.x + 120, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 60, box.y + 150, { steps: 5 });
+  await page.mouse.up();
+  await mapIdle(page);
+  const moved = (await page.locator('.route-marker').first().boundingBox())!;
+  await page.locator('#panel-toggle').click();
+  // Longer than the refit's settling delay.
+  await page.waitForTimeout(500);
+  expect((await page.locator('.route-marker').first().boundingBox())!.y).toBe(
+    moved.y,
+  );
 });
 
 test('the dot follows, and the button re-centers a panned map without ever turning location off', async ({
