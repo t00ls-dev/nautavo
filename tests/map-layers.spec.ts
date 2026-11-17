@@ -327,7 +327,7 @@ test('GPX bytes remain identical across map layers and saved state contains no l
   const [backup] = await Promise.all([
     page.waitForEvent('download'),
     page
-      .locator('.saved-routes > summary')
+      .locator('#open-settings')
       .click()
       .then(() => page.locator('#backup-routes').click()),
   ]);

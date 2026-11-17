@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- Favorite places: choose Save as favorite in a point's field menu, or Add favorite in Favorite places, name it and pick its icon (Home, Work or Favorite), then pick the place in any point's menu, with its address and distance, no search and offline; edit or delete them in Favorite places. Backups now include favorites (format version 2); older backups still import.
 - While navigating, tap or drag up the handle on the bottom bar to list the turns and route points ahead, with their distances and arrival times; navigation goes on underneath.
 - Spoken directions while navigating, off by default: turn them on in the start notice, in Settings or with the speaker button on the navigation screen, and the phone's own voice says each turn ahead, the arrival, leaving the route and a recalculated route, in the interface language, with no request.
 - If the page reloads during navigation (a phone discarding the tab, an accidental refresh), it offers to continue on the same route with one tap, even without a connection; this tab keeps the route and the distance travelled for that, never your position, until you end the navigation, arrive or after 30 minutes.
@@ -28,6 +29,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Export backup and Import backup moved from Saved routes to Settings, where one file keeps your saved routes and favorite places.
 - On an imported track, Calculate route keeps that track and adds directions from its roads, instead of recalculating the whole route through its points; editing a point recalculates only about 1 km on each side of it; and Copy link says that the link recalculates the route, so share the GPX for the exact track.
 - Satellite always shows the map's labels: the Labels switch and the note about non-commercial imagery left the Map layers menu (the imagery license stays in the map credits, and Settings still offers the EOX 2016 edition).
 - The planner map is drawn by MapLibre GL JS alone, like the navigation map, instead of inside Leaflet: one map engine, with the route, colorings and arrows drawn by the map itself. A double tap and drag zooms with one finger as before. A browser without WebGL now shows a notice instead of the map, and the panel still plans, calculates and exports the route.

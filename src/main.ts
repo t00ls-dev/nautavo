@@ -6,10 +6,15 @@ import {
   listSavedRoutes,
   saveNamedRoute,
   deleteSavedRoute,
-  exportRouteBackup,
-  parseRouteBackup,
-  importRouteBackup,
-  savedRouteKey,
+  exportLibraryBackup,
+  parseLibraryBackup,
+  importLibraryBackup,
+  libraryKey,
+  listFavorites,
+  saveFavorite,
+  editFavorite,
+  deleteFavorite,
+  type Favorite,
   markDirectionsChecked,
   updateSavedSteps,
   type SavedRoute,
@@ -117,7 +122,7 @@ import {
 import { checkTrack, type TrackCheck } from './track-check';
 import { PASS_OFFSET } from './route-overlays';
 import { routeDaylight } from './daylight';
-import { addressAutocomplete } from './autocomplete';
+import { addressAutocomplete, splitPlace } from './autocomplete';
 import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
@@ -133,6 +138,7 @@ import {
 import { setupMapControls } from './map-controls';
 import { compactLayout, setupPanel } from './panel';
 import { icon, iconControl } from './icons';
+import { coordText, FAVORITE_ICONS, favoriteDialog } from './favorite-dialog';
 import {
   maneuverIcon,
   maneuverPositions,
@@ -724,6 +730,32 @@ function renderPoints() {
           icon: 'pin',
           run: () => adjustPoint(point, true),
         },
+        // Favorites (#52): save this point's place, unless it already is
+        // one, then each favorite with its icon and distance.
+        ...(point.coord && !editBlocked() && !favoriteAt(point.coord)
+          ? [
+              {
+                label: 'Save as favorite',
+                icon: 'star' as const,
+                run: () => saveAsFavorite(point),
+              },
+            ]
+          : []),
+        ...favoritesFor(input.value, point).map((favorite, n) => ({
+          heading: n ? undefined : t('Favorite places'),
+          label: favorite.name,
+          note: favorite.place ?? coordText(favorite.coord),
+          icon: FAVORITE_ICONS[favorite.kind ?? 'place'],
+          detail:
+            point.coord && favoriteAt(point.coord) === favorite
+              ? t('This point')
+              : (suggestionDistance(point, favorite.coord) ?? undefined),
+          run: () => {
+            if (editBlocked()) return;
+            setPoint(point, i, favorite.coord, favorite.name, true);
+            map.panTo(favorite.coord);
+          },
+        })),
       ],
       distance: (coord) => suggestionDistance(point, coord),
     });
@@ -1942,11 +1974,149 @@ function updateSaveButton() {
   const button = $<HTMLButtonElement>('save-route');
   button.disabled =
     savingRoute || !current || !state.name.trim() || dirty.size > 0;
-  button.textContent = savedEntries.some(
-    (r) => r.id === savedRouteKey(state.name),
-  )
+  button.textContent = savedEntries.some((r) => r.id === libraryKey(state.name))
     ? 'Update saved route'
     : 'Save route';
+}
+/** Favorite places (#52), kept on this device next to the saved routes. */
+let favoriteEntries: Favorite[] = [];
+const editFavoriteSheet = favoriteDialog({
+  base: () => photonUrl,
+  center: () => map.getCenter(),
+  search: (query) => searchAddress(query, state.nominatim),
+  locate: () =>
+    getPosition().then((position) => gpsPoint(positionView(position).center)),
+});
+/** A point this close to a favorite is that favorite (meters). */
+const FAVORITE_HERE = 30;
+const favoriteAt = (coord: Coord) =>
+  favoriteEntries.find((f) => meters(f.coord, coord) <= FAVORITE_HERE);
+/**
+ * The favorites a point's menu lists: all of them while the field shows the
+ * point itself, else those whose name matches what is typed.
+ */
+function favoritesFor(typed: string, point: Point): Favorite[] {
+  const query = libraryKey(typed);
+  if (!query || typed === pointValue(point)) return favoriteEntries;
+  return favoriteEntries.filter((f) => f.id.includes(query));
+}
+function saveAsFavorite(point: Point) {
+  const coord = point.coord;
+  if (!coord) return;
+  const value = pointValue(point);
+  // A point typed as coordinates has no name to suggest.
+  const named = !parseCoordinates(value);
+  editFavoriteSheet({
+    title: 'Save favorite',
+    coord,
+    place: named ? value : undefined,
+    name: named ? splitPlace(value)[0] : '',
+    kind: 'place',
+    save: (name, kind, where, place) =>
+      saveFavorite(name, where, kind, place).then((favorite) => {
+        // The point now goes by the favorite's name, as when one is chosen,
+        // unless the sheet moved the favorite elsewhere.
+        if (point.coord === coord && where === coord && !editBlocked()) {
+          point.name = favorite.name;
+          syncUrl();
+          renderPoints();
+        }
+        status('Favorite saved on this device.');
+        return refreshFavorites();
+      }),
+  });
+}
+/** Add favorite, in Favorite places: the same sheet, starting empty. */
+iconControl($('add-favorite'), 'plus', 'Add favorite');
+$('add-favorite').onclick = () =>
+  editFavoriteSheet({
+    title: 'Add favorite',
+    name: '',
+    kind: 'place',
+    save: (name, kind, where, place) =>
+      saveFavorite(name, where, kind, place).then(() => {
+        libraryMessage('Favorite saved.');
+        return refreshFavorites();
+      }),
+  });
+async function refreshFavorites() {
+  try {
+    favoriteEntries = await listFavorites();
+  } catch {
+    favoriteEntries = [];
+  }
+  $('favorite-count').textContent = `(${favoriteEntries.length})`;
+  const list = $('favorite-list');
+  list.replaceChildren();
+  if (!favoriteEntries.length)
+    list.append(
+      text('p', "No favorites. Add one here or from a point's menu.", 'hint'),
+    );
+  for (const favorite of favoriteEntries) {
+    const row = document.createElement('div');
+    row.className = 'favorite-row';
+    const mark = icon(FAVORITE_ICONS[favorite.kind ?? 'place']);
+    mark.classList.add('favorite-icon');
+    const about = document.createElement('div');
+    about.className = 'favorite-about';
+    const name = text('strong', favorite.name, 'favorite-name');
+    name.title = favorite.name;
+    // A tap on the name shows the place on the map.
+    name.tabIndex = 0;
+    name.setAttribute('role', 'button');
+    name.setAttribute('aria-label', `${t('Show on map')}: ${favorite.name}`);
+    const show = () => {
+      if (!$('route-panel').hidden && compactLayout())
+        $('panel-toggle').click();
+      map.panTo(favorite.coord);
+    };
+    name.onclick = show;
+    name.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        show();
+      }
+    };
+    about.append(
+      name,
+      text('small', favorite.place ?? coordText(favorite.coord)),
+    );
+    const change = document.createElement('button');
+    change.type = 'button';
+    iconControl(change, 'edit', `Edit favorite: ${favorite.name}`, true);
+    change.onclick = () =>
+      editFavoriteSheet({
+        title: 'Edit favorite',
+        coord: favorite.coord,
+        place: favorite.place,
+        name: favorite.name,
+        kind: favorite.kind ?? 'place',
+        save: (next, kind, where, place) =>
+          editFavorite(favorite.id, next, kind, where, place).then(() => {
+            libraryMessage('Favorite saved.');
+            return refreshFavorites();
+          }),
+      });
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    iconControl(remove, 'trash', `Delete favorite: ${favorite.name}`, true);
+    remove.onclick = () => {
+      void deleteFavorite(favorite.id)
+        .then(() => {
+          libraryMessage('Favorite deleted.');
+          return refreshFavorites();
+        })
+        .catch(() => libraryMessage('Could not access favorites.', true));
+    };
+    row.append(mark, about, change, remove);
+    list.append(row);
+  }
+  updateBackupButton();
+}
+/** The backup holds saved routes and favorites: enabled when either exists. */
+function updateBackupButton() {
+  $<HTMLButtonElement>('backup-routes').disabled =
+    !savedEntries.length && !favoriteEntries.length;
 }
 async function refreshSavedRoutes() {
   const version = ++libraryRevision;
@@ -2039,7 +2209,7 @@ async function refreshSavedRoutes() {
       card.append(actions);
       list.append(card);
     });
-    $<HTMLButtonElement>('backup-routes').disabled = !rows.length;
+    updateBackupButton();
     updateSaveButton();
   } catch {
     libraryMessage('Local route storage is unavailable in this browser.', true);
@@ -2048,6 +2218,11 @@ async function refreshSavedRoutes() {
 function libraryMessage(message: string, error = false) {
   $('library-status').textContent = message;
   $('library-status').classList.toggle('error', error);
+}
+/** Backup and restore in Settings say how it went beside their buttons. */
+function backupMessage(message: string, error = false) {
+  $('backup-status').textContent = message;
+  $('backup-status').classList.toggle('error', error);
 }
 $('save-route').onclick = () => {
   if (!current || !state.name.trim() || dirty.size) return;
@@ -2071,9 +2246,9 @@ $('save-route').onclick = () => {
 };
 if (shareExports) $('backup-routes').textContent = 'Share backup';
 $('backup-routes').onclick = () => {
-  if (!savedEntries.length) return;
+  if (!savedEntries.length && !favoriteEntries.length) return;
   void exportFile(
-    exportRouteBackup(savedEntries),
+    exportLibraryBackup({ routes: savedEntries, favorites: favoriteEntries }),
     `route-gpx-backup-${new Date().toISOString().slice(0, 10)}.json`,
     {
       share: shareExports,
@@ -2087,27 +2262,26 @@ $<HTMLInputElement>('restore-routes').onchange = () => {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > 50_000_000) {
-    libraryMessage('Choose a backup smaller than 50 MB.', true);
+    backupMessage('Choose a backup smaller than 50 MB.', true);
     input.value = '';
     return;
   }
   void file
     .text()
-    .then((data) => importRouteBackup(parseRouteBackup(data)))
+    .then((data) => importLibraryBackup(parseLibraryBackup(data)))
     .then((count) => {
-      libraryMessage(
-        count === 1
-          ? 'Imported 1 route. Existing names were kept.'
-          : `Imported ${count} routes. Existing names were kept.`,
+      backupMessage(
+        `${count.routes === 1 ? 'Imported 1 route' : `Imported ${count.routes} routes`}${count.favorites ? (count.favorites === 1 ? ' and 1 favorite' : ` and ${count.favorites} favorites`) : ''}. Existing names were kept.`,
       );
-      return refreshSavedRoutes();
+      return Promise.all([refreshSavedRoutes(), refreshFavorites()]);
     })
-    .catch(() => libraryMessage('Could not import this route backup.', true))
+    .catch(() => backupMessage('Could not import this route backup.', true))
     .finally(() => {
       input.value = '';
     });
 };
 void refreshSavedRoutes();
+void refreshFavorites();
 updateSaveButton();
 
 setupPanel(map);

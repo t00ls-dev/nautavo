@@ -7,6 +7,12 @@ export interface SearchAction {
   label: string;
   icon: IconName;
   run: () => void;
+  /** A short note at the end of the row, such as a distance. */
+  detail?: string;
+  /** A second line below the label, such as a favorite's address. */
+  note?: string;
+  /** A section title shown above this choice, such as Favorite places. */
+  heading?: string;
 }
 /** The first part of a result's name as its title, the rest below it. */
 export function splitPlace(name: string): [string, string] {
@@ -90,11 +96,36 @@ export function addressAutocomplete(
   const showActions = () => {
     if (input.readOnly || !config.actions) return;
     config.actions().forEach((action, i) => {
+      if (action.heading) {
+        const heading = document.createElement('div');
+        heading.className = 'suggestion-heading';
+        heading.setAttribute('role', 'presentation');
+        heading.textContent = action.heading;
+        list.append(heading);
+      }
       const button = option(`action-${i}`, action.run);
-      button.className = 'suggestion-action';
+      // A choice with a second line reads as a place (a favorite), not as
+      // one of the field's commands.
+      button.className = action.note
+        ? 'suggestion-place suggestion-saved'
+        : 'suggestion-action';
       const label = document.createElement('span');
-      label.textContent = action.label;
+      if (action.note) {
+        const name = document.createElement('b');
+        name.textContent = action.label;
+        const more = document.createElement('small');
+        more.textContent = action.note;
+        label.append(name, more);
+      } else label.textContent = action.label;
       button.append(icon(action.icon), label);
+      if (action.detail) {
+        const detail = document.createElement('em');
+        detail.textContent = action.detail;
+        button.append(detail);
+      }
+      const spoken = [action.label, action.note, action.detail].filter(Boolean);
+      if (spoken.length > 1)
+        button.setAttribute('aria-label', spoken.join(', '));
     });
     input.setAttribute('aria-expanded', String(list.children.length > 0));
   };

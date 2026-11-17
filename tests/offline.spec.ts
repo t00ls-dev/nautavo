@@ -102,7 +102,7 @@ test('a saved route opens offline, without routing requests, and downloads', asy
   context.on('request', (r) => {
     if (r.url().includes('/route/v1/')) routing++;
   });
-  await page.locator('.saved-routes summary').click();
+  await page.locator('.saved-routes > summary').click();
   await page
     .getByRole('button', {
       name: 'Open saved route: Offline route',

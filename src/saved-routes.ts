@@ -1,4 +1,11 @@
-import { validateState, validRoute, type Route, type State } from './core';
+import {
+  validateState,
+  validCoord,
+  validRoute,
+  type Coord,
+  type Route,
+  type State,
+} from './core';
 export interface SavedRoute {
   id: string;
   name: string;
@@ -12,14 +19,44 @@ export interface SavedRoute {
    */
   directionsChecked?: boolean;
 }
+/** What a favorite is, for its icon and its place in the lists. */
+const FAVORITE_KINDS = ['home', 'work', 'place'] as const;
+export type FavoriteKind = (typeof FAVORITE_KINDS)[number];
+const isKind = (value: unknown): value is FavoriteKind =>
+  FAVORITE_KINDS.includes(value as FavoriteKind);
+/** A favorite place (#52): a named coordinate kept only on this device. */
+export interface Favorite {
+  id: string;
+  name: string;
+  coord: Coord;
+  /** Home and work come first; absent means a place. */
+  kind?: FavoriteKind;
+  /** The place's address as the search gave it, shown under the name. */
+  place?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+type Store = 'routes' | 'favorites';
+/** Longest address kept for a favorite. */
+const PLACE_LIMIT = 240;
+/** A favorite's address field, absent when there is none. */
+const placeOf = (place: string | undefined) =>
+  place?.trim() ? { place: place.trim().slice(0, PLACE_LIMIT) } : {};
+/** Longest name for a saved route or a favorite. */
+const NAME_LIMIT = 160;
+const validName = (value: unknown): value is string =>
+  typeof value === 'string' && !!value.trim() && value.length <= NAME_LIMIT;
+
 let connection: Promise<IDBDatabase> | undefined;
 function database(): Promise<IDBDatabase> {
   if (!connection)
     connection = new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('route-gpx', 1);
+      // Version 2 adds favorites; an upgrade keeps the saved routes.
+      const request = indexedDB.open('route-gpx', 2);
       request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains('routes'))
-          request.result.createObjectStore('routes', { keyPath: 'id' });
+        for (const store of ['routes', 'favorites'] as const)
+          if (!request.result.objectStoreNames.contains(store))
+            request.result.createObjectStore(store, { keyPath: 'id' });
       };
       request.onsuccess = () => {
         request.result.onversionchange = () => {
@@ -38,23 +75,27 @@ function database(): Promise<IDBDatabase> {
   return connection;
 }
 async function operation<T>(
+  name: Store,
   mode: IDBTransactionMode,
   run: (store: IDBObjectStore) => IDBRequest<T>,
 ): Promise<T> {
   const db = await database();
   return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction('routes', mode);
-    const request = run(tx.objectStore('routes'));
+    const tx = db.transaction(name, mode);
+    const request = run(tx.objectStore(name));
     tx.oncomplete = () => resolve(request.result);
     tx.onabort = () => reject(tx.error ?? request.error);
     tx.onerror = () => reject(tx.error ?? request.error);
   });
 }
-export function savedRouteKey(name: string): string {
+/** Saved routes and favorites are identified by their normalized names. */
+export function libraryKey(name: string): string {
   return name.trim().normalize('NFKC').toLocaleLowerCase('en');
 }
 export async function listSavedRoutes(): Promise<SavedRoute[]> {
-  const rows = await operation<SavedRoute[]>('readonly', (s) => s.getAll());
+  const rows = await operation<SavedRoute[]>('routes', 'readonly', (s) =>
+    s.getAll(),
+  );
   return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 export async function saveNamedRoute(
@@ -62,11 +103,12 @@ export async function saveNamedRoute(
   route: Route,
 ): Promise<SavedRoute> {
   const name = state.name.trim();
-  if (!name || name.length > 160)
-    throw new Error('Name your route before saving.');
-  const id = savedRouteKey(name);
-  const old = await operation<SavedRoute | undefined>('readonly', (s) =>
-    s.get(id),
+  if (!validName(name)) throw new Error('Name your route before saving.');
+  const id = libraryKey(name);
+  const old = await operation<SavedRoute | undefined>(
+    'routes',
+    'readonly',
+    (s) => s.get(id),
   );
   const now = new Date().toISOString();
   const record: SavedRoute = {
@@ -77,7 +119,7 @@ export async function saveNamedRoute(
     createdAt: old?.createdAt ?? now,
     updatedAt: now,
   };
-  await operation('readwrite', (s) => s.put(record));
+  await operation('routes', 'readwrite', (s) => s.put(record));
   return record;
 }
 /**
@@ -99,77 +141,175 @@ export async function updateSavedSteps(
   id: string,
   route: Route,
 ): Promise<void> {
-  const record = await operation<SavedRoute | undefined>('readonly', (s) =>
-    s.get(id),
+  const record = await operation<SavedRoute | undefined>(
+    'routes',
+    'readonly',
+    (s) => s.get(id),
   );
   const updated = record && withUpdatedSteps(record, route);
-  if (updated) await operation('readwrite', (s) => s.put(updated));
+  if (updated) await operation('routes', 'readwrite', (s) => s.put(updated));
 }
 
 /** Remembers that directions could not be added, changing nothing else. */
 export async function markDirectionsChecked(id: string): Promise<void> {
-  const record = await operation<SavedRoute | undefined>('readonly', (s) =>
-    s.get(id),
+  const record = await operation<SavedRoute | undefined>(
+    'routes',
+    'readonly',
+    (s) => s.get(id),
   );
   if (record)
-    await operation('readwrite', (s) =>
+    await operation('routes', 'readwrite', (s) =>
       s.put({ ...record, directionsChecked: true }),
     );
 }
 
 export async function deleteSavedRoute(id: string): Promise<void> {
-  await operation('readwrite', (s) => s.delete(id));
+  await operation('routes', 'readwrite', (s) => s.delete(id));
 }
-export function exportRouteBackup(records: SavedRoute[]): string {
+export async function listFavorites(): Promise<Favorite[]> {
+  const rows = await operation<Favorite[]>('favorites', 'readonly', (s) =>
+    s.getAll(),
+  );
+  const rank = (f: Favorite) => FAVORITE_KINDS.indexOf(f.kind ?? 'place');
+  return rows.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+}
+/** Saves a favorite; one with the same name is replaced. */
+export async function saveFavorite(
+  name: string,
+  coord: Coord,
+  kind: FavoriteKind = 'place',
+  place?: string,
+): Promise<Favorite> {
+  const clean = name.trim();
+  if (!validName(clean)) throw new Error('Name the favorite before saving.');
+  if (!validCoord(coord)) throw new Error('Invalid favorite place.');
+  const id = libraryKey(clean);
+  const old = await operation<Favorite | undefined>(
+    'favorites',
+    'readonly',
+    (s) => s.get(id),
+  );
+  const now = new Date().toISOString();
+  const record: Favorite = {
+    id,
+    name: clean,
+    coord: [coord[0], coord[1]],
+    kind,
+    ...placeOf(place),
+    createdAt: old?.createdAt ?? now,
+    updatedAt: now,
+  };
+  await operation('favorites', 'readwrite', (s) => s.put(record));
+  return record;
+}
+/**
+ * Changes a favorite's name, kind or place; refused when the name is taken
+ * by another one.
+ */
+export async function editFavorite(
+  id: string,
+  name: string,
+  kind: FavoriteKind,
+  coord: Coord,
+  place?: string,
+): Promise<void> {
+  const clean = name.trim();
+  if (!validName(clean)) throw new Error('Name the favorite before saving.');
+  if (!validCoord(coord)) throw new Error('Invalid favorite place.');
+  const next = libraryKey(clean);
+  const [old, taken] = await Promise.all(
+    [id, next].map((key) =>
+      operation<Favorite | undefined>('favorites', 'readonly', (s) =>
+        s.get(key),
+      ),
+    ),
+  );
+  if (!old) return;
+  if (taken && next !== id)
+    throw new Error('A favorite with this name already exists.');
+  const db = await database();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('favorites', 'readwrite');
+    const store = tx.objectStore('favorites');
+    store.delete(id);
+    const record: Favorite = {
+      id: next,
+      name: clean,
+      coord: [coord[0], coord[1]],
+      kind,
+      ...placeOf(place),
+      createdAt: old.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    store.put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+export async function deleteFavorite(id: string): Promise<void> {
+  await operation('favorites', 'readwrite', (s) => s.delete(id));
+}
+
+/** A backup's contents: saved routes and, from version 2, favorites. */
+export interface Library {
+  routes: SavedRoute[];
+  favorites: Favorite[];
+}
+export function exportLibraryBackup(library: Library): string {
   return JSON.stringify(
     {
       format: 'route-gpx-library',
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
-      routes: records,
+      routes: library.routes,
+      favorites: library.favorites,
     },
     null,
     2,
   );
 }
-export function parseRouteBackup(text: string): SavedRoute[] {
+/**
+ * Reads a backup, version 1 (routes only) or 2 (routes and favorites), and
+ * validates all of it before anything is written.
+ */
+export function parseLibraryBackup(text: string): Library {
   if (text.length > 50_000_000)
     throw new Error('Choose a backup smaller than 50 MB.');
   const backup = JSON.parse(text) as {
     format?: string;
     version?: number;
     routes?: unknown[];
+    favorites?: unknown;
   };
   if (
     backup?.format !== 'route-gpx-library' ||
-    backup.version !== 1 ||
-    !Array.isArray(backup.routes)
+    (backup.version !== 1 && backup.version !== 2) ||
+    !Array.isArray(backup.routes) ||
+    (backup.version === 2 &&
+      backup.favorites !== undefined &&
+      !Array.isArray(backup.favorites))
   )
     throw new Error('Invalid route backup.');
-  return backup.routes.map((item) => {
+  const now = new Date().toISOString();
+  const date = (value: unknown) =>
+    typeof value === 'string' && Number.isFinite(Date.parse(value))
+      ? value
+      : now;
+  const routes = backup.routes.map((item) => {
     if (!item || typeof item !== 'object')
       throw new Error('Invalid route backup.');
     const row = item as SavedRoute;
-    if (
-      typeof row.name !== 'string' ||
-      !row.name.trim() ||
-      row.name.length > 160
-    )
-      throw new Error('Invalid saved route name.');
+    if (!validName(row.name)) throw new Error('Invalid saved route name.');
     const state = validateState(row.state);
     if (state.points.some((p) => !p.coord))
       throw new Error('Invalid saved route points.');
     const route = row.route;
     if (!validRoute(route)) throw new Error('Invalid saved route geometry.');
-    const now = new Date().toISOString();
-    const date = (value: unknown) =>
-      typeof value === 'string' && Number.isFinite(Date.parse(value))
-        ? value
-        : now;
     const name = row.name.trim();
     state.name = name;
     return {
-      id: savedRouteKey(name),
+      id: libraryKey(name),
       name,
       state,
       route,
@@ -177,25 +317,62 @@ export function parseRouteBackup(text: string): SavedRoute[] {
       updatedAt: date(row.updatedAt),
     };
   });
-}
-export async function importRouteBackup(
-  records: SavedRoute[],
-): Promise<number> {
-  const existing = new Set((await listSavedRoutes()).map((r) => r.id));
-  const added: SavedRoute[] = [];
-  for (const record of records) {
-    if (existing.has(record.id)) continue;
-    existing.add(record.id);
-    added.push(record);
-  }
-  if (!added.length) return 0;
-  const db = await database();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction('routes', 'readwrite');
-    for (const record of added) tx.objectStore('routes').put(record);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+  const favorites = (
+    backup.version === 2 && Array.isArray(backup.favorites)
+      ? backup.favorites
+      : []
+  ).map((item) => {
+    const row = (item ?? {}) as Favorite;
+    if (
+      !validName(row.name) ||
+      !validCoord(row.coord) ||
+      (row.kind !== undefined && !isKind(row.kind)) ||
+      (row.place !== undefined &&
+        (typeof row.place !== 'string' || row.place.length > PLACE_LIMIT))
+    )
+      throw new Error('Invalid favorite in the backup.');
+    const name = row.name.trim();
+    return {
+      id: libraryKey(name),
+      name,
+      coord: [row.coord[0], row.coord[1]] as Coord,
+      kind: row.kind ?? 'place',
+      ...placeOf(row.place),
+      createdAt: date(row.createdAt),
+      updatedAt: date(row.updatedAt),
+    };
   });
-  return added.length;
+  return { routes, favorites };
+}
+/**
+ * Adds what the backup has and this device does not; entries whose names
+ * already exist are kept as they are. Returns how many of each were added.
+ */
+export async function importLibraryBackup(
+  library: Library,
+): Promise<{ routes: number; favorites: number }> {
+  const fresh = <T extends { id: string }>(rows: T[], have: string[]) => {
+    const seen = new Set(have);
+    return rows.filter((r) => !seen.has(r.id) && !!seen.add(r.id));
+  };
+  const routes = fresh(
+    library.routes,
+    (await listSavedRoutes()).map((r) => r.id),
+  );
+  const favorites = fresh(
+    library.favorites,
+    (await listFavorites()).map((f) => f.id),
+  );
+  if (routes.length || favorites.length) {
+    const db = await database();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(['routes', 'favorites'], 'readwrite');
+      for (const record of routes) tx.objectStore('routes').put(record);
+      for (const record of favorites) tx.objectStore('favorites').put(record);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+  return { routes: routes.length, favorites: favorites.length };
 }

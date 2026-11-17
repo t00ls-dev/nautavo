@@ -250,7 +250,8 @@ textarea {
   line-height: 1.5;
   resize: vertical;
 }
-label[for] {
+label[for],
+.settings-label {
   display: block;
   margin: 10px 0 4px;
   font-size: 14px;
@@ -714,6 +715,13 @@ header button.icon-control {
   color: var(--color-primary);
   font-weight: 650;
 }
+.suggestion-action > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .suggestion-place .button-icon {
   color: #56636c;
 }
@@ -736,11 +744,27 @@ header button.icon-control {
   color: var(--color-text-muted);
   font-size: 13px;
 }
-.suggestion-place em {
+.suggestion-place em,
+.suggestion-action em {
   flex: none;
   color: var(--color-text-muted);
   font-size: 13px;
   font-style: normal;
+}
+/* Favorites in the field's menu: their own section below the commands,
+   read like places (name, address, distance) with the favorite's icon. */
+.suggestion-heading {
+  padding: 10px 12px 4px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+.suggestions > .suggestion-heading + button {
+  border-top: 0;
+}
+.suggestion-saved .button-icon {
+  color: var(--color-primary);
 }
 .suggestions [aria-selected='true'] {
   outline: 3px solid var(--color-focus);
@@ -927,7 +951,8 @@ header button.icon-control {
 }
 #route-details > details,
 #itinerary > details,
-.saved-routes {
+.saved-routes,
+.favorites {
   border-top: 1px solid var(--color-border);
 }
 /* Travel the route: a short note and the button that starts the replay. */
@@ -939,14 +964,21 @@ header button.icon-control {
 }
 #route-details > details[open],
 #itinerary > details[open],
-.saved-routes[open] {
+.saved-routes[open],
+.favorites[open] {
   padding-bottom: 10px;
 }
 #itinerary:empty {
   display: none;
 }
-.saved-routes {
+.saved-routes,
+.favorites {
   border-bottom: 1px solid var(--color-border);
+}
+/* Favorite places sit right below Saved routes: one line between them. */
+.saved-routes + .favorites {
+  margin-top: -12px;
+  border-top: 0;
 }
 #route-details:not([hidden]) + .saved-routes {
   margin-top: -12px;
@@ -1076,8 +1108,76 @@ div.step-item {
   flex-wrap: wrap;
   gap: 8px;
 }
-#library-status:empty {
+/* Favorite places (#52), listed like the saved routes. */
+.favorites #favorite-count {
+  font-weight: 450;
+  color: var(--color-text-muted);
+}
+.favorites .hint {
+  margin: 0 0 10px;
+}
+#add-favorite {
+  width: 100%;
+}
+.favorite-name[role='button'] {
+  cursor: pointer;
+}
+.favorite-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+}
+.favorite-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--color-primary);
+}
+.favorite-about {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.favorite-name,
+.favorite-about small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.favorite-about small {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.favorite-row button {
+  flex: none;
+  width: var(--control);
+  padding: 0;
+}
+#library-status:empty,
+#backup-status:empty {
   display: none;
+}
+/* Backup in Settings: saved routes and favorite places in one file. */
+.settings-backup .hint {
+  margin: 0 0 8px;
+}
+/* Export and Import side by side, equal; stacked where both do not fit. */
+.settings-backup .library-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.settings-backup .library-actions > * {
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+}
+#backup-status {
+  margin: 8px 0 0;
 }
 .planner footer {
   display: flex;
@@ -3031,7 +3131,9 @@ dialog.home-dialog::backdrop {
 }
 #nav-notice-start,
 #nav-resume-continue,
-#nav-resume-dismiss {
+#nav-resume-dismiss,
+#favorite-save,
+#favorite-cancel {
   width: 100%;
   min-height: 52px;
   border-radius: var(--radius-large);
@@ -3041,8 +3143,89 @@ dialog.home-dialog::backdrop {
   margin: 0 0 16px;
   line-height: 1.4;
 }
-#nav-resume-dismiss {
+#nav-resume-dismiss,
+#favorite-cancel {
   margin-top: 8px;
+}
+/* Favorite place sheet (#52): icon choice, name and the place it keeps. */
+.favorite-dialog h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.favorite-place {
+  margin: 0 0 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.favorite-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+.favorite-kinds legend {
+  margin: 0 0 6px;
+  padding: 0;
+  font-weight: 650;
+}
+.favorite-kinds label {
+  position: relative;
+}
+.favorite-kinds input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.favorite-kind {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-large);
+  font-size: 15px;
+  cursor: pointer;
+}
+.favorite-kind .button-icon {
+  width: 26px;
+  height: 26px;
+}
+.favorite-kinds input:checked + .favorite-kind {
+  border: 2px solid var(--color-primary);
+  background: var(--color-soft);
+  color: var(--color-primary);
+  font-weight: 650;
+}
+.favorite-kinds input:focus-visible + .favorite-kind {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.favorite-dialog label[for='favorite-name'] {
+  display: block;
+  margin: 0 0 6px;
+  font-weight: 650;
+}
+#favorite-name,
+#favorite-where {
+  width: 100%;
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.favorite-where-results:not(:empty) {
+  margin: -8px 0 12px;
+}
+.favorite-dialog label[for='favorite-where'] {
+  display: block;
+  margin: 0 0 6px;
+  font-weight: 650;
+}
+.favorite-error {
+  margin: -4px 0 12px;
+  color: var(--color-danger);
 }
 /* Add to home screen steps, a bottom sheet like the navigation notice. */
 .home-dialog h2 {

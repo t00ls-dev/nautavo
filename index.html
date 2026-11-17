@@ -296,16 +296,13 @@
             <summary>Saved routes <span id="saved-count">(0)</span></summary>
             <p id="library-status" class="hint" role="status"></p>
             <div id="saved-list"></div>
-            <div class="library-actions">
-              <button id="backup-routes" type="button" disabled>
-                Export backup</button
-              ><label class="file-button"
-                >Import backup<input
-                  id="restore-routes"
-                  type="file"
-                  accept=".json,application/json"
-              /></label>
-            </div>
+          </details>
+          <details class="favorites">
+            <summary>
+              Favorite places <span id="favorite-count">(0)</span>
+            </summary>
+            <div id="favorite-list"></div>
+            <button id="add-favorite" type="button">Add favorite</button>
           </details>
           <footer>
             <a
@@ -503,6 +500,28 @@
             >Speak the directions while navigating</span
           ></label
         >
+        <div
+          class="settings-backup"
+          role="group"
+          aria-labelledby="backup-title"
+        >
+          <span id="backup-title" class="settings-label">Backup</span>
+          <p class="hint">
+            Your saved routes and favorite places in one file, to keep or to
+            move to another device.
+          </p>
+          <div class="library-actions">
+            <button id="backup-routes" type="button" disabled>
+              Export backup</button
+            ><label class="file-button"
+              >Import backup<input
+                id="restore-routes"
+                type="file"
+                accept=".json,application/json"
+            /></label>
+          </div>
+          <p id="backup-status" class="hint" role="status"></p>
+        </div>
         <label for="osrm">OSRM server</label><input id="osrm" type="url" />
         <label for="valhalla">Valhalla fallback</label
         ><input id="valhalla" type="url" />
@@ -591,6 +610,64 @@
       <button id="nav-notice-start" class="primary" type="button">
         Start navigation
       </button>
+    </dialog>
+    <dialog
+      id="favorite-dialog"
+      class="nav-notice favorite-dialog"
+      aria-labelledby="favorite-title"
+    >
+      <form id="favorite-form" method="dialog" novalidate>
+        <h2 id="favorite-title">Save favorite</h2>
+        <fieldset class="favorite-kinds">
+          <legend>Icon</legend>
+          <label
+            ><input type="radio" name="favorite-kind" value="home" /><span
+              class="favorite-kind"
+              data-icon="home"
+              >Home</span
+            ></label
+          ><label
+            ><input type="radio" name="favorite-kind" value="work" /><span
+              class="favorite-kind"
+              data-icon="work"
+              >Work</span
+            ></label
+          ><label
+            ><input
+              type="radio"
+              name="favorite-kind"
+              value="place"
+              checked
+            /><span class="favorite-kind" data-icon="star"
+              >Favorite</span
+            ></label
+          >
+        </fieldset>
+        <label for="favorite-where">Place</label>
+        <input
+          id="favorite-where"
+          type="text"
+          autocomplete="off"
+          enterkeyhint="search"
+          placeholder="Search a place or paste coordinates"
+        />
+        <div
+          id="favorite-where-results"
+          class="suggestions favorite-where-results"
+        ></div>
+        <label for="favorite-name">Name</label>
+        <input
+          id="favorite-name"
+          type="text"
+          maxlength="160"
+          autocomplete="off"
+          enterkeyhint="done"
+          placeholder="E.g. Corner bakery"
+        />
+        <p id="favorite-error" class="favorite-error" role="alert" hidden></p>
+        <button id="favorite-save" class="primary" type="submit">Save</button>
+        <button id="favorite-cancel" type="button">Cancel</button>
+      </form>
     </dialog>
     <dialog
       id="nav-resume-notice"
