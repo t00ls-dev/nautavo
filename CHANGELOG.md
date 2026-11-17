@@ -29,6 +29,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- On the navigation screen, the bottom bar keeps to the time and distance, centered beside End and Upcoming; a chip on the map says when the GPS is awaited, as it already did for a weak signal.
 - Saved routes and Favorite places share one row: tap the name to open the route or see the place on the map, with icon buttons for download, edit and delete; long names take two lines. A deleted saved route or favorite can be brought back with Undo for 8 seconds. With no point set, both lists come right below the points. The GPX name field is now Route name.
 - On phones, the route's distance, time and arrival come first in the panel, on one row even at 320 px; tapping a point's field raises the panel to full height with the field and its menu in view, and lowers it again when you leave the field.
 - Prefer main roads now changes the route, not only the review: with it on (the default), routes come from the Valhalla router favoring highways, where OSRM sometimes cut through local roads, with OSRM if Valhalla fails. Turn it off for OSRM's route. In Settings, Valhalla fallback is now Valhalla server.

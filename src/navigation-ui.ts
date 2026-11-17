@@ -61,7 +61,7 @@ import {
   replayAdvance,
   replayFix,
 } from './navigation-replay';
-import { distanceLabel, shortDistanceLabel } from './units';
+import { distanceLabel } from './units';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
@@ -1046,12 +1046,9 @@ export function setupNavigation(deps: {
     );
     $('nav-rest').textContent =
       `${distanceLabel(remaining, units(), deps.locale())}${r ? ` · ${clock}` : ''}`;
-    const dot = $('nav-dot');
-    dot.classList.toggle('waiting', !last);
-    dot.classList.toggle('weak', !!r?.weak);
-    $('nav-fix-text').textContent = !last
-      ? 'Waiting for GPS'
-      : `${r?.weak ? t('Weak GPS') : t('GPS on')} ±${shortDistanceLabel(last.accuracy, units())}`;
+    // The map's chips say when the signal is missing or weak; the bar keeps
+    // to the time and distance.
+    $('nav-waiting').hidden = !!last || replaying;
     $('nav-gps').hidden = !last || !r?.weak;
     if (r) drawTravelled(Math.min(tracker.total, r.progress + replayLead()));
   }

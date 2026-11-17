@@ -79,8 +79,6 @@ const pt: Record<string, string> = {
   Then: 'Depois',
   'You have arrived': 'Você chegou',
   'Weak GPS signal': 'Sinal de GPS fraco',
-  'Weak GPS': 'GPS fraco',
-  'GPS on': 'GPS ativo',
   'Waiting for GPS': 'Aguardando o GPS',
   'Route overview': 'Ver a rota toda',
   'Re-center': 'Centralizar',

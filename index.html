@@ -760,6 +760,9 @@
             ></button>
             <ol id="nav-weather-list" class="nav-weather-list" hidden></ol>
           </div>
+          <p id="nav-waiting" class="nav-chip" hidden>
+            <span>Waiting for GPS</span>
+          </p>
           <p id="nav-gps" class="nav-chip" hidden>
             <span>Weak GPS signal</span>
           </p>
@@ -842,6 +845,17 @@
             <div id="nav-rest" class="nav-rest"></div>
           </div>
           <button id="nav-stop" class="nav-stop" type="button">End</button>
+          <button
+            id="nav-list-toggle"
+            class="nav-list-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="nav-list"
+            aria-label="Upcoming turns"
+            title="Upcoming turns"
+          >
+            <span>Upcoming</span>
+          </button>
         </div>
         <div id="nav-replay" class="nav-replay" hidden>
           <button id="nav-replay-toggle" type="button"></button
@@ -860,22 +874,6 @@
             <option value="5">5×</option>
             <option value="10">10×</option>
           </select>
-        </div>
-        <div class="nav-status">
-          <span id="nav-fix"
-            ><i id="nav-dot" class="nav-dot"></i
-            ><span id="nav-fix-text">Waiting for GPS</span></span
-          ><button
-            id="nav-list-toggle"
-            class="nav-list-toggle"
-            type="button"
-            aria-expanded="false"
-            aria-controls="nav-list"
-            aria-label="Upcoming turns"
-            title="Upcoming turns"
-          >
-            <span>Upcoming</span>
-          </button>
         </div>
       </div>
     </dialog>

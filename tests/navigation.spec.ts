@@ -184,7 +184,7 @@ test.describe('phone navigation', () => {
     // own average takes over.
     await expect(page.locator('#nav-time')).toHaveText('4 min');
     await expect(page.locator('#nav-rest')).toContainText('1.4 km ·');
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect(page.locator('#nav-gps')).toBeHidden();
     await expect(page.locator('#nav-announce')).toHaveText(
       'Turn right · Estrada das Furnas',
@@ -198,7 +198,6 @@ test.describe('phone navigation', () => {
     });
     await expect(page.locator('#nav-road')).toHaveText('Estrada do Joá');
     await expect(page.locator('#nav-gps')).toBeVisible();
-    await expect(page.locator('#nav-fix-text')).toHaveText('Weak GPS ±60 m');
 
     await context.setGeolocation({
       latitude: lat,
@@ -267,7 +266,7 @@ test.describe('phone navigation', () => {
     await expect.poll(watching).toBe(1);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     expect(await watching()).toBe(1);
     const visibility = (hidden: boolean) =>
       page.evaluate((value) => {
@@ -293,7 +292,7 @@ test.describe('phone navigation', () => {
     await setup(page);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     // The screen, not its first button, takes focus: none looks selected.
     await expect(page.locator('#nav-screen')).toBeFocused();
     // From the keyboard, focus moves to the button that replaces it.
@@ -335,7 +334,7 @@ test.describe('phone navigation', () => {
     await setup(page);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     const rotor = page.locator('#nav-rotor'),
       resume = page.locator('#nav-resume'),
       marker = page.locator('.nav-arrow');
@@ -447,7 +446,7 @@ test.describe('phone navigation', () => {
       Number(await page.locator('#nav-rotor').getAttribute('data-zoom'));
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect.poll(zoom).toBeGreaterThan(0);
     const before = await zoom();
     const marker = (await page.locator('.nav-arrow').boundingBox())!;
@@ -488,7 +487,7 @@ test.describe('phone navigation', () => {
     await setup(page);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     const rotor = page.locator('#nav-rotor'),
       resume = page.getByRole('button', { name: 'Re-center' });
     await expect(rotor).toHaveAttribute('data-turn', '-90');
@@ -1000,6 +999,13 @@ test.describe('phone navigation', () => {
         const bar = page.locator('.nav-bar');
         await expect(bar).toHaveCSS('padding-top', '12px');
         await expect(bar).toHaveCSS('padding-bottom', '12px');
+        // The time and distance sit centered against End and Upcoming.
+        const eta = (await page.locator('.nav-eta').boundingBox())!,
+          top = (await page.locator('#nav-stop').boundingBox())!.y,
+          below = (await page.locator('#nav-list-toggle').boundingBox())!;
+        expect(
+          Math.abs(eta.y + eta.height / 2 - (top + below.y + below.height) / 2),
+        ).toBeLessThanOrEqual(2);
         // End and Upcoming share the right column: their edges line up.
         const end = (await page.locator('#nav-stop').boundingBox())!,
           upcoming = (await page.locator('#nav-list-toggle').boundingBox())!;
@@ -1478,8 +1484,8 @@ test.describe('replay on the navigation screen', () => {
     );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
-    // No GPS status in a replay; Upcoming stays (#207).
-    await expect(page.locator('#nav-fix')).toBeHidden();
+    // No waiting for GPS in a replay; Upcoming shows (#207).
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect(page.locator('#nav-list-toggle')).toBeVisible();
     // About 610 m along (30 % of 2 km): the right turn at 1 km comes next.
     await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
@@ -2059,8 +2065,12 @@ test.describe('speed while navigating', () => {
     page,
   }) => {
     await navigateWithFixes(page);
+    // Before the first fix, a chip says the GPS is awaited; the bar does not.
+    await expect(page.locator('#nav-waiting')).toBeVisible();
+    await expect(page.locator('.nav-bar')).not.toContainText('GPS');
     const badge = page.locator('#nav-speed');
     await fix(page, 100, 5, t0 + 1000);
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect(badge).toBeVisible();
     // 5 m/s is 18 km/h.
     await expect(page.locator('#nav-speed-value')).toHaveText('18');
