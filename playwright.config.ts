@@ -1,12 +1,14 @@
 import { defineConfig } from '@playwright/test';
+import { availableParallelism } from 'node:os';
 import process from 'node:process';
 export default defineConfig({
   testDir: 'tests',
   testMatch: '**/*.spec.ts',
   fullyParallel: true,
-  // Two workers per process, locally and in each CI shard (see ci.yml): the
-  // suite runs in about half the time and tests must stay independent.
-  workers: 2,
+  // One worker per CPU core, at least two: the map's software WebGL keeps
+  // each worker busy, so more workers than cores gain nothing. Tests must
+  // stay independent.
+  workers: Math.max(2, availableParallelism()),
   // CI shards write blob reports that the merge-reports job combines.
   reporter: process.env.CI ? 'blob' : 'list',
   use: {
