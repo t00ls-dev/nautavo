@@ -136,15 +136,17 @@ Edit SVG brand sources, then run `node scripts/generate-brand.mjs` to regenerate
 
 Use Node.js 22 LTS 22.23.4 or newer, Node 24.15 or newer in the 24 line, or Node 26+ (CI, Deploy and Lighthouse read the version from `.nvmrc`, 22.23.4, through `node-version-file`; change it there only), and `npm ci` for a reproducible install. The 24.15 minimum comes from jsdom 31 (unit-test environment), which requires Node `^22.22.2 || ^24.15.0 || >=26.0.0`; keep the `engines` field in `package.json` within the ranges required by the development dependencies, and update the README when it changes. Keep `@types/node` on the 22 line so type checks match the minimum supported runtime (Dependabot ignores its major updates). `npm run dev` serves the application at `http://localhost:5173/` by default; the help page is a second Vite entry.
 
-For application changes, run the CI checks:
+For application changes, run the static checks, unit tests and build, and the browser specs that cover the change:
 
 ```sh
 npm run lint
 npm run format:check
 npm test
-npm run test:browser
 npm run build
+npx playwright test tests/<name>.spec.ts   # each spec that covers the change; --last-failed after a fix
 ```
+
+Run the complete browser suite (`npm run test:browser`) locally as well when the change touches the shared test helpers (`tests/app-helpers.ts`, `tests/map-helpers.ts`), `playwright.config.ts` or behavior that many specs exercise (the planner map's fit, the panel layout, the routing queue), or when CI is unavailable. The complete suite always runs in the pull request's CI, which must pass before merging; on a two-core machine it takes about three times as long locally as in CI.
 
 Install Chromium with `npx playwright install chromium` if needed. Playwright starts its own dev server on `127.0.0.1:5173` and a production preview on `127.0.0.1:4175` for the service worker tests; avoid unrelated servers occupying those ports. For documentation-only edits, run `npm run format:check` and check the documented commands/paths against the repository; no application test is needed solely for prose.
 
