@@ -625,6 +625,7 @@ export function setupWeather(
         interactive: true,
         // Route editing pins stay above weather.
         z: 5,
+        framed: true,
       });
       centerIcon(mapSymbol);
       const markerSpeed = speedLabel(hour.wind);
