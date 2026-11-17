@@ -996,6 +996,10 @@ test.describe('phone navigation', () => {
         await expect(page.locator('#nav-reroute')).toBeVisible();
         await expect(page.locator('#nav-speed')).toBeVisible();
         expect(await overlaps(page)).toEqual([]);
+        // The bar keeps the same room above and below its contents.
+        const bar = page.locator('.nav-bar');
+        await expect(bar).toHaveCSS('padding-top', '12px');
+        await expect(bar).toHaveCSS('padding-bottom', '12px');
         // End and Upcoming share the right column: their edges line up.
         const end = (await page.locator('#nav-stop').boundingBox())!,
           upcoming = (await page.locator('#nav-list-toggle').boundingBox())!;
