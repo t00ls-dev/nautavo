@@ -14,7 +14,7 @@ For large or architectural changes, [open an issue](https://github.com/t00ls-dev
 
 ## Setup and validation
 
-The [Local development](README.md#local-development) and [Validation](README.md#validation) sections of the README list the install and check commands. The supported Node.js versions are set by the `engines` field in [`package.json`](package.json). Run the full validation before opening a pull request and report the real results.
+The [Local development](README.md#local-development) and [Validation](README.md#validation) sections of the README list the install and check commands. The supported Node.js versions are set by the `engines` field in [`package.json`](package.json). Before opening a pull request, run the static checks, unit tests, build and the browser specs that cover the change, and report the real results; the pull request's CI runs the complete browser suite.
 
 ## Workflow
 
