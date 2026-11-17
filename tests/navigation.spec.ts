@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
 import { weatherResponse } from './weather-fixture';
 import { decimalYear, magneticDeclination } from '../src/declination';
@@ -97,6 +97,59 @@ async function fits(page: Page) {
     if (eta.width && eta.right > stop.left) problems.push('time under Stop');
     return problems;
   });
+}
+/** The fixed clock of the tests that send their own fixes. */
+const t0 = Date.parse('2026-11-14T12:00:00Z');
+/**
+ * Replaces the device's location with fixes the test sends itself
+ * (`sendFix`), on a fixed clock, so time passes only as the fixes say.
+ */
+async function ownFixes(page: Page) {
+  await page.clock.setFixedTime(new Date(t0));
+  await page.addInitScript(() => {
+    const w = window as unknown as {
+      sendFix: (fix: {
+        lon: number;
+        lat: number;
+        speed: number | null;
+        accuracy: number;
+        time: number;
+      }) => void;
+    };
+    let deliver: PositionCallback | null = null;
+    navigator.geolocation.watchPosition = (success) => {
+      deliver = success;
+      return 1;
+    };
+    navigator.geolocation.clearWatch = () => {};
+    w.sendFix = ({ lon, lat, speed, accuracy, time }) =>
+      deliver?.({
+        coords: {
+          latitude: lat,
+          longitude: lon,
+          accuracy,
+          speed,
+          heading: null,
+          altitude: null,
+          altitudeAccuracy: null,
+        },
+        timestamp: time,
+      } as GeolocationPosition);
+  });
+}
+/** One fix at `[lat, lon]` and `time`, with the page clock moved there. */
+async function sendFix(
+  page: Page,
+  [latitude, longitude]: [number, number],
+  time: number,
+  speed: number | null = null,
+  accuracy = 5,
+) {
+  await page.clock.setFixedTime(new Date(time));
+  await page.evaluate(
+    (f) => (window as unknown as { sendFix: (f: unknown) => void }).sendFix(f),
+    { lat: latitude, lon: longitude, speed, accuracy, time },
+  );
 }
 
 test.describe('phone navigation', () => {
@@ -697,27 +750,52 @@ test.describe('phone navigation', () => {
     return asked;
   }
   /** About 330 m north of the route at the 0.7 km mark; `shift` makes a new fix. */
-  const offRoute = (context: BrowserContext, shift = 0) =>
-    context.setGeolocation({
-      latitude: lat + 0.003 + shift,
-      longitude: lon(7) + shift,
-      accuracy: 8,
-    });
+  /** Where the rerouting tests start, on the route before its turn. */
+  const onRoute: [number, number] = [lat + 0.00003, lon(6)];
+  /** About 330 m north of the route, nudged by `shift` for a new fix. */
+  const offRoute = (shift = 0): [number, number] => [
+    lat + 0.003 + shift,
+    lon(7) + shift,
+  ];
+  /**
+   * Navigation on fixes the test sends, from `onRoute` at `t0 + 1 s`, with
+   * rerouting answered (`ok`) or refused; `before` runs ahead of Navigate and
+   * `start` closes the start notice.
+   */
+  async function rerouting(
+    page: Page,
+    {
+      ok = true,
+      before = async () => {},
+      start = () => page.locator('#nav-notice-start').click(),
+    }: {
+      ok?: boolean;
+      before?: () => Promise<void>;
+      start?: () => Promise<void>;
+    } = {},
+  ) {
+    await ownFixes(page);
+    await setup(page);
+    await before();
+    const asked = await mockReroute(page, ok);
+    await page.locator('#navigate').click();
+    await start();
+    await sendFix(page, onRoute, t0 + 1000);
+    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    return asked;
+  }
+  /** Off the route, a new fix every 3 s for 21 s, as a traveler would. */
+  async function offRouteFor21s(page: Page) {
+    for (let i = 0; i < 7; i++)
+      await sendFix(page, offRoute(i * 0.00001), t0 + 4000 + i * 3000, null, 8);
+  }
 
   test('off the route for 15 s, the route is recalculated once', async ({
     page,
-    context,
   }) => {
-    await setup(page);
-    const asked = await mockReroute(page);
-    await page.locator('#navigate').click();
-    await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    const asked = await rerouting(page);
     // New fixes every few seconds while off the route.
-    for (let i = 0; i < 7; i++) {
-      await offRoute(context, i * 0.00001);
-      await page.waitForTimeout(3000);
-    }
+    await offRouteFor21s(page);
     await expect(page.locator('#nav-road')).toHaveText('Rua de Volta');
     await expect(page.locator('#nav-rerouted')).toBeVisible();
     await expect(page.locator('#nav-screen')).not.toHaveClass(/off-route/);
@@ -743,15 +821,11 @@ test.describe('phone navigation', () => {
     page,
     context,
   }) => {
-    await setup(page);
-    const asked = await mockReroute(page, false);
-    await page.locator('#navigate').click();
-    await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
+    const asked = await rerouting(page, { ok: false });
     const button = page.getByRole('button', { name: 'Recalculate route' });
-    await offRoute(context);
-    await page.waitForTimeout(5500);
-    await offRoute(context, 0.00001);
+    // Off the route for 5.5 s.
+    await sendFix(page, offRoute(), t0 + 2000, null, 8);
+    await sendFix(page, offRoute(0.00001), t0 + 7500, null, 8);
     await expect(page.locator('#nav-road')).toHaveText('Back to route');
     await expect(button).toBeEnabled();
     await button.click();
@@ -769,7 +843,7 @@ test.describe('phone navigation', () => {
     expect(await fits(page)).toEqual([]);
     // Offline, there is no button and nothing is sent.
     await context.setOffline(true);
-    await offRoute(context, 0.00002);
+    await sendFix(page, offRoute(0.00002), t0 + 9000, null, 8);
     await expect(waiting).toBeHidden();
     expect(asked).toHaveLength(2);
     await context.setOffline(false);
@@ -777,23 +851,19 @@ test.describe('phone navigation', () => {
 
   test('with automatic recalculation off, only the button asks', async ({
     page,
-    context,
   }) => {
-    await setup(page);
-    const asked = await mockReroute(page);
-    await page.locator('#navigate').click();
-    const auto = page.getByLabel('Recalculate the route automatically', {
-      exact: true,
+    const asked = await rerouting(page, {
+      start: async () => {
+        const auto = page.getByLabel('Recalculate the route automatically', {
+          exact: true,
+        });
+        await expect(auto).toBeChecked();
+        await auto.uncheck();
+        await page.locator('#nav-notice-start').click();
+      },
     });
-    await expect(auto).toBeChecked();
-    await auto.uncheck();
-    await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
     await expect(page.locator('#nav-auto-reroute')).toBeHidden();
-    for (let i = 0; i < 7; i++) {
-      await offRoute(context, i * 0.00001);
-      await page.waitForTimeout(3000);
-    }
+    await offRouteFor21s(page);
     await expect(page.locator('#nav-road')).toHaveText('Back to route');
     expect(asked).toHaveLength(0);
     await page.getByRole('button', { name: 'Recalculate route' }).click();
@@ -817,12 +887,12 @@ test.describe('phone navigation', () => {
 
   test('without the notice, a chip says recalculation is automatic', async ({
     page,
-    context,
   }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await page.addInitScript(() =>
       localStorage.setItem('navigation-notice', 'off'),
     );
+    await ownFixes(page);
     await setup(page);
     const asked = await mockReroute(page);
     await page.locator('#navigate').click();
@@ -840,10 +910,8 @@ test.describe('phone navigation', () => {
     expect(
       await page.evaluate(() => localStorage.getItem('auto-reroute')),
     ).toBe('off');
-    for (let i = 0; i < 7; i++) {
-      await offRoute(context, i * 0.00001);
-      await page.waitForTimeout(3000);
-    }
+    await sendFix(page, onRoute, t0 + 1000);
+    await offRouteFor21s(page);
     await expect(page.locator('#nav-road')).toHaveText('Volte à rota');
     expect(asked).toHaveLength(0);
     // Off, the next navigation shows no chip.
@@ -855,17 +923,15 @@ test.describe('phone navigation', () => {
 
   test('the recalculation texts fit at 320 px in Portuguese', async ({
     page,
-    context,
   }) => {
     await page.setViewportSize({ width: 320, height: 640 });
-    await setup(page);
-    await page.locator('#language').selectOption('pt');
-    await mockReroute(page, false);
-    await page.locator('#navigate').click();
-    await page.locator('#nav-notice-start').click();
-    await offRoute(context);
-    await page.waitForTimeout(5500);
-    await offRoute(context, 0.00001);
+    await rerouting(page, {
+      ok: false,
+      before: () => page.locator('#language').selectOption('pt').then(),
+    });
+    // Off the route for 5.5 s.
+    await sendFix(page, offRoute(), t0 + 2000, null, 8);
+    await sendFix(page, offRoute(0.00001), t0 + 7500, null, 8);
     const button = page.getByRole('button', { name: 'Recalcular rota' });
     await expect(button).toBeVisible();
     expect(await fits(page)).toEqual([]);
@@ -1863,43 +1929,12 @@ test.describe('speed while navigating', () => {
     hasTouch: true,
     permissions: ['geolocation'],
   });
-  const t0 = Date.parse('2026-11-14T12:00:00Z');
   /** Navigation with fixes the test sends itself, on a fixed clock. */
   async function navigateWithFixes(
     page: Page,
     before: () => Promise<void> = async () => {},
   ) {
-    await page.clock.setFixedTime(new Date(t0));
-    await page.addInitScript(() => {
-      const w = window as unknown as {
-        sendFix: (fix: {
-          lon: number;
-          lat: number;
-          speed: number | null;
-          accuracy: number;
-          time: number;
-        }) => void;
-      };
-      let deliver: PositionCallback | null = null;
-      navigator.geolocation.watchPosition = (success) => {
-        deliver = success;
-        return 1;
-      };
-      navigator.geolocation.clearWatch = () => {};
-      w.sendFix = ({ lon, lat, speed, accuracy, time }) =>
-        deliver?.({
-          coords: {
-            latitude: lat,
-            longitude: lon,
-            accuracy,
-            speed,
-            heading: null,
-            altitude: null,
-            altitudeAccuracy: null,
-          },
-          timestamp: time,
-        } as GeolocationPosition);
-    });
+    await ownFixes(page);
     await setup(page);
     await before();
     await page.locator('#navigate').click();
@@ -1907,20 +1942,13 @@ test.describe('speed while navigating', () => {
     await expect(page.locator('#nav-screen')).toBeVisible();
   }
   /** One fix `meters` along the route (0.001° is about 102 m), at `time`. */
-  const fix = async (
+  const fix = (
     page: Page,
     meters: number,
     speed: number | null,
     time: number,
     accuracy = 5,
-  ) => {
-    await page.clock.setFixedTime(new Date(time));
-    await page.evaluate(
-      (f) =>
-        (window as unknown as { sendFix: (f: unknown) => void }).sendFix(f),
-      { lon: lon(meters / 102.4), lat, speed, accuracy, time },
-    );
-  };
+  ) => sendFix(page, [lat, lon(meters / 102.4)], time, speed, accuracy);
 
   test('shows the current speed, 0 when stopped and none with a weak signal', async ({
     page,

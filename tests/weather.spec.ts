@@ -1010,6 +1010,8 @@ test('a recalculated route waits to settle and reuses cached elevation', async (
 test('a usage limit counts down, retries once by itself, then offers the button', async ({
   page,
 }) => {
+  // The countdowns' seconds pass on the page clock, not in real time.
+  await page.clock.install();
   await setup(page, true);
   let refusals = 2;
   const requests: string[] = [];
@@ -1037,17 +1039,21 @@ test('a usage limit counts down, retries once by itself, then offers the button'
     'Elevation usage limit reached. Try again in 2s.',
   );
   await expect(page.locator('#elevation-retry')).toBeHidden();
+  await page.clock.runFor(1000);
   await expect(status).toHaveText(
     'Elevation usage limit reached. Try again in 1s.',
   );
   // It retried once on its own, was refused again, counted down again and
   // only then offers the button: two requests, no third attempt.
-  await expect(page.locator('#elevation-retry')).toBeVisible({
-    timeout: 10000,
-  });
+  await page.clock.runFor(1000);
+  await expect.poll(() => requests.length).toBe(2);
+  await page.clock.runFor(2000);
+  await expect(page.locator('#elevation-retry')).toBeVisible();
   await expect(status).toHaveText('Elevation usage limit reached.');
   expect(requests).toHaveLength(2);
-  await page.waitForTimeout(2500);
+  await page.clock.runFor(2500);
+  // Long enough for a third request, if one were sent, to reach the mock.
+  await page.waitForTimeout(300);
   expect(requests).toHaveLength(2);
   await page.locator('#elevation-retry').click();
   await expect(page.locator('#elevation-stats')).toContainText('Min 70 m');
