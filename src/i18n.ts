@@ -676,10 +676,12 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
       `UV ${value} · ${({ Low: 'baixo', Moderate: 'moderado', High: 'alto', 'Very high': 'muito alto', Extreme: 'extremo' } as Record<string, string>)[category]}`,
   ],
   [/^(\S+ (?:km|mi)) of (\S+ (?:km|mi))$/, (done, all) => `${done} de ${all}`],
+  // Sunset and sunrise ahead while navigating, on screen and spoken.
+  [/^Sunset in (\d+) min$/, (n) => `Sol se põe em ${n} min`],
+  [/^Sunrise in (\d+) min$/, (n) => `Sol nasce em ${n} min`],
   [
-    /^Weather here: (.+), (\S+), rain (\S+)%$/,
-    (description, temperature, rain) =>
-      `Tempo aqui: ${pt[description] ?? description}, ${temperature}, chuva ${rain}%`,
+    /^Sunset in (\d+) minutes?\.$/,
+    (n) => `O sol se põe em ${n} ${n === '1' ? 'minuto' : 'minutos'}.`,
   ],
   [/^Replay · (.+)$/, (clock) => `Reprodução · ${clock}`],
   [/^About (-?[\d.,]+ (?:m|ft))$/, (value) => `Cerca de ${value}`],

@@ -16,6 +16,10 @@ import type { DistanceUnits } from './units';
  * The next maneuver is announced at most three times: far (once, only when
  * it was first seen farther than that), near and at the turn, at distances
  * that grow with speed so a faster traveler hears it earlier.
+ *
+ * A sunset before the arrival is said once, `VOICE_SUNSET_MINUTES` ahead
+ * (or at once, with the minutes left, when less remains), never over a
+ * maneuver announcement.
  */
 export const VOICE_THRESHOLDS = {
   /** Far: the larger of these meters and seconds ahead at the speed. */
@@ -25,6 +29,9 @@ export const VOICE_THRESHOLDS = {
   /** At the turn, meters. */
   now: 30,
 } as const;
+
+/** The sunset is said when this many minutes away, or fewer. */
+export const VOICE_SUNSET_MINUTES = 30;
 
 type Stage = 'far' | 'near' | 'now';
 
@@ -65,7 +72,8 @@ export function createVoiceSchedule() {
   /** How far each maneuver was when first seen. */
   const firstSeen = new WeakMap<Step, number>();
   let offRoute = false,
-    arrived = false;
+    arrived = false,
+    sunsetSaid = false;
   return {
     /**
      * What to say for this readout, or null. `speed` in m/s (0 when
@@ -117,6 +125,16 @@ export function createVoiceSchedule() {
     /** A recalculated route was taken (#145). */
     rerouted(): string {
       return 'Route recalculated.';
+    },
+    /** The sunset `minutes` ahead, before the arrival; null when none. */
+    sunset(minutes: number | null): string | null {
+      if (minutes === null || offRoute || sunsetSaid) return null;
+      if (minutes > VOICE_SUNSET_MINUTES) return null;
+      sunsetSaid = true;
+      const whole = Math.max(1, Math.round(minutes));
+      return whole === 1
+        ? 'Sunset in 1 minute.'
+        : `Sunset in ${whole} minutes.`;
     },
   };
 }

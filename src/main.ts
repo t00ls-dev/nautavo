@@ -2481,7 +2481,6 @@ const navigation = setupNavigation({
   speedKmh: () => speedKmh,
   locale: () => (state.language === 'pt' ? 'pt-BR' : 'en'),
   status,
-  weather: () => weather.routeWeather(),
 });
 if (resumable) navigation.offerResume(resumable.progress);
 // Settings always open with the values in use; unapplied edits are dropped.

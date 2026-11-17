@@ -194,3 +194,35 @@ export function routeDaylight(
     latestDeparture,
   };
 }
+
+/**
+ * The next sunset or sunrise on the rest of the route, travelling on from
+ * `progress` at `now` at `speedKmh`, for the navigation screen's notices:
+ * the first change ahead between day and twilight or night (the sun crossing
+ * `SUNRISE_ANGLE`, as in the planner's summary). Null when the arrival comes
+ * first.
+ */
+export function sunAhead(
+  route: Route,
+  progress: number,
+  now: number,
+  speedKmh: number,
+): { kind: 'sunset' | 'sunrise'; time: number } | null {
+  // The departure that puts the traveler here now, at that speed.
+  const departure = now - travelTimeSeconds(progress, speedKmh) * 1000;
+  const { ranges } = routeDaylight(route, departure, speedKmh);
+  const i = ranges.findIndex((r) => r.from <= progress && progress < r.to);
+  if (i < 0) return null;
+  const day = ranges[i].kind === 'day';
+  const change = ranges.slice(i + 1).find((r) => (r.kind === 'day') !== day);
+  if (!change) return null;
+  const kind = day ? 'sunset' : 'sunrise';
+  // The pieces say where on the route it happens; the sun's own time there
+  // says when, exactly, whatever the speed (the planner's sun times).
+  const estimate = departure + travelTimeSeconds(change.from, speedKmh) * 1000;
+  const place = cumulativeTrack(route.segments).find(
+    (p) => p.distance >= change.from,
+  )?.coord;
+  const exact = place ? sunTimes(estimate, place)[kind] : null;
+  return { kind, time: exact ?? estimate };
+}

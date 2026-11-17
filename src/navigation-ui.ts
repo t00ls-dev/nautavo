@@ -42,12 +42,7 @@ import {
   locateOnTrack,
   type TrackIndex,
 } from './track-position';
-import {
-  weatherAlong,
-  type RouteWeather,
-  type SampleWeather,
-} from './navigation-weather';
-import { weatherDescription } from './i18n';
+import { sunAhead } from './daylight';
 import { arrivalSpeedKmh, createSpeedMeter } from './navigation-speed';
 import { createVoiceSchedule } from './navigation-voice';
 import {
@@ -62,7 +57,7 @@ import {
   replayFix,
 } from './navigation-replay';
 import { distanceLabel } from './units';
-import { distanceUnits, temperatureUnits } from './unit-preferences';
+import { distanceUnits } from './unit-preferences';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /**
@@ -89,6 +84,8 @@ const ZOOM = 15;
 const REPLAY_TURN_METERS = 40;
 /** How long "Route recalculated" stays on screen, ms. */
 const REROUTED_NOTICE = 4000;
+/** A sunset or sunrise shows this many minutes ahead, or fewer. */
+const SUN_NOTICE_MINUTES = 60;
 /** Room kept between the rejoin point and the screen edges, pixels. */
 const REJOIN_MARGIN = 40;
 /** Off the route, the map never zooms out farther than this. */
@@ -182,8 +179,6 @@ export function setupNavigation(deps: {
   speedKmh: () => number;
   locale: () => string;
   status: (message: string, error?: boolean) => void;
-  /** The forecast the planner already fetched for the route, or null (#155). */
-  weather: () => RouteWeather | null;
 }) {
   const button = $<HTMLButtonElement>('navigate'),
     notice = $<HTMLDialogElement>('nav-notice'),
@@ -362,11 +357,14 @@ export function setupNavigation(deps: {
     travelledNext: number | null = null,
     /** How long a travelled-line redraw takes to show, ms (smoothed). */
     travelledDelay = 50,
-    /** The planned route and the traveler's progress on it, for weather. */
+    /** The planned route and the traveler's progress on it, for the trip's
+        average and the sun notices. */
     plannedIndex: TrackIndex | null = null,
     plannedProgress = 0,
-    /** What the weather chip and list show, to redraw only on a change. */
-    weatherShown = '',
+    /** What the sun notice was computed for, to redo it only on a change. */
+    sunShown = '',
+    /** Minutes to a sunset before the arrival, for the voice; else null. */
+    sunsetIn: number | null = null,
     /** Current speed and the trip's average for the arrival (#32, #136). */
     meter = createSpeedMeter();
   /** The traveler's clock: simulated while replaying. */
@@ -810,10 +808,13 @@ export function setupNavigation(deps: {
       $('nav-then').hidden = true;
     } else renderManeuver(r, arrived);
     announce(r, arrived, !!rejoin);
-    say(voice.next(r, speedNow, units(), deps.locale()));
+    renderSun();
+    // A maneuver comes first; the sunset waits for a quiet readout.
+    say(
+      voice.next(r, speedNow, units(), deps.locale()) ?? voice.sunset(sunsetIn),
+    );
     renderBar(r);
     renderList();
-    renderWeather();
     renderSpeed();
     renderReplayClock();
   }
@@ -865,112 +866,35 @@ export function setupNavigation(deps: {
       label.textContent = text;
     }
   }
-  /** Rounded temperature with a degree sign, in the chosen units. */
-  function shortTemperature(celsius: number | null) {
-    if (celsius === null) return '—';
-    const value =
-      temperatureUnits() === 'fahrenheit' ? (celsius * 9) / 5 + 32 : celsius;
-    return `${Math.round(value)}°`;
-  }
-  /** Icon, temperature and chance of rain of one sample, as elements. */
-  function weatherFacts(sample: SampleWeather): Node[] {
-    const { icon: name } = weatherDescription(sample.hour.code);
-    const temperature = document.createElement('span');
-    temperature.className = 'nav-weather-temperature';
-    temperature.textContent = shortTemperature(sample.hour.temperature);
-    const rain = document.createElement('span');
-    rain.className = 'nav-weather-rain';
-    rain.append(icon('droplet'), `${sample.hour.probability ?? '—'}%`);
-    return [icon(name), temperature, rain];
-  }
-  const weatherWrap = $('nav-weather'),
-    weatherToggle = $<HTMLButtonElement>('nav-weather-toggle'),
-    weatherList = $('nav-weather-list');
-  function weatherOpen(open: boolean) {
-    weatherList.hidden = !open;
-    weatherToggle.setAttribute('aria-expanded', String(open));
-  }
-  // The chip is the weather here; it opens the samples ahead, when any.
-  weatherToggle.onclick = () =>
-    weatherOpen(
-      !!weatherList.childElementCount &&
-        weatherToggle.getAttribute('aria-expanded') !== 'true',
-    );
   /**
-   * The weather here and ahead from the forecast already fetched for the
-   * planned route (#155); hidden without one. No request is made.
+   * The next sunset or sunrise before the arrival, within the hour, as a
+   * chip ("Sunset in 40 min"): local, from the route, the progress and the
+   * trip's speed, so it never goes stale. Weather stays in the planner.
    */
-  function renderWeather() {
-    const forecast = deps.weather();
-    const planned = deps.route();
-    const along =
-      forecast && planned && forecast.route === planned
-        ? weatherAlong(forecast, plannedProgress, now(), arrivalSpeed())
-        : null;
-    const here = along?.here ?? null;
-    const locale = deps.locale();
-    const clock = (time: number) =>
-      new Date(time).toLocaleTimeString(locale, {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    const key = !here
-      ? ''
-      : JSON.stringify([
-          locale,
-          units(),
-          temperatureUnits(),
-          [here, ...along!.ahead].map((s) => [
-            s.index,
-            s.hour.time,
-            Math.round(s.ahead / 100),
-            clock(s.passage),
-          ]),
-        ]);
-    if (key === weatherShown) return;
-    weatherShown = key;
-    weatherWrap.hidden = !here;
-    if (!here) {
-      weatherOpen(false);
-      return;
-    }
-    const alert = (s: SampleWeather) =>
-      s.risks.find((risk) => risk.severity >= 2) ?? null;
-    weatherToggle.classList.toggle('alert', !!alert(here));
-    weatherToggle.replaceChildren(...weatherFacts(here));
-    const description = weatherDescription(here.hour.code).text;
-    weatherToggle.setAttribute(
-      'aria-label',
-      t(
-        `Weather here: ${description}, ${shortTemperature(here.hour.temperature)}, rain ${here.hour.probability ?? '—'}%`,
+  function renderSun() {
+    const planned = deps.route(),
+      at = now();
+    const key = `${Math.floor(at / 60_000)}:${Math.round(plannedProgress / 250)}:${Math.round(arrivalSpeed())}`;
+    if (key === sunShown) return;
+    sunShown = key;
+    const sun = planned
+      ? sunAhead(planned, plannedProgress, at, arrivalSpeed())
+      : null;
+    const minutes = sun
+      ? Math.max(1, Math.round((sun.time - at) / 60_000))
+      : Infinity;
+    sunsetIn = sun?.kind === 'sunset' ? minutes : null;
+    const chip = $('nav-sun');
+    chip.hidden = minutes > SUN_NOTICE_MINUTES;
+    if (!sun || chip.hidden) return;
+    // English text: the page translator turns it into the chosen language.
+    chip.replaceChildren(
+      icon(sun.kind),
+      text(
+        'span',
+        `${sun.kind === 'sunset' ? 'Sunset' : 'Sunrise'} in ${minutes} min`,
       ),
     );
-    // The list holds only the samples ahead; the chip is the weather here.
-    weatherList.replaceChildren(
-      ...along!.ahead.map((sample) => {
-        const item = document.createElement('li');
-        const label = document.createElement('span');
-        label.className = 'nav-weather-when';
-        label.textContent = `+${distanceLabel(sample.ahead, units(), locale)}`;
-        item.append(label, ...weatherFacts(sample));
-        // Below: the passage time and the main alert, if any.
-        const note = document.createElement('span');
-        note.className = 'nav-weather-note';
-        note.append(clock(sample.passage));
-        const risk = alert(sample);
-        if (risk) {
-          item.classList.add('alert');
-          const text = document.createElement('span');
-          text.className = 'nav-weather-alert';
-          // English text: the page translator turns it into the chosen language.
-          text.textContent = risk.text;
-          note.append(' · ', text);
-        }
-        item.append(note);
-        return item;
-      }),
-    );
-    if (!along!.ahead.length) weatherOpen(false);
   }
   /** The Recalculate route button and the failure notice, off the route. */
   function renderReroute(offRoute: boolean) {
@@ -1121,7 +1045,7 @@ export function setupNavigation(deps: {
     previous = { coord: last.coord, time };
     moving = isMoving(speed, moving);
     speedNow = speed ?? speedNow;
-    // Progress on the planned route: weather samples and the trip's average
+    // Progress on the planned route: the trip's average and the sun notices
     // are measured on it, so both hold after a recalculation.
     if (replaying) plannedProgress = replayDistance;
     else if (plannedIndex) {
@@ -1424,8 +1348,8 @@ export function setupNavigation(deps: {
     // Kept in this tab so a reload can continue it (#138); a replay is not.
     if (!replay) rememberNavigation(route, location.hash, Date.now(), progress);
     meter = createSpeedMeter();
-    weatherShown = '';
-    weatherOpen(false);
+    sunShown = '';
+    sunsetIn = null;
     session++;
     hideAutoChip();
     voice = createVoiceSchedule();
@@ -1524,8 +1448,7 @@ export function setupNavigation(deps: {
     clearTimeout(reroutedTimer);
     $('nav-rerouted').hidden = true;
     hideAutoChip();
-    weatherOpen(false);
-    weatherWrap.hidden = true;
+    $('nav-sun').hidden = true;
     document.documentElement.classList.remove('navigating');
     stopWatching();
     // The planner's location watch resumes only after this one has stopped.
