@@ -70,6 +70,8 @@ npm run test:browser              # Playwright browser workflows
 npm run build                     # TypeScript check and production build
 ```
 
+While working on a change, run the browser specs that cover it (`npx playwright test tests/<name>.spec.ts`); the complete browser suite also runs in every pull request's CI.
+
 The opt-in `npm run test:integration` calls real OSRM, `npm run test:tracks` checks imported-track matching on recorded tracks kept locally in the ignored `.audit.local/tracks/` folder, and `node scripts/browser-check.mjs` runs live acceptance checks against a local server (or a deployed site through `SITE_URL`), writing only to the ignored `.browser-check.local/` folder. `npm run lighthouse` audits every sitemap page on the local preview (or `SITE_URL`) with Lighthouse, the engine behind PageSpeed Insights, writing reports to the ignored `.lighthouse.local/` folder.
 
 ## Deployment
