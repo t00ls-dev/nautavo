@@ -995,22 +995,20 @@ test.describe('phone navigation', () => {
         await expect(page.locator('#nav-reroute')).toBeVisible();
         await expect(page.locator('#nav-speed')).toBeVisible();
         expect(await overlaps(page)).toEqual([]);
-        // The bar keeps the same room above and below its contents.
-        const bar = page.locator('.nav-bar');
-        await expect(bar).toHaveCSS('padding-top', '12px');
-        await expect(bar).toHaveCSS('padding-bottom', '12px');
-        // The time and distance sit centered against End and Upcoming.
-        const eta = (await page.locator('.nav-eta').boundingBox())!,
-          top = (await page.locator('#nav-stop').boundingBox())!.y,
-          below = (await page.locator('#nav-list-toggle').boundingBox())!;
+        // A sheet like the route panel: rounded top, its handle across the
+        // top and End well apart from it.
+        await expect(page.locator('.nav-bar')).toHaveCSS(
+          'border-top-left-radius',
+          '16px',
+        );
+        const handle = (await page.locator('#nav-list-toggle').boundingBox())!,
+          end = (await page.locator('#nav-stop').boundingBox())!;
+        expect(end.y).toBeGreaterThanOrEqual(handle.y + handle.height);
+        // The time and End share one row.
+        const eta = (await page.locator('.nav-eta').boundingBox())!;
         expect(
-          Math.abs(eta.y + eta.height / 2 - (top + below.y + below.height) / 2),
-        ).toBeLessThanOrEqual(2);
-        // End and Upcoming share the right column: their edges line up.
-        const end = (await page.locator('#nav-stop').boundingBox())!,
-          upcoming = (await page.locator('#nav-list-toggle').boundingBox())!;
-        expect(Math.abs(end.x - upcoming.x)).toBeLessThanOrEqual(1);
-        expect(Math.abs(end.width - upcoming.width)).toBeLessThanOrEqual(1);
+          Math.abs(eta.y + eta.height / 2 - (end.y + end.height / 2)),
+        ).toBeLessThanOrEqual(4);
         // The whole bar is the list's touch target (#207).
         await page.locator('#nav-time').click();
         const rows = page.locator('#nav-list li');
@@ -1484,7 +1482,7 @@ test.describe('replay on the navigation screen', () => {
     );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
-    // No waiting for GPS in a replay; Upcoming shows (#207).
+    // No waiting for GPS in a replay; the list's handle shows (#207).
     await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect(page.locator('#nav-list-toggle')).toBeVisible();
     // About 610 m along (30 % of 2 km): the right turn at 1 km comes next.

@@ -1241,11 +1241,10 @@ export function setupNavigation(deps: {
     );
     list.replaceChildren(...rows);
   }
-  // The whole bottom bar opens the list, its Upcoming button saying so; End,
-  // the replay controls and the list itself keep their own taps. A tap
-  // toggles; a drag up opens and a drag down closes.
+  // The bottom bar is a sheet: its handle, and the whole bar around it, open
+  // the list; End, the replay controls and the list itself keep their own
+  // taps. A tap toggles; a drag up opens and a drag down closes.
   const bar = listToggle.closest<HTMLElement>('.nav-bar')!;
-  listToggle.append(icon('chevron'));
   const ownTap = (target: EventTarget | null) =>
     target instanceof Element &&
     !!target.closest(

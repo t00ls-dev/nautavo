@@ -112,7 +112,6 @@ const pt: Record<string, string> = {
   'Voice on': 'Voz ligada',
   'Voice off': 'Voz desligada',
   'Upcoming turns': 'Próximas curvas',
-  Upcoming: 'Próximas',
   'Save as favorite': 'Salvar como favorito',
   Backup: 'Cópia de segurança',
   'Your saved routes and favorite places in one file, to keep or to move to another device.':

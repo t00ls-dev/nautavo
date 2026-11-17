@@ -463,6 +463,15 @@ header button.icon-control {
   padding: 0;
   border-color: transparent;
 }
+/* The handle of a bottom sheet: the route panel on phones and the
+   navigation bar. */
+.sheet-handle {
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
 #panel-toggle .sheet-handle,
 #panel-toggle .peek {
   display: none;
@@ -1772,10 +1781,6 @@ dialog.settings::backdrop {
   #panel-toggle .sheet-handle {
     display: block;
     align-self: center;
-    width: 40px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--color-border-strong);
   }
   #panel-toggle .peek {
     display: flex;
@@ -3818,16 +3823,19 @@ dialog:modal:not(.nav-screen) {
   position: relative;
   z-index: 2;
   flex: none;
-  /* The same 12 px above and below, the iPhone's home indicator area
-     taking the bottom's place rather than adding to it. */
-  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  /* A sheet, like the route panel: rounded top and a handle; the iPhone's
+     home indicator area takes the bottom's 12 px rather than adding to it. */
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
   background: var(--color-surface);
   box-shadow: 0 -4px 20px #1b293426;
 }
 /* With the upcoming list open, the bar and its list cover the map's
-   buttons and badges instead of slipping under them (#207). */
+   buttons and badges instead of slipping under them (#207), and the list's
+   rounded top takes over from the bar's. */
 .nav-bar:has(.nav-list:not([hidden])) {
   z-index: 4;
+  border-radius: 0;
 }
 /* The upcoming list (#137): the whole bar opens it, a chevron beside the
    time says so, and it shows as a panel over the map. */
@@ -3838,30 +3846,22 @@ dialog:modal:not(.nav-screen) {
 .nav-eta {
   touch-action: none;
 }
-/* Upcoming, below End: a labelled pill with a chevron, while the whole bar
-   stays its touch target. */
+/* The handle opens the upcoming list; the whole bar around it does too. */
 .nav-list-toggle {
-  gap: 2px;
-  min-width: 0;
-  min-height: 32px;
-  padding: 0 8px 0 12px;
+  grid-column: 1 / -1;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  height: 20px;
+  padding: 0;
   border: 0;
-  border-radius: 16px;
-  background: var(--color-soft);
-  color: var(--color-primary-strong);
-  font-size: 15px;
-  font-weight: 650;
+  background: none;
 }
 .nav-list-toggle:hover {
-  background: var(--color-soft);
+  background: none;
 }
-.nav-list-toggle .button-icon {
-  width: 20px;
-  height: 20px;
-  transition: transform 150ms ease;
-}
-.nav-list-toggle[aria-expanded='true'] .button-icon {
-  transform: rotate(180deg);
+.nav-list-toggle[aria-expanded='true'] .sheet-handle {
+  background: var(--color-primary);
 }
 .nav-list {
   position: absolute;
@@ -3909,10 +3909,9 @@ dialog:modal:not(.nav-screen) {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
-/* Two columns: the time and distance on the left, centered against End and
-   Upcoming, which share the right one so their edges line up in both
-   languages. The row's wrapper steps aside for the grid; the replay
-   controls span both columns below. */
+/* The handle across the top, then the time and distance on the left and
+   End on the right; the row's wrapper steps aside for the grid, and the
+   replay controls span both columns below. */
 .nav-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3924,14 +3923,11 @@ dialog:modal:not(.nav-screen) {
 }
 .nav-eta {
   grid-column: 1;
-  grid-row: 1 / span 2;
+  margin-top: 4px;
 }
-.nav-stop,
-.nav-list-toggle {
+.nav-stop {
   grid-column: 2;
-}
-.nav-list-toggle {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .nav-replay {
   grid-column: 1 / -1;

@@ -840,11 +840,6 @@
           hidden
         ></ol>
         <div class="nav-bar-row">
-          <div class="nav-eta">
-            <div id="nav-time" class="nav-time"></div>
-            <div id="nav-rest" class="nav-rest"></div>
-          </div>
-          <button id="nav-stop" class="nav-stop" type="button">End</button>
           <button
             id="nav-list-toggle"
             class="nav-list-toggle"
@@ -854,8 +849,13 @@
             aria-label="Upcoming turns"
             title="Upcoming turns"
           >
-            <span>Upcoming</span>
+            <span class="sheet-handle" aria-hidden="true"></span>
           </button>
+          <div class="nav-eta">
+            <div id="nav-time" class="nav-time"></div>
+            <div id="nav-rest" class="nav-rest"></div>
+          </div>
+          <button id="nav-stop" class="nav-stop" type="button">End</button>
         </div>
         <div id="nav-replay" class="nav-replay" hidden>
           <button id="nav-replay-toggle" type="button"></button
