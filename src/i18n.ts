@@ -411,7 +411,7 @@ const pt: Record<string, string> = {
   'Copy link': 'Copiar link',
   'My road trip': 'Minha viagem',
   'OSRM server': 'Servidor OSRM',
-  'Valhalla fallback': 'Fallback Valhalla',
+  'Valhalla server': 'Servidor Valhalla',
   'Nominatim server': 'Servidor Nominatim',
   'Apply settings': 'Aplicar configurações',
   'Points and settings (latitude, longitude)':
@@ -513,6 +513,7 @@ const pt: Record<string, string> = {
   'Imported TCX': 'TCX importado',
   'Imported FIT': 'FIT importado',
   'Valhalla (fallback)': 'Valhalla (alternativo)',
+  'OSRM (fallback)': 'OSRM (alternativo)',
   'Lock editing': 'Bloquear edição',
   'Unlock editing': 'Desbloquear edição',
   'Route locked. Map, export and sharing still work.':

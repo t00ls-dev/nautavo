@@ -10,7 +10,13 @@ import { readFile } from 'node:fs/promises';
 import { Fit, le, name, recordFields, semi } from './fit-fixture';
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits, setSpeed } from './unit-settings';
-import { base, mockOsrm, osrmAnswer, osrmPoints } from './app-helpers';
+import {
+  base,
+  mockRouting,
+  osrmAnswer,
+  osrmPoints,
+  routedPoints,
+} from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
 test.beforeEach(async ({ page }) => {
@@ -18,7 +24,7 @@ test.beforeEach(async ({ page }) => {
 });
 async function setup(page: Page) {
   await mockBasemap(page);
-  await mockOsrm(page, {
+  await mockRouting(page, {
     legs: [
       {
         steps: [
@@ -299,7 +305,9 @@ test('the itinerary shows turn directions in both languages', async ({
   page,
 }) => {
   await setup(page);
-  // Later routes override the shared mock: three steps with maneuvers.
+  // Later routes override the shared mock: three steps with OSRM's
+  // maneuvers, which answers as the fallback when Valhalla fails.
+  await page.route(/\/route\?json=/, (r) => r.abort());
   await page.route('**/route/v1/driving/**', async (r) => {
     const coords = osrmPoints(r.request().url());
     const step = (name: string, maneuver: object) => ({
@@ -513,10 +521,8 @@ test('editing an imported track reroutes only the track around the edit', async 
   await setup(page);
   const routes: number[] = [];
   page.on('request', (r) => {
-    if (r.url().includes('/route/v1/driving/'))
-      routes.push(
-        new URL(r.url()).pathname.split('/driving/')[1].split(';').length,
-      );
+    const points = routedPoints(r.url());
+    if (points !== null) routes.push(points);
   });
   // A 30 km straight track with a 4 km out-and-back spur in the middle.
   const track = [
@@ -561,7 +567,9 @@ test('editing an imported track reroutes only the track around the edit', async 
   expect(exported.slice(-150)).toEqual(
     track.slice(-150).map(([lat, lon]) => `<trkpt lat="${lat}" lon="${lon}"/>`),
   );
-  await expect(page.locator('#itinerary')).toContainText('Imported GPX + OSRM');
+  await expect(page.locator('#itinerary')).toContainText(
+    'Imported GPX + Valhalla',
+  );
 
   // Undo returns to the renamed step with the exact imported track, no request.
   await page.locator('#undo').click();
@@ -891,6 +899,8 @@ test.describe('servers suggested by a link', () => {
       { name: 'Destination', coord: [-23.05016, -43.53524] },
     ];
     if (osrm) state.osrm = osrm;
+    // OSRM first, so the link's OSRM server is the one asked.
+    state.prefer = false;
     return base + encodeState(state);
   };
   const track = (page: Page) => {

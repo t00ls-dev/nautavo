@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
-import { base, mockOsrm } from './app-helpers';
+import { base, mockRouting } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
@@ -198,7 +198,7 @@ test.describe('phone summary', () => {
   }) => {
     // 23:20 local: the automatic departure is 23:30 and the arrival after midnight.
     await page.clock.setFixedTime(new Date('2026-11-11T02:20:00Z'));
-    await mockOsrm(page, {
+    await mockRouting(page, {
       distance: 30900,
       duration: 2000,
       legs: [{ steps: [] }],

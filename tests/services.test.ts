@@ -56,6 +56,8 @@ const state = () => {
   ];
   return s;
 };
+/** The same route without Prefer main roads, which keeps OSRM primary. */
+const osrmFirst = () => ({ ...state(), prefer: false });
 describe('routing adapters', () => {
   it('requests full geometry with lon,lat and returns lat,lon', async () => {
     const fetch = vi.fn().mockResolvedValue(response(osrm));
@@ -190,10 +192,10 @@ describe('routing adapters', () => {
         }),
       );
     vi.stubGlobal('fetch', fetch);
-    const promise = calculate(state());
+    const promise = calculate(osrmFirst());
     await vi.runAllTimersAsync();
     const r = await promise;
-    expect(r.provider).toContain('Valhalla');
+    expect(r.provider).toBe('Valhalla (fallback)');
     expect(r.distance).toBe(1000);
     expect(r.steps[0].ref).toBe('BR-101');
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -267,9 +269,52 @@ describe('routing adapters', () => {
       )
       .mockResolvedValueOnce(response(valhalla()));
     vi.stubGlobal('fetch', fetch);
-    const promise = calculate(state());
+    const promise = calculate(osrmFirst());
     await vi.runAllTimersAsync();
     expect((await promise).provider).toContain('Valhalla');
+  });
+  it('asks Valhalla first with Prefer main roads, OSRM once after a pause on failure', async () => {
+    vi.useFakeTimers();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(response(valhalla()))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(response(osrm));
+    vi.stubGlobal('fetch', fetch);
+    /** One calculation, with the routing queue's spacing let pass. */
+    const run = async (s: ReturnType<typeof state>) => {
+      const promise = calculate(s);
+      await vi.runAllTimersAsync();
+      return promise;
+    };
+    const first = await run(state());
+    expect(String(fetch.mock.calls[0][0])).toContain('/route?json=');
+    expect(
+      JSON.parse(
+        decodeURIComponent(String(fetch.mock.calls[0][0]).split('json=')[1]),
+      ),
+    ).toMatchObject({ costing_options: { auto: { use_highways: 1 } } });
+    expect(first.provider).toBe('Valhalla');
+    // The route points where Valhalla placed them: the ends of each leg.
+    expect(first.snapped).toEqual([
+      [0, 0],
+      [1, 2],
+    ]);
+    expect((await run(state())).provider).toBe('OSRM (fallback)');
+    expect(String(fetch.mock.calls[2][0])).toContain('/route/v1/driving/');
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+  it('keeps OSRM first without Prefer main roads, or when the caller says so', async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn().mockResolvedValue(response(osrm));
+    vi.stubGlobal('fetch', fetch);
+    const plain = calculate(osrmFirst()),
+      chosen = calculate(state(), () => true, null, 'osrm');
+    await vi.runAllTimersAsync();
+    expect((await plain).provider).toBe('OSRM');
+    expect((await chosen).provider).toBe('OSRM');
+    for (const [url] of fetch.mock.calls)
+      expect(String(url)).toContain('/route/v1/driving/');
   });
   it('rejects Valhalla responses with invalid values', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(valhalla('x'))));
@@ -334,7 +379,7 @@ it('does not start Valhalla when a route is superseded during the fallback delay
     throw new Error('Offline');
   });
   vi.stubGlobal('fetch', fetch);
-  const pending = calculate(state(), () => current);
+  const pending = calculate(osrmFirst(), () => current);
   const assertion = expect(pending).rejects.toThrow('Offline');
   await vi.runAllTimersAsync();
   await assertion;

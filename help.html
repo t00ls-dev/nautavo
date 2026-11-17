@@ -294,8 +294,10 @@
         <h2>Choose main roads</h2>
         <p>
           Add stops directly on the roads you want. The road list shows the
-          router’s names and references. “Prefer main roads” flags possible
-          local sections of 500 m or more; it does not exclude all local roads.
+          router’s names and references. “Prefer main roads”, on by default,
+          asks the Valhalla router for a route that favors highways (OSRM if
+          Valhalla fails; with the option off, OSRM first) and flags the local
+          sections of 500 m or more left; it does not exclude all local roads.
           Major avenues without a reference may also be flagged. Access roads
           can be necessary.
         </p>
@@ -829,9 +831,9 @@
         </p>
         <p>
           Routing sends control coordinates and options to
-          https://router.project-osrm.org or, on fallback,
-          https://valhalla1.openstreetmap.de. The route data uses
-          OpenStreetMap/ODbL. The
+          https://valhalla1.openstreetmap.de (with Prefer main roads) or
+          https://router.project-osrm.org, and to the other one if the first
+          fails. The route data uses OpenStreetMap/ODbL. The
           <a href="https://routing.openstreetmap.de/about.html"
             >OSRM operator</a
           >
@@ -1087,9 +1089,12 @@
         <p>
           Adicione paradas diretamente nas vias desejadas. A lista mostra os
           nomes e referências retornados pelo roteador. “Preferir vias
-          principais” sinaliza possíveis trechos locais com 500 m ou mais; não
-          exclui todas as vias locais. Avenidas principais sem referência também
-          podem ser sinalizadas. Vias de acesso podem ser necessárias.
+          principais”, ligada por padrão, pede ao roteador Valhalla uma rota que
+          favorece rodovias (o OSRM se o Valhalla falhar; com a opção desligada,
+          o OSRM primeiro) e sinaliza os trechos locais com 500 m ou mais que
+          restarem; não exclui todas as vias locais. Avenidas principais sem
+          referência também podem ser sinalizadas. Vias de acesso podem ser
+          necessárias.
         </p>
         <p>
           Resultados recentes do roteador ficam na memória da página por 15
@@ -1644,9 +1649,9 @@
         </p>
         <p>
           O roteamento envia coordenadas de controle e opções a
-          https://router.project-osrm.org ou, na alternativa,
-          https://valhalla1.openstreetmap.de. Os dados usam OpenStreetMap/ODbL.
-          O
+          https://valhalla1.openstreetmap.de (com Preferir vias principais) ou
+          https://router.project-osrm.org, e ao outro se o primeiro falhar. Os
+          dados usam OpenStreetMap/ODbL. O
           <a href="https://routing.openstreetmap.de/about.html"
             >operador OSRM</a
           >
