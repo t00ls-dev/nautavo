@@ -1,4 +1,4 @@
-import { addressAutocomplete, splitPlace } from './autocomplete';
+import { addressAutocomplete, placeOption, splitPlace } from './autocomplete';
 import { parseCoordinates, type Coord } from './core';
 import { byId as $ } from './dom';
 import { t } from './i18n';
@@ -128,7 +128,7 @@ export function favoriteDialog(services: {
           ...found.map((r) => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.textContent = r.display_name;
+            placeOption(button, r);
             button.onclick = () => {
               const c = parseCoordinates(`${r.lat},${r.lon}`);
               if (c) choose(c, r.display_name.slice(0, 240));
@@ -182,10 +182,12 @@ export function favoriteDialog(services: {
     error.hidden = true;
     for (const k of kinds) k.checked = k.value === edit.kind;
     dialog.showModal();
+    // No field takes the focus on opening, so the phone's keyboard stays
+    // down until a field is tapped; Tab goes on from the dialog itself.
+    dialog.focus();
     if (edit.coord) {
       choose(edit.coord, edit.place);
       name.value = edit.name;
-      name.focus();
     } else {
       // A new favorite starts from the place: search it, paste coordinates
       // or use My location.
@@ -193,7 +195,6 @@ export function favoriteDialog(services: {
       where.value = '';
       where.removeAttribute('aria-invalid');
       results.replaceChildren();
-      where.focus();
     }
   };
 }

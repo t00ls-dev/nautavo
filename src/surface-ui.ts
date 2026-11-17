@@ -157,7 +157,7 @@ export function setupSurface(
     link.textContent = 'See the help.';
     note.append(
       document.createTextNode(
-        'From OpenStreetMap via Valhalla. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.',
+        'From OpenStreetMap. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.',
       ),
       document.createTextNode(' '),
       link,

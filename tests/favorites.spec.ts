@@ -170,7 +170,13 @@ test('Add favorite in Favorite places starts an empty sheet, and the menu lists 
   const sheet = page.getByRole('dialog', { name: 'Add favorite' });
   const where = sheet.locator('#favorite-where');
   await expect(where).toHaveValue('');
-  await expect(where).toBeFocused();
+  // Nothing is focused on opening, so the phone keyboard stays down; the
+  // icon choices need no visible label.
+  await expect(sheet).toBeFocused();
+  expect(
+    (await sheet.locator('legend').boundingBox())!.height,
+  ).toBeLessThanOrEqual(1);
+  await expect(sheet.getByRole('group', { name: 'Icon' })).toBeAttached();
   // No place yet: the sheet asks for one.
   await sheet.locator('#favorite-name').fill('Bakery');
   await sheet.getByRole('button', { name: 'Save', exact: true }).click();
@@ -334,6 +340,21 @@ for (const [width, language] of [
         e.map((k) => Math.round(k.getBoundingClientRect().top)),
       );
     expect(new Set(tops).size).toBe(1);
+    // The place field's placeholder is read whole, not cut (#212).
+    const where = page.locator('#favorite-where');
+    await where.fill('');
+    const room = await where.evaluate((input: HTMLInputElement) => {
+      const style = getComputedStyle(input);
+      const context = document.createElement('canvas').getContext('2d')!;
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      return (
+        input.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight) -
+        context.measureText(input.placeholder).width
+      );
+    });
+    expect(room).toBeGreaterThan(0);
     // The name takes at most two lines (then shortened), beside its buttons.
     const lines = await page
       .locator('#favorite-list .library-open strong')

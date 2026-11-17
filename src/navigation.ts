@@ -56,6 +56,8 @@ export const REROUTE_SESSION_CAP = 20;
 export const REROUTE_AHEAD = 300;
 /** A route point closer than this ahead of the progress counts as reached. */
 const STOP_REACHED = 30;
+/** Largest gap between an arrive maneuver and the stop it reaches, meters. */
+const STOP_MATCH = 200;
 
 export interface NavigationManeuver {
   step: Step;
@@ -207,6 +209,25 @@ export function upcomingItems(
       : [],
   );
   return [...turns, ...points].sort((a, b) => a.at - b.at);
+}
+
+/**
+ * The intermediate stop an arrive maneuver reaches (#212): the nearest one
+ * within `STOP_MATCH` of it, never the destination, so the banner and voice
+ * name the stop instead of saying Arrive.
+ */
+export function stopAt(
+  stops: { at: number | null; name: string }[],
+  at: number,
+): string | null {
+  let best: { name: string; gap: number } | null = null;
+  for (const s of stops.slice(0, -1)) {
+    if (s.at === null) continue;
+    const gap = Math.abs(s.at - at);
+    if (gap <= STOP_MATCH && (!best || gap < best.gap))
+      best = { name: s.name, gap };
+  }
+  return best?.name ?? null;
 }
 
 /** Direction of the track from a distance to a point a little ahead. */

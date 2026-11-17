@@ -85,6 +85,19 @@ describe('voice announcements', () => {
     expect(voice.next(arrived, 5, 'metric', 'en')).toBeNull();
   });
 
+  it('names an intermediate stop instead of the arrival', () => {
+    const voice = createVoiceSchedule();
+    expect(voice.next(at(90, arrive), 5, 'metric', 'en', 'Lagoa')).toBe(
+      'In 90 meters, you reach Lagoa.',
+    );
+    expect(translate('In 90 meters, you reach Lagoa.', 'pt')).toBe(
+      'Em 90 metros, você chega a Lagoa.',
+    );
+    expect(translate('In 90 meters, you reach Stop 2.', 'pt')).toBe(
+      'Em 90 metros, você chega a Parada 2.',
+    );
+  });
+
   it('says once when the route is left and when it is rejoined', () => {
     const voice = createVoiceSchedule();
     const off = at(800, turn, { offRoute: true });

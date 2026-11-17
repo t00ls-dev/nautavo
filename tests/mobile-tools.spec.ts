@@ -278,15 +278,15 @@ test('empty suggestions offer an explicit Enter search and translate both ways',
   await page.goto(base);
   await page.locator('#location-1').fill('Nowhere');
   await expect(page.locator('#status')).toHaveText(
-    'No suggestions found. Press Enter to search with Nominatim.',
+    'No suggestions found. Press Enter to search addresses.',
   );
   await page.locator('#language').selectOption('pt');
   await expect(page.locator('#status')).toHaveText(
-    'Nenhuma sugestão encontrada. Pressione Enter para buscar com Nominatim.',
+    'Nenhuma sugestão encontrada. Pressione Enter para buscar endereços.',
   );
   await page.locator('#language').selectOption('en');
   await expect(page.locator('#status')).toHaveText(
-    'No suggestions found. Press Enter to search with Nominatim.',
+    'No suggestions found. Press Enter to search addresses.',
   );
 });
 test('long press on the map cannot start a native text selection, but the panel can', async ({

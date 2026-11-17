@@ -8,13 +8,14 @@ import {
 import { defaults, encodeState, encodeStateV1 } from '../src/core';
 import { readFile } from 'node:fs/promises';
 import { Fit, le, name, recordFields, semi } from './fit-fixture';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 import { chooseUnits, setSpeed } from './unit-settings';
 import {
   base,
   mockRouting,
   osrmAnswer,
   osrmPoints,
+  valhallaAnswer,
   libraryEntry,
   routedPoints,
 } from './app-helpers';
@@ -273,9 +274,65 @@ test('address searches belong to their own point and do not fire while typing', 
   );
   await expect(page.locator('#location-1')).toHaveValue('Grumari');
   await page.locator('#location-1').press('Enter');
-  await page.locator('#point-results-1 button').click();
+  // An Enter result reads like a suggestion (#214): pin, name, the rest of
+  // the address and the distance from the start, in the same card.
+  const result = page.locator('#point-results-1 button');
+  await expect(result).toHaveClass(/suggestion-place/);
+  await expect(result.locator('svg')).toHaveCount(1);
+  await expect(result.locator('b')).toHaveText('Grumari');
+  await expect(result.locator('small')).toHaveText('Rio de Janeiro');
+  await expect(result.locator('em')).toHaveText(/km/);
+  await expect(result).toHaveAttribute(
+    'aria-label',
+    /^Grumari, Rio de Janeiro, .+km/,
+  );
+  await result.click();
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   expect(searches).toBe(2);
+});
+test('a failed route says so in plain words and offers Try again', async ({
+  page,
+}) => {
+  await setup(page);
+  let fail = true;
+  const answer = (r: Route, json: unknown) =>
+    fail ? r.fulfill({ status: 503 }) : r.fulfill({ json });
+  await page.route('**/route/v1/driving/**', (r) =>
+    answer(r, osrmAnswer(r.request().url())),
+  );
+  await page.route(/\/route\?json=/, (r) =>
+    answer(r, valhallaAnswer(r.request().url())),
+  );
+  await page.locator('#location-0').fill(start);
+  await page.locator('#location-1').fill(end);
+  await page.locator('#location-1').press('Tab');
+  await expect(page.locator('#status')).toHaveText(
+    'Could not calculate the route right now. Check the points or try again.',
+    { timeout: 15000 },
+  );
+  await expect(page.locator('#calculate')).toHaveText('Try again');
+  fail = false;
+  await page.locator('#calculate').click();
+  await expect(page.locator('#status')).toHaveText('Route ready.', {
+    timeout: 15000,
+  });
+  await expect(page.locator('#calculate')).toHaveText('Calculate route');
+});
+test('the status names the point still to set', async ({ page }) => {
+  await setup(page);
+  await expect(page.locator('#status')).toHaveText(
+    'Set your start and destination.',
+  );
+  await page.locator('#location-0').fill(start);
+  await page.locator('#location-0').press('Tab');
+  await expect(page.locator('#status')).toHaveText('Set your destination.');
+  await page.locator('#location-1').fill(end);
+  await page.locator('#location-1').press('Tab');
+  await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
+  await page.locator('#add').click();
+  await expect(page.locator('#status')).toHaveText('Set point 2.');
+  await page.locator('#language').selectOption('pt');
+  await expect(page.locator('#status')).toHaveText('Defina o ponto 2.');
 });
 test('undo restores a moved marker and a removed stop', async ({ page }) => {
   await setup(page);
@@ -447,7 +504,6 @@ test('imports FIT and TCX files by content and reports damaged files', async ({
     'Route imported. Edits recalculate only the changed sections.',
   );
   await expect(page.locator('#download')).toBeEnabled();
-  await expect(page.locator('#itinerary')).toContainText('Imported FIT ·');
   await expect(page.locator('#location-1')).toHaveValue('Viewpoint');
   // Recorded FIT altitude needs no elevation request.
   const requests: string[] = [];
@@ -471,8 +527,8 @@ test('imports FIT and TCX files by content and reports damaged files', async ({
       `<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Courses><Course><Name>Costa</Name><Track>${point(-43.3)}${point(-43.25)}${point(-43.2)}</Track></Course></Courses></TrainingCenterDatabase>`,
     ),
   });
-  await expect(page.locator('#itinerary')).toContainText('TCX importado ·');
   await expect(page.locator('#route-name')).toHaveValue('Costa');
+  await expect(page.locator('#download')).toBeEnabled();
 
   const damaged = Buffer.from(bytes);
   damaged[30] ^= 0xff;
@@ -485,7 +541,8 @@ test('imports FIT and TCX files by content and reports damaged files', async ({
     'Este arquivo FIT está corrompido (soma de verificação não confere).',
   );
   // The previous route is kept.
-  await expect(page.locator('#itinerary')).toContainText('TCX importado ·');
+  await expect(page.locator('#route-name')).toHaveValue('Costa');
+  await expect(page.locator('#download')).toBeEnabled();
 });
 test('undo restores the geometry of each GPX import, even with equal points', async ({
   page,
@@ -568,15 +625,15 @@ test('editing an imported track reroutes only the track around the edit', async 
   expect(exported.slice(-150)).toEqual(
     track.slice(-150).map(([lat, lon]) => `<trkpt lat="${lat}" lon="${lon}"/>`),
   );
-  await expect(page.locator('#itinerary')).toContainText(
-    'Imported GPX + Valhalla',
+  // The router and the point count stay out of the Itinerary (#210).
+  await expect(page.locator('#itinerary')).not.toContainText(
+    /Valhalla|OSRM|Imported GPX|points/,
   );
 
   // Undo returns to the renamed step with the exact imported track, no request.
   await page.locator('#undo').click();
   // Restored synchronously: a reroute would leave the download disabled.
   expect(await page.locator('#download').isEnabled()).toBe(true);
-  await expect(page.locator('#itinerary')).toContainText('Imported GPX ·');
   await expect(page.locator('#route-name')).toHaveValue('Renamed spur');
   expect(routes).toEqual([3]);
 
@@ -586,7 +643,7 @@ test('editing an imported track reroutes only the track around the edit', async 
   await expect(page.locator('#status')).toHaveText(
     'The route could not be calculated along the imported track now. The imported track is kept.',
   );
-  await expect(page.locator('#itinerary')).toContainText('Imported GPX ·');
+  await expect(page.locator('#download')).toBeEnabled();
   expect(routes).toEqual([3]);
 });
 test('invalid coordinates cannot enable a stale GPX download', async ({

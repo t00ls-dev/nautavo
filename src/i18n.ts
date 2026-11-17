@@ -116,7 +116,7 @@ const pt: Record<string, string> = {
   Backup: 'Cópia de segurança',
   'Your saved routes and favorite places in one file, to keep or to move to another device.':
     'Suas rotas salvas e seus lugares favoritos em um arquivo, para guardar ou levar a outro aparelho.',
-  'Search a place or paste coordinates': 'Busque um lugar ou cole coordenadas',
+  'Place or coordinates': 'Lugar ou coordenadas',
   'Your location is not available.': 'Sua localização não está disponível.',
   'Search is unavailable right now.': 'A busca está indisponível agora.',
   'Choose the place from the search, or paste coordinates.':
@@ -158,7 +158,6 @@ const pt: Record<string, string> = {
     'Sem conexão. A rota na tela foi mantida; calcule de novo quando a conexão voltar.',
   'No connection. The route will be calculated when the connection returns.':
     'Sem conexão. A rota será calculada quando a conexão voltar.',
-  'Network error.': 'Erro de rede.',
   'You are offline. The route on screen and saved routes still work; routing, search, weather, elevation and surface need a connection.':
     'Você está sem conexão. A rota na tela e as rotas salvas continuam funcionando; roteamento, busca, clima, elevação e pavimento precisam de conexão.',
   'Back to map': 'Voltar ao mapa',
@@ -188,30 +187,30 @@ const pt: Record<string, string> = {
   'Wind unavailable': 'Vento indisponível',
   'Wind direction unavailable': 'Direção do vento indisponível',
   'Departure must be within the last 90 days.':
-    'A saída deve estar nos últimos 90 dias.',
+    'A partida deve estar nos últimos 90 dias.',
   'No alert': 'Sem alerta',
   'Alert 1': 'Alerta 1',
   'Alert 2': 'Alerta 2',
   'Alert 3': 'Alerta 3',
   'Weather along the route': 'Clima ao longo da rota',
   'Loading weather…': 'Buscando clima…',
-  'Weather data license: CC BY 4.0': 'Licença dos dados do tempo: CC BY 4.0',
+  'Weather data license: CC BY 4.0': 'Licença dos dados de clima: CC BY 4.0',
   'Try again': 'Tentar novamente',
   'Updating weather…': 'Atualizando clima…',
   'Passage times exceed the fetched interval.':
     'Os horários de passagem ultrapassam o intervalo consultado.',
 
-  'Weather data by Open-Meteo': 'Dados do tempo por Open-Meteo',
+  'Weather data by Open-Meteo': 'Dados de clima por Open-Meteo',
   'Passage times and risk summaries calculated by route-gpx.':
     'Horários de passagem e resumos de risco calculados pelo route-gpx.',
   'Open-Meteo server': 'Servidor Open-Meteo',
-  'Automatic departure': 'Saída automática',
-  'Choose departure': 'Escolher saída',
+  'Automatic departure': 'Partida automática',
+  'Choose departure': 'Escolher partida',
   'Choose a departure to see the weather along the route.':
-    'Escolha uma saída para ver o clima ao longo da rota.',
-  'Choose a departure date and time.': 'Escolha uma data e hora de saída.',
+    'Escolha uma partida para ver o clima ao longo da rota.',
+  'Choose a departure date and time.': 'Escolha uma data e hora de partida.',
   'Departure and arrival, including the weather margin, must fit within the 16-day forecast.':
-    'A saída e a chegada, incluindo a margem da previsão, devem estar no horizonte de 16 dias.',
+    'A partida e a chegada, incluindo a margem da previsão, devem estar no horizonte de 16 dias.',
   'Calculate or import a route first.': 'Calcule ou importe uma rota primeiro.',
   'Weather service returned an invalid response.':
     'O serviço de clima retornou uma resposta inválida.',
@@ -251,7 +250,7 @@ const pt: Record<string, string> = {
   'Heavy rain showers': 'Pancadas fortes de chuva',
   'Snow showers': 'Pancadas de neve',
   'Thunderstorm with hail': 'Trovoada com granizo',
-  'Weather unavailable': 'Tempo indisponível',
+  'Weather unavailable': 'Clima indisponível',
 
   'Map layers': 'Camadas do mapa',
   Standard: 'Padrão',
@@ -261,10 +260,10 @@ const pt: Record<string, string> = {
   'Share GPX': 'Compartilhar GPX',
   'Map point': 'Ponto do mapa',
   'Photon server': 'Servidor Photon',
-  'Suggestions unavailable. Press Enter to search with Nominatim.':
-    'Sugestões indisponíveis. Pressione Enter para buscar com Nominatim.',
-  'No suggestions found. Press Enter to search with Nominatim.':
-    'Nenhuma sugestão encontrada. Pressione Enter para buscar com Nominatim.',
+  'Suggestions unavailable. Press Enter to search addresses.':
+    'Sugestões indisponíveis. Pressione Enter para buscar endereços.',
+  'No suggestions found. Press Enter to search addresses.':
+    'Nenhuma sugestão encontrada. Pressione Enter para buscar endereços.',
   'The route already has 50 points.': 'A rota já tem 50 pontos.',
   'Route panel': 'Painel da rota',
   'Map credits': 'Créditos do mapa',
@@ -334,9 +333,8 @@ const pt: Record<string, string> = {
   Undo: 'Desfazer',
   'Change undone.': 'Alteração desfeita.',
   'Set on map': 'Definir no mapa',
-  'Set your start.': 'Defina a origem.',
+  'Set your start.': 'Defina o início.',
   'Set your destination.': 'Defina o destino.',
-  'Set all stops.': 'Defina todas as paradas.',
   'Enter a place, or paste coordinates.':
     'Digite um lugar ou cole coordenadas.',
   'Enter a place or valid coordinates.':
@@ -349,13 +347,13 @@ const pt: Record<string, string> = {
   'Unnamed road': 'Via sem nome',
   'Zoom in': 'Aproximar',
   'Zoom out': 'Afastar',
-  'Place your start on the map': 'Posicione a origem no mapa',
+  'Place your start on the map': 'Posicione o início no mapa',
 
   'Plan your route': 'Criar rota',
   Points: 'Pontos',
   'Add stop': 'Adicionar parada',
   Reverse: 'Inverter',
-  'Starting point': 'Ponto de partida',
+  'Starting point': 'Início',
   'Choose on map': 'Escolher no mapa',
   'My location': 'Minha localização',
   'Add a stop': 'Adicionar parada',
@@ -363,7 +361,7 @@ const pt: Record<string, string> = {
   Settings: 'Configurações',
   'Advanced: JSON': 'Avançado: JSON',
   'Fit route': 'Ver rota',
-  'Set your start and destination.': 'Defina a origem e o destino.',
+  'Set your start and destination.': 'Defina o início e o destino.',
   'Updating…': 'Atualizando…',
   'Calculating…': 'Calculando…',
   'Route ready.': 'Rota pronta.',
@@ -425,6 +423,10 @@ const pt: Record<string, string> = {
     'O link da rota é inválido. Comece uma nova rota abaixo.',
   'Invalid coordinates. Use latitude, longitude (for example: -22.90, -43.18).':
     'Coordenadas inválidas. Use latitude, longitude (por exemplo: -22.90, -43.18).',
+  'Could not calculate the route right now. Check the points or try again.':
+    'Não foi possível calcular a rota agora. Confira os pontos ou tente de novo.',
+  'The server did not answer correctly.':
+    'O servidor não respondeu corretamente.',
   'Routing server unavailable. Please try again.':
     'Servidor de roteamento indisponível. Tente novamente.',
   'A round trip would exceed the 50-point limit.':
@@ -486,7 +488,6 @@ const pt: Record<string, string> = {
   'Distance and average speed must be valid positive numbers.':
     'A distância e a velocidade média devem ser números positivos válidos.',
   'Imported route': 'Rota importada',
-  'Imported GPX': 'GPX importado',
   Depart: 'Partida',
   Arrive: 'Chegada',
   'U-turn': 'Retorno',
@@ -512,10 +513,6 @@ const pt: Record<string, string> = {
   Merge: 'Entre na via',
   'Merge left': 'Entre pela esq.',
   'Merge right': 'Entre pela dir.',
-  'Imported TCX': 'TCX importado',
-  'Imported FIT': 'FIT importado',
-  'Valhalla (fallback)': 'Valhalla (alternativo)',
-  'OSRM (fallback)': 'OSRM (alternativo)',
   'Lock editing': 'Bloquear edição',
   'Unlock editing': 'Desbloquear edição',
   'Route locked. Map, export and sharing still work.':
@@ -549,10 +546,10 @@ const pt: Record<string, string> = {
   'Surface unavailable for part of the route.':
     'Pavimento indisponível em parte da rota.',
   'No unpaved stretches.': 'Nenhum trecho sem asfalto.',
-  'From OpenStreetMap via Valhalla. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.':
-    'Do OpenStreetMap via Valhalla. Vias sem pavimento mapeado contam como pavimentadas; os trechos sem asfalto são os mapeados. Confira antes de sair.',
-  'Valhalla usage limit reached. Try again later.':
-    'Limite de uso do Valhalla atingido. Tente mais tarde.',
+  'From OpenStreetMap. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.':
+    'Do OpenStreetMap. Vias sem pavimento mapeado contam como pavimentadas; os trechos sem asfalto são os mapeados. Confira antes de sair.',
+  'Road data usage limit reached. Try again later.':
+    'Limite de uso dos dados das vias atingido. Tente mais tarde.',
   Paved: 'Asfalto',
   Unpaved: 'Sem asfalto',
   Unknown: 'Sem dados',
@@ -572,7 +569,7 @@ const pt: Record<string, string> = {
   Day: 'Dia',
   Twilight: 'Crepúsculo',
   Dark: 'Escuro',
-  'Choose a departure date': 'Escolha a data de saída',
+  'Choose a departure date': 'Escolha a data de partida',
   'Travel the route': 'Percorrer a rota',
   Play: 'Reproduzir',
   Pause: 'Pausar',
@@ -580,7 +577,7 @@ const pt: Record<string, string> = {
   'Position along the route': 'Posição na rota',
   'Very high UV': 'UV muito alto',
   'Extreme UV': 'UV extremo',
-  Departure: 'Saída',
+  Departure: 'Partida',
   Sunrise: 'Nascer do sol',
   Sunset: 'Pôr do sol',
   Distance: 'Distância',
@@ -591,7 +588,7 @@ const pt: Record<string, string> = {
   'None in the dark': 'Nada no escuro',
   'Today at the start:': 'Hoje no início:',
   'Choose a departure date to see dark sections.':
-    'Escolha a data de saída para ver os trechos no escuro.',
+    'Escolha a data de partida para ver os trechos no escuro.',
   Start: 'Início',
   Destination: 'Destino',
   Via: 'Passagem',
@@ -621,6 +618,10 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [
     /^In (.+ (?:meters|kilometers|feet|miles)), you will arrive\.$/,
     (d) => `Em ${spokenPt(d)}, você chega ao destino.`,
+  ],
+  [
+    /^In (.+ (?:meters|kilometers|feet|miles)), you reach (.+)\.$/,
+    (d, stop) => `Em ${spokenPt(d)}, você chega a ${translate(stop, 'pt')}.`,
   ],
   [
     /^In (.+ (?:meters|kilometers|feet|miles)), (.+?)(?: onto (.+))?\.$/,
@@ -698,7 +699,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     /^Elevation gain (.+) · Elevation loss (.+)$/,
     (up, down) => `Ganho de elevação ${up} · Perda de elevação ${down}`,
   ],
-  [/^Stop (\d+)$/, (n) => `Parada ${n}`],
   [
     /^Finding directions… (\d+)\/(\d+)$/,
     (a, b) => `Buscando direções… ${a}/${b}`,
@@ -734,15 +734,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^(\d+) of (\d+) with alerts$/, (a, b) => `${a} de ${b} com alerta`],
   [/^Check road positions: (.*?)$/, (p) => `Confira os pontos nas vias: ${p}`],
 
-  [
-    /^(.*?) · (.*?) points$/,
-    // Providers combine as "Imported GPX + OSRM"; names without a key stay as is.
-    (p, n) =>
-      `${p
-        .split(' + ')
-        .map((part) => pt[part] ?? part)
-        .join(' + ')} · ${n} pontos`,
-  ],
   [/^1 road section to review$/, () => '1 trecho para conferir'],
   [
     /^This route cannot be followed exactly in (\d+) places:$/,
@@ -752,6 +743,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Itinerary \((\d+)\)$/, (n) => `Itinerário (${n})`],
 
   [/^(\d+) points$/, (n) => `${n} pontos`],
+  [/^Set point (\d+)\.$/, (n) => `Defina o ponto ${n}.`],
   [/^Select point (\d+)$/, (n) => `Selecionar ponto ${n}`],
   [/^Remove point (\d+)$/, (n) => `Remover ponto ${n}`],
   [/^Move point (\d+)$/, (n) => `Mover ponto ${n}`],
@@ -760,15 +752,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     /^This link suggests other routing servers: (.+)\. The route uses the default servers\.$/,
     (hosts) =>
       `Este link sugere outros servidores de rota: ${hosts}. A rota usa os servidores padrão.`,
-  ],
-  [
-    /^No route available\. Check the points or try again later\. (.*?) The fallback server also failed\.$/,
-    (p) =>
-      `Rota indisponível. Confira os pontos ou tente mais tarde. ${translate(p, 'pt')} O servidor alternativo também falhou.`,
-  ],
-  [
-    /^Server returned HTTP (\d+)\.$/,
-    (code) => `O servidor respondeu HTTP ${code}.`,
   ],
 ];
 /** A spoken distance in Portuguese: the unit word translated. */

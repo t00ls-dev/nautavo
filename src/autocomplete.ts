@@ -163,33 +163,13 @@ export function addressAutocomplete(
             document.activeElement !== input
           )
             return;
-          results.forEach((result, i) => {
-            const button = option(String(i), () => config.choose(result));
-            button.className = 'suggestion-place';
-            const [title, detail] = splitPlace(result.display_name);
-            const text = document.createElement('span');
-            const name = document.createElement('b');
-            name.textContent = title;
-            text.append(name);
-            if (detail) {
-              const more = document.createElement('small');
-              more.textContent = detail;
-              text.append(more);
-            }
-            button.append(icon('pin'), text);
-            const coord = parseCoordinates(`${result.lat},${result.lon}`);
-            const away = coord && config.distance?.(coord);
-            if (away) {
-              const label = document.createElement('em');
-              label.textContent = away;
-              button.append(label);
-            }
-            // The whole name stays the option's accessible name.
-            button.setAttribute(
-              'aria-label',
-              away ? `${result.display_name}, ${away}` : result.display_name,
-            );
-          });
+          results.forEach((result, i) =>
+            placeOption(
+              option(String(i), () => config.choose(result)),
+              result,
+              config.distance,
+            ),
+          );
           input.setAttribute('aria-expanded', String(list.children.length > 0));
           config.completed(results.length);
         })
@@ -242,4 +222,39 @@ export function addressAutocomplete(
     }, 300);
   });
   return close;
+}
+/**
+ * One place in a list of places: pin, name, the rest of its address and the
+ * distance, with the whole name as its accessible name. Suggestions while
+ * typing and the results of an Enter search share it (#214).
+ */
+export function placeOption(
+  button: HTMLButtonElement,
+  result: SearchResult,
+  distance?: (coord: Coord) => string | null,
+): HTMLButtonElement {
+  button.classList.add('suggestion-place');
+  const [title, detail] = splitPlace(result.display_name);
+  const text = document.createElement('span');
+  const name = document.createElement('b');
+  name.textContent = title;
+  text.append(name);
+  if (detail) {
+    const more = document.createElement('small');
+    more.textContent = detail;
+    text.append(more);
+  }
+  button.append(icon('pin'), text);
+  const coord = parseCoordinates(`${result.lat},${result.lon}`);
+  const away = coord && distance?.(coord);
+  if (away) {
+    const label = document.createElement('em');
+    label.textContent = away;
+    button.append(label);
+  }
+  button.setAttribute(
+    'aria-label',
+    away ? `${result.display_name}, ${away}` : result.display_name,
+  );
+  return button;
 }

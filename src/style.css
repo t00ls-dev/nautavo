@@ -676,18 +676,6 @@ header button.icon-control {
     transition: none;
   }
 }
-.point-results {
-  display: grid;
-  gap: 4px;
-}
-.point-results > button {
-  justify-content: flex-start;
-  margin-top: 4px;
-  font-size: 14px;
-  font-weight: 450;
-  line-height: 1.4;
-  text-align: left;
-}
 .suggestions {
   max-height: 320px;
   overflow-y: auto;
@@ -3213,10 +3201,9 @@ dialog.home-dialog::backdrop {
   padding: 0;
   border: 0;
 }
-.favorite-kinds legend {
-  margin: 0 0 6px;
-  padding: 0;
-  font-weight: 650;
+/* The icons speak for themselves: the legend is for screen readers. */
+.favorite-dialog:focus {
+  outline: none;
 }
 .favorite-kinds label {
   position: relative;

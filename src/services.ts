@@ -96,9 +96,16 @@ function request(
       : deadline,
   });
 }
+/** A server answer that was not a success, said in plain words (#210). */
+export class ServerError extends Error {
+  constructor(readonly status: number) {
+    super('The server did not answer correctly.');
+    this.name = 'ServerError';
+  }
+}
 async function json(url: string): Promise<unknown> {
   const r = await request(url, 30000, { sendOrigin: true });
-  if (!r.ok) throw new Error(`Server returned HTTP ${r.status}.`);
+  if (!r.ok) throw new ServerError(r.status);
   return r.json();
 }
 interface OsrmResponse {
@@ -393,24 +400,15 @@ export async function calculate(
       try {
         return await second(state, startHeading, `${secondName} (fallback)`);
       } catch {
+        // Plain words for the traveler (#210), with no router name or HTTP
+        // code; why the primary router failed stays on the error's cause.
         throw new Error(
-          `No route available. Check the points or try again later. ${routingFailure(e)} The fallback server also failed.`,
+          'Could not calculate the route right now. Check the points or try again.',
+          { cause: e },
         );
       }
     }
   });
-}
-/**
- * One sentence about why the primary router failed. A failed fetch carries the
- * browser's own wording (Failed to fetch, Load failed...), so it reads as a
- * network error in every browser and language.
- */
-export function routingFailure(error: unknown): string {
-  if (error instanceof TypeError || !(error instanceof Error))
-    return 'Network error.';
-  const message = error.message.trim();
-  if (!message) return 'Network error.';
-  return /[.!?]$/.test(message) ? message : `${message}.`;
 }
 /** The public OSRM server accepts at most 10 trace points per match request. */
 const MATCH_POINTS = 10,
@@ -1176,9 +1174,12 @@ export async function fetchElevations(
  */
 const PIECE_CACHE = 100,
   PIECE_FRESH = 15 * 60_000;
+/** What a road data usage limit (HTTP 429) says, wherever it shows. */
+export const ROAD_DATA_LIMIT =
+  'Road data usage limit reached. Try again later.';
 export class ValhallaLimitError extends Error {
   constructor() {
-    super('Valhalla usage limit reached. Try again later.');
+    super(ROAD_DATA_LIMIT);
     this.name = 'ValhallaLimitError';
   }
 }
