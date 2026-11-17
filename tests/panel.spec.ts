@@ -93,7 +93,7 @@ test.describe('bottom sheet', () => {
     await expect(page.locator('#route-name')).toBeHidden();
   });
 
-  test('the open sheet shows the status once, at the top, and Calculate route sits at the end of its row', async ({
+  test('the open sheet shows the status once, at the top, and Calculate route spans its row', async ({
     page,
   }) => {
     await page.goto(base);
@@ -116,13 +116,11 @@ test.describe('bottom sheet', () => {
     const status = page.locator('#status');
     await expect(status).toHaveAttribute('aria-live', 'polite');
     expect((await status.boundingBox())!.width).toBeLessThanOrEqual(1);
-    // Compact, not a full-width bar above the route's numbers (#206).
+    // The whole row, at the standard control height (#206).
     const row = (await page.locator('.status-row').boundingBox())!,
       calculate = (await page.locator('#calculate').boundingBox())!;
-    expect(
-      Math.abs(calculate.x + calculate.width - (row.x + row.width)),
-    ).toBeLessThanOrEqual(1);
-    expect(calculate.width).toBeLessThan(row.width / 2);
+    expect(Math.abs(calculate.width - row.width)).toBeLessThanOrEqual(1);
+    expect(calculate.height).toBe(44);
   });
   test('dragging the handle moves between closed, half and full height', async ({
     page,

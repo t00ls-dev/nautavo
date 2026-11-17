@@ -1805,15 +1805,16 @@ dialog.settings::backdrop {
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  /* The status shows on the handle; Calculate route stays compact at the
-     end of its row (#206). */
+  /* The status shows on the handle; Calculate route spans its row, at the
+     standard control height (#206). */
   .status-row {
-    justify-content: flex-end;
     min-height: 0;
   }
   #calculate,
   #calculate:disabled {
-    min-height: 44px;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: var(--control);
     border-radius: var(--radius-large);
     background: var(--color-soft);
   }

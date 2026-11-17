@@ -166,8 +166,8 @@ for (const width of [320, 360, 390, 430]) {
         input.x + input.width + 1,
       );
       expect(remove.x).toBeGreaterThanOrEqual(input.x + input.width);
-      // Add stop, Reverse and Round trip: equal tiles below the list, on its
-      // edges; Calculate route is compact, at its right edge (#206).
+      // Add stop, Reverse and Round trip: equal tiles below the list, on the
+      // same edges as the list and Calculate route.
       const tiles = await page.evaluate(() => {
         const box = (e: Element) => e.getBoundingClientRect();
         // Rounded, without negative zero.
@@ -182,7 +182,10 @@ for (const width of [320, 360, 390, 430]) {
           tops: new Set(buttons.map((b) => Math.round(b.top))).size,
           left: px(buttons[0].left - list.left),
           right: px(buttons[2].right - list.right),
-          calculate: px(calculate.right - list.right),
+          calculate: [
+            px(calculate.left - list.left),
+            px(calculate.right - list.right),
+          ],
           gap: px(buttons[0].top - list.bottom),
         };
       });
@@ -191,7 +194,7 @@ for (const width of [320, 360, 390, 430]) {
         tops: 1,
         left: 0,
         right: 0,
-        calculate: 0,
+        calculate: [0, 0],
         gap: 16,
       });
       for (const control of ['.point-grip', '.point-remove', '.point-number'])
