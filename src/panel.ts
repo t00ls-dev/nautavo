@@ -8,6 +8,17 @@ import { readSession, SESSION, writeSession } from './preferences';
 const COMPACT = '(max-width: 759px)';
 export const compactLayout = (): boolean => matchMedia(COMPACT).matches;
 
+/**
+ * With no point set, Saved routes and Favorite places come right below the
+ * points, where a visit starts (#213); once one is set, they return below
+ * the route details. Moved in the page, so the focus order follows.
+ */
+export function placeLibrary(first: boolean): void {
+  const lists = document.querySelectorAll('.saved-routes, .favorites');
+  if (first) $('trip-options').before(...lists);
+  else $('route-details').after(...lists);
+}
+
 type SheetSize = 'half' | 'full';
 /** Snap heights of the open sheet; the same numbers are in `style.css`. */
 function sheetHeights(): Record<SheetSize, number> {

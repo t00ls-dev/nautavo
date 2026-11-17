@@ -803,3 +803,38 @@ test.describe('touch accessibility at 320 px', () => {
     await expect(navigate).toHaveAttribute('title', 'Start navigation');
   });
 });
+
+for (const language of ['en', 'pt'] as const)
+  test(`with no point set, saved routes and favorites come right below the points (${language})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(`${base}?lang=${language}`);
+    const order = () =>
+      page.evaluate(() =>
+        [
+          ...document.querySelectorAll(
+            '#route-panel > :is(.points-section, .saved-routes, .favorites, #trip-options, #route-details)',
+          ),
+        ].map((e) => e.id || e.className.split(' ')[0]),
+      );
+    expect(await order()).toEqual([
+      'points-section',
+      'saved-routes',
+      'favorites',
+      'trip-options',
+      'route-details',
+    ]);
+    // Once a point is set they return below the route details (#213).
+    await page.locator('#location-0').fill('-22.97, -43.18');
+    await page.locator('#location-0').press('Tab');
+    await expect
+      .poll(order)
+      .toEqual([
+        'points-section',
+        'trip-options',
+        'route-details',
+        'saved-routes',
+        'favorites',
+      ]);
+  });

@@ -6,6 +6,7 @@ import {
   listSavedRoutes,
   saveNamedRoute,
   deleteSavedRoute,
+  restoreSavedRoute,
   exportLibraryBackup,
   parseLibraryBackup,
   importLibraryBackup,
@@ -14,6 +15,7 @@ import {
   saveFavorite,
   editFavorite,
   deleteFavorite,
+  restoreFavorite,
   type Favorite,
   markDirectionsChecked,
   updateSavedSteps,
@@ -140,8 +142,8 @@ import {
   type PlacementMode,
 } from './point-placement';
 import { setupMapControls } from './map-controls';
-import { compactLayout, setupPanel } from './panel';
-import { icon, iconControl } from './icons';
+import { compactLayout, placeLibrary, setupPanel } from './panel';
+import { icon, iconControl, type IconName } from './icons';
 import { coordText, FAVORITE_ICONS, favoriteDialog } from './favorite-dialog';
 import {
   maneuverIcon,
@@ -732,6 +734,8 @@ function pointValue(point: Point): string {
       : '')
   );
 }
+/** Saved routes and favorites come first while no point is set (#213). */
+const placeLists = () => placeLibrary(state.points.every((p) => !p.coord));
 function renderPoints() {
   const list = $('points');
   const scroll = list.scrollTop;
@@ -739,6 +743,7 @@ function renderPoints() {
   autocompleteCleanups = [];
   list.replaceChildren();
   $('point-count').textContent = `${state.points.length} points`;
+  placeLists();
   state.points.forEach((point, i) => {
     const row = document.createElement('li');
     row.className = i === selected ? 'selected' : '';
@@ -1610,6 +1615,7 @@ function changed(preserveEditor = false, forceRouting = false) {
   if (preserveEditor) {
     updateSelection();
     renderMarkers();
+    placeLists();
   } else renderPoints();
   settings();
   line.clearLayers();
@@ -2132,7 +2138,7 @@ $('add-favorite').onclick = () =>
     kind: 'place',
     save: (name, kind, where, place) =>
       saveFavorite(name, where, kind, place).then(() => {
-        libraryMessage('Favorite saved.');
+        favoriteMessage('Favorite saved.');
         return refreshFavorites();
       }),
   });
@@ -2149,65 +2155,70 @@ async function refreshFavorites() {
     list.append(
       text('p', "No favorites. Add one here or from a point's menu.", 'hint'),
     );
-  for (const favorite of favoriteEntries) {
-    const row = document.createElement('div');
-    row.className = 'favorite-row';
-    const mark = icon(FAVORITE_ICONS[favorite.kind ?? 'place']);
-    mark.classList.add('favorite-icon');
-    const about = document.createElement('div');
-    about.className = 'favorite-about';
-    const name = text('strong', favorite.name, 'favorite-name');
-    name.title = favorite.name;
-    // A tap on the name shows the place on the map.
-    name.tabIndex = 0;
-    name.setAttribute('role', 'button');
-    name.setAttribute('aria-label', `${t('Show on map')}: ${favorite.name}`);
-    const show = () => {
-      if (!$('route-panel').hidden && compactLayout())
-        $('panel-toggle').click();
-      map.panTo(favorite.coord);
-    };
-    name.onclick = show;
-    name.onkeydown = (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        show();
-      }
-    };
-    about.append(
-      name,
-      text('small', favorite.place ?? coordText(favorite.coord)),
-    );
-    const change = document.createElement('button');
-    change.type = 'button';
-    iconControl(change, 'edit', `Edit favorite: ${favorite.name}`, true);
-    change.onclick = () =>
-      editFavoriteSheet({
-        title: 'Edit favorite',
-        coord: favorite.coord,
-        place: favorite.place,
+  for (const favorite of favoriteEntries)
+    list.append(
+      libraryRow({
+        icon: FAVORITE_ICONS[favorite.kind ?? 'place'],
         name: favorite.name,
-        kind: favorite.kind ?? 'place',
-        save: (next, kind, where, place) =>
-          editFavorite(favorite.id, next, kind, where, place).then(() => {
-            libraryMessage('Favorite saved.');
-            return refreshFavorites();
-          }),
-      });
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    iconControl(remove, 'trash', `Delete favorite: ${favorite.name}`, true);
-    remove.onclick = () => {
-      void deleteFavorite(favorite.id)
-        .then(() => {
-          libraryMessage('Favorite deleted.');
-          return refreshFavorites();
-        })
-        .catch(() => libraryMessage('Could not access favorites.', true));
-    };
-    row.append(mark, about, change, remove);
-    list.append(row);
-  }
+        detail: favorite.place ?? coordText(favorite.coord),
+        primary: `${t('Show on map')}: ${favorite.name}`,
+        // A tap on the name shows the place on the map.
+        onPrimary: () => {
+          if (!$('route-panel').hidden && compactLayout())
+            $('panel-toggle').click();
+          map.panTo(favorite.coord);
+        },
+        actions: [
+          {
+            icon: 'edit',
+            label: `Edit favorite: ${favorite.name}`,
+            run: () =>
+              editFavoriteSheet({
+                title: 'Edit favorite',
+                coord: favorite.coord,
+                place: favorite.place,
+                name: favorite.name,
+                kind: favorite.kind ?? 'place',
+                save: (next, kind, where, place) =>
+                  editFavorite(favorite.id, next, kind, where, place).then(
+                    () => {
+                      favoriteMessage('Favorite saved.');
+                      return refreshFavorites();
+                    },
+                  ),
+              }),
+          },
+          {
+            icon: 'trash',
+            label: `Delete favorite: ${favorite.name}`,
+            run: () =>
+              void deleteFavorite(favorite.id)
+                .then((deleted) => {
+                  if (deleted)
+                    offerUndo(
+                      $('favorite-status'),
+                      'Favorite deleted.',
+                      'Could not access favorites.',
+                      () =>
+                        restoreFavorite(deleted).then((restored) => {
+                          favoriteMessage(
+                            restored
+                              ? 'Favorite restored.'
+                              : 'A favorite with this name already exists.',
+                            !restored,
+                          );
+                          return refreshFavorites();
+                        }),
+                    );
+                  return refreshFavorites();
+                })
+                .catch(() =>
+                  favoriteMessage('Could not access favorites.', true),
+                ),
+          },
+        ],
+      }),
+    );
   updateBackupButton();
 }
 /** The backup holds saved routes and favorites: enabled when either exists. */
@@ -2225,23 +2236,9 @@ async function refreshSavedRoutes() {
     const list = $('saved-list');
     list.replaceChildren();
     if (!rows.length) list.append(text('p', 'No saved routes.', 'hint'));
-    rows.forEach((record) => {
-      const card = document.createElement('article');
-      card.className = 'saved-route';
-      card.append(
-        text('strong', record.name),
-        text(
-          'small',
-          `${distanceLabel(record.route.distance, distanceUnits(), state.language === 'pt' ? 'pt-BR' : 'en')} · ${new Date(record.updatedAt).toLocaleDateString(state.language === 'pt' ? 'pt-BR' : 'en')}`,
-        ),
-      );
-      const actions = document.createElement('div');
-      const open = text('button', 'Open') as HTMLButtonElement;
-      open.type = 'button';
-      open.setAttribute('aria-label', `Open saved route: ${record.name}`);
-      open.classList.add('open-saved');
-      open.disabled = locked;
-      open.onclick = () => {
+    const locale = state.language === 'pt' ? 'pt-BR' : 'en';
+    for (const record of rows) {
+      const open = () => {
         if (editBlocked()) return;
         const language = state.language;
         revision++;
@@ -2268,18 +2265,7 @@ async function refreshSavedRoutes() {
         status('Saved route opened.');
         void refreshSavedRoutes();
       };
-      const download = text(
-        'button',
-        shareExports ? 'Share GPX' : 'Download GPX',
-      ) as HTMLButtonElement;
-      download.type = 'button';
-      download.setAttribute(
-        'aria-label',
-        shareExports
-          ? `Share saved route: ${record.name}`
-          : `Download saved route: ${record.name}`,
-      );
-      download.onclick = () => {
+      const download = () => {
         const name = filename(record.state.points, record.name);
         void exportFile(
           generateGpx(record.route, record.state.points, record.name),
@@ -2291,30 +2277,137 @@ async function refreshSavedRoutes() {
           },
         );
       };
-      const remove = text('button', 'Delete') as HTMLButtonElement;
-      remove.type = 'button';
-      remove.setAttribute('aria-label', `Delete saved route: ${record.name}`);
-      remove.onclick = () => {
+      const remove = () =>
         void deleteSavedRoute(record.id)
-          .then(() => {
-            libraryMessage('Saved route deleted.');
+          .then((deleted) => {
+            // The route on screen is no longer saved.
+            const onScreen = record.id === libraryKey(state.name);
+            // The status shows in the interface language.
+            const shown = $('status').textContent ?? '';
+            if (onScreen && SAVED_STATUS.some((m) => [m, t(m)].includes(shown)))
+              status('Route ready.');
+            if (deleted)
+              offerUndo(
+                $('library-status'),
+                'Saved route deleted.',
+                'Could not access saved routes.',
+                () =>
+                  restoreSavedRoute(deleted).then((restored) => {
+                    libraryMessage(
+                      restored
+                        ? 'Saved route restored.'
+                        : 'A saved route with this name already exists.',
+                      !restored,
+                    );
+                    return refreshSavedRoutes();
+                  }),
+              );
             return refreshSavedRoutes();
           })
           .catch(() => libraryMessage('Could not access saved routes.', true));
-      };
-      actions.append(open, download, remove);
-      card.append(actions);
-      list.append(card);
-    });
+      const row = libraryRow({
+        icon: 'route',
+        name: record.name,
+        detail: `${distanceLabel(record.route.distance, distanceUnits(), locale)} · ${new Date(record.updatedAt).toLocaleDateString(locale)}`,
+        primary: `Open saved route: ${record.name}`,
+        onPrimary: open,
+        actions: [
+          {
+            icon: shareExports ? 'share' : 'download',
+            label: shareExports
+              ? `Share saved route: ${record.name}`
+              : `Download saved route: ${record.name}`,
+            run: download,
+          },
+          {
+            icon: 'trash',
+            label: `Delete saved route: ${record.name}`,
+            run: remove,
+          },
+        ],
+      });
+      row.querySelector<HTMLButtonElement>('.library-open')!.disabled = locked;
+      list.append(row);
+    }
     updateBackupButton();
     updateSaveButton();
   } catch {
     libraryMessage('Local route storage is unavailable in this browser.', true);
   }
 }
+/** What the top status says while the route on screen is a saved one. */
+const SAVED_STATUS = ['Route saved on this device.', 'Saved route opened.'];
+/** Says how a saved-route action went, in Saved routes. */
 function libraryMessage(message: string, error = false) {
-  $('library-status').textContent = message;
-  $('library-status').classList.toggle('error', error);
+  sectionMessage($('library-status'), message, error);
+}
+/** Says how a favorite action went, in Favorite places (#205). */
+function favoriteMessage(message: string, error = false) {
+  sectionMessage($('favorite-status'), message, error);
+}
+const undoTimers = new WeakMap<HTMLElement, number>();
+function sectionMessage(element: HTMLElement, message: string, error = false) {
+  clearTimeout(undoTimers.get(element));
+  element.replaceChildren(message);
+  element.classList.toggle('error', error);
+}
+/** How long Undo stays after a deletion (ms). */
+const UNDO_TIME = 8000;
+/**
+ * A deletion's message with Undo beside it for `UNDO_TIME` (#205); the
+ * message stays after the button goes.
+ */
+function offerUndo(
+  element: HTMLElement,
+  message: string,
+  failure: string,
+  undo: () => Promise<unknown>,
+) {
+  sectionMessage(element, message);
+  const button = text('button', 'Undo', 'ghost') as HTMLButtonElement;
+  button.type = 'button';
+  button.onclick = () => {
+    button.disabled = true;
+    void undo().catch(() => sectionMessage(element, failure, true));
+  };
+  element.append(button);
+  undoTimers.set(
+    element,
+    window.setTimeout(() => button.remove(), UNDO_TIME),
+  );
+}
+/**
+ * One row of Saved routes or Favorite places (#213): an icon, the name and
+ * a detail line in the row's main button, then icon actions with full names.
+ */
+function libraryRow(row: {
+  icon: IconName;
+  name: string;
+  detail: string;
+  primary: string;
+  onPrimary: () => void;
+  actions: { icon: IconName; label: string; run: () => void }[];
+}): HTMLElement {
+  const element = document.createElement('div');
+  element.className = 'library-row';
+  const mark = icon(row.icon);
+  mark.classList.add('library-icon');
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'library-open';
+  open.title = row.name;
+  open.setAttribute('aria-label', row.primary);
+  open.append(text('strong', row.name), text('small', row.detail));
+  open.onclick = row.onPrimary;
+  element.append(mark, open);
+  for (const action of row.actions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    iconControl(button, action.icon, action.label, true);
+    button.onclick = action.run;
+    element.append(button);
+  }
+  return element;
 }
 /** Backup and restore in Settings say how it went beside their buttons. */
 function backupMessage(message: string, error = false) {
@@ -2330,7 +2423,6 @@ $('save-route').onclick = () => {
   void saveNamedRoute(snapshot, route)
     .then(() => {
       status('Route saved on this device.');
-      libraryMessage('Route saved on this device.');
       return refreshSavedRoutes();
     })
     .catch(() => {

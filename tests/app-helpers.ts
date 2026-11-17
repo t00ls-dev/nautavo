@@ -143,3 +143,31 @@ export async function boxSettled(page: Page, selector: string) {
     )
     .toBe(true);
 }
+
+/**
+ * A saved route or favorite as the app's IndexedDB holds it (`route-gpx`,
+ * store `routes` or `favorites`), or null when there is none.
+ */
+export function libraryEntry(
+  page: Page,
+  store: 'routes' | 'favorites',
+  id: string,
+): Promise<unknown> {
+  return page.evaluate(
+    ([name, key]) =>
+      new Promise<unknown>((resolve, reject) => {
+        const request = indexedDB.open('route-gpx');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const read = db.transaction(name).objectStore(name).get(key);
+          read.onerror = () => reject(read.error);
+          read.onsuccess = () => {
+            db.close();
+            resolve(read.result ?? null);
+          };
+        };
+      }),
+    [store, id] as const,
+  );
+}

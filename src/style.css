@@ -1101,23 +1101,6 @@ div.step-item {
   font-weight: 450;
   color: var(--color-text-muted);
 }
-.saved-route {
-  margin: 0 0 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-large);
-}
-.saved-route strong {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.saved-route small {
-  display: block;
-  margin: 2px 0 8px;
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-.saved-route > div,
 .library-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1134,46 +1117,78 @@ div.step-item {
 #add-favorite {
   width: 100%;
 }
-.favorite-name[role='button'] {
-  cursor: pointer;
-}
-.favorite-row {
+/* Saved routes and favorite places share one row (#213): an icon, the name
+   with a detail line (the row's main action) and icon actions. */
+.library-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   margin: 0 0 8px;
-  padding: 6px 6px 6px 12px;
+  padding: 2px 2px 2px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-large);
 }
-.favorite-icon {
+.library-icon {
   flex: none;
   width: 24px;
   height: 24px;
   color: var(--color-primary);
 }
-.favorite-about {
+.planner .library-open {
   display: flex;
   flex: 1;
   flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  font-weight: 450;
+  text-align: left;
 }
-.favorite-name,
-.favorite-about small {
+.planner .library-open:hover:not(:disabled) {
+  background: var(--color-subtle);
+}
+.library-open strong,
+.library-open small {
+  max-width: 100%;
   overflow: hidden;
+}
+/* A long name takes two lines before it ends in an ellipsis. */
+.library-open strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+.library-open small {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.favorite-about small {
+.library-open small {
   color: var(--color-text-muted);
   font-size: 13px;
 }
-.favorite-row button {
+.library-row > button:not(.library-open) {
   flex: none;
   width: var(--control);
   padding: 0;
+  border-color: transparent;
+  background: none;
+}
+/* A deletion says so in its section, with Undo for a few seconds (#205). */
+#library-status,
+#favorite-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 #library-status:empty,
+#favorite-status:empty,
 #backup-status:empty {
   display: none;
 }

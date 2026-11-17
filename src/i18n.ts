@@ -146,6 +146,10 @@ const pt: Record<string, string> = {
   'Invalid favorite place.': 'Lugar favorito inválido.',
   'A favorite with this name already exists.':
     'Já existe um favorito com este nome.',
+  'Favorite restored.': 'Favorito restaurado.',
+  'A saved route with this name already exists.':
+    'Já existe uma rota salva com este nome.',
+  'Saved route restored.': 'Rota salva restaurada.',
   'Invalid favorite in the backup.': 'Favorito inválido no backup.',
   'Straight line, not by road': 'Em linha reta, não pelas ruas',
   'No map. The route and your position still show.':
@@ -309,7 +313,7 @@ const pt: Record<string, string> = {
   'Could not import this route backup.':
     'Não foi possível importar este backup de rotas.',
 
-  'GPX name': 'Nome do GPX',
+  'Route name': 'Nome da rota',
   'Average speed': 'Velocidade média',
   'Distance units': 'Unidades de distância',
   'Temperature units': 'Unidades de temperatura',
