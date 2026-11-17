@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
-import { base } from './app-helpers';
+import { base, boxSettled } from './app-helpers';
 test.use({ isMobile: true, hasTouch: true });
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -137,6 +137,8 @@ for (const width of [320, 360, 390, 430]) {
       await page.locator('#panel-toggle').tap();
       await page.locator('#location-0').fill('38.72, -9.14');
       await page.locator('#location-0').press('Tab');
+      // The field raised the sheet and Tab lowers it again (#204).
+      await boxSettled(page, '#sheet');
       const input = (await page.locator('#location-0').boundingBox())!,
         form = (await page
           .locator('#points li')

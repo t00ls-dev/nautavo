@@ -29,6 +29,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- On phones, the route's distance, time and arrival come first in the panel, on one row even at 320 px; tapping a point's field raises the panel to full height with the field and its menu in view, and lowers it again when you leave the field.
 - Prefer main roads now changes the route, not only the review: with it on (the default), routes come from the Valhalla router favoring highways, where OSRM sometimes cut through local roads, with OSRM if Valhalla fails. Turn it off for OSRM's route. In Settings, Valhalla fallback is now Valhalla server.
 - Export backup and Import backup moved from Saved routes to Settings, where one file keeps your saved routes and favorite places.
 - On an imported track, Calculate route keeps that track and adds directions from its roads, instead of recalculating the whole route through its points; editing a point recalculates only about 1 km on each side of it; and Copy link says that the link recalculates the route, so share the GPX for the exact track.
@@ -61,6 +62,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- Accessibility on touch screens: the language selector of Help and What's new no longer zooms the page on iPhone, disabled buttons keep enough contrast, the point number and remove buttons answer across 44 px, and Navigate is announced by the name it shows.
 - A fitted route (a new, opened or imported route, and Fit route) now stays clear of the map tools, the header and the route panel with its markers and weather icons whole, and is fitted again when the panel opens, closes or changes height, unless you have moved the map since.
 - Navigation on a route that ends where it starts no longer says you have arrived as it begins: the first position counts from the start of the route.
 - On iPhones with a notch or Dynamic Island, the route panel at full height stops below the header instead of covering the logo, language and Settings when the page is drawn under the status bar, as in a home-screen web app or an app's web view.

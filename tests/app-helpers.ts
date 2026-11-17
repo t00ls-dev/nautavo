@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from '@playwright/test';
+import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { encodePolyline } from '../src/road-attributes';
 
@@ -120,3 +120,26 @@ export const gpxPoints = (xml: string): number[][] =>
     Number(m[1]),
     Number(m[2]),
   ]);
+
+/**
+ * Waits until an element's box stops moving or resizing, before positions
+ * are measured or touches aimed at it: the phone's bottom sheet after a point
+ * field raises or lowers it, the point rows as the summary above them fills.
+ */
+export async function boxSettled(page: Page, selector: string) {
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        const box = await page.locator(selector).boundingBox();
+        const now = JSON.stringify(
+          box && [box.x, box.y, box.width, box.height].map(Math.round),
+        );
+        const still = now === last;
+        last = now;
+        return still;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
+}

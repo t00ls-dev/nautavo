@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base } from './app-helpers';
+import { base, boxSettled } from './app-helpers';
 
 const coords = [
   '-22.930929, -43.238286',
@@ -148,6 +148,12 @@ test.describe('phone', () => {
     await expect(page.locator('.point-grip').first()).toHaveAccessibleName(
       'Mover ponto 1',
     );
+    // The route's numbers come first on the sheet (#206), so at half height
+    // the rows sit at its bottom: open it fully, as a traveler would.
+    await page.locator('#panel-toggle').focus();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator('body')).toHaveClass(/sheet-full/);
+    await boxSettled(page, '#points');
     const grip = (await page.locator('.point-grip').first().boundingBox())!;
     const x = grip.x + grip.width / 2,
       y = grip.y + grip.height / 2;

@@ -116,9 +116,11 @@ test.describe('bottom sheet', () => {
     const status = page.locator('#status');
     await expect(status).toHaveAttribute('aria-live', 'polite');
     expect((await status.boundingBox())!.width).toBeLessThanOrEqual(1);
+    // The whole row, at the standard control height (#206).
     const row = (await page.locator('.status-row').boundingBox())!,
       calculate = (await page.locator('#calculate').boundingBox())!;
     expect(Math.abs(calculate.width - row.width)).toBeLessThanOrEqual(1);
+    expect(calculate.height).toBe(44);
   });
   test('dragging the handle moves between closed, half and full height', async ({
     page,
@@ -601,3 +603,203 @@ for (const [width, language] of [
       language === 'pt' ? 'Copiar link' : 'Copy link',
     );
   });
+
+/** Whether the bottom of a locator's box is above the phone's action bar. */
+async function aboveActionBar(page: Page, selector: string) {
+  const bar = (await page.locator('#action-bar').boundingBox())!;
+  const box = (await page.locator(selector).boundingBox())!;
+  return box.y + box.height <= bar.y;
+}
+for (const width of [320, 390])
+  for (const language of ['en', 'pt'] as const)
+    test(`on the sheet the route's numbers come first, on one row, at ${width}px in ${language}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
+      await mockRouting(page, { distance: 44000, duration: 9000 });
+      if (language === 'en')
+        await page.addInitScript(() =>
+          localStorage.setItem('distance-units', 'imperial'),
+        );
+      await page.goto(`${base}?lang=${language}`);
+      await page.locator('#location-0').fill('-22.97, -43.18');
+      await page.locator('#location-1').fill('-23.02, -43.48');
+      await page.locator('#location-1').press('Tab');
+      await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
+      await page.locator('#location-1').blur();
+      // Before the points in the page, so the focus order follows the view.
+      expect(
+        await page.evaluate(
+          () =>
+            document
+              .getElementById('summary')!
+              .compareDocumentPosition(
+                document.querySelector('.points-section')!,
+              ) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      ).toBeTruthy();
+      const cards = page.locator('#summary .stats > div');
+      await expect(cards).toHaveCount(3);
+      const tops = await cards.evaluateAll((all) =>
+        all.map((c) => Math.round(c.getBoundingClientRect().top)),
+      );
+      expect(new Set(tops).size).toBe(1);
+      for (const card of await cards.all())
+        expect(
+          await card.evaluate(
+            (c) =>
+              c.querySelector('strong')!.getBoundingClientRect().right <=
+              c.getBoundingClientRect().right,
+          ),
+        ).toBe(true);
+      // Visible at half height without scrolling.
+      expect(await aboveActionBar(page, '#summary .stats')).toBe(true);
+    });
+
+test('on wide screens the summary stays below the points', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(base);
+  expect(
+    await page.evaluate(
+      () =>
+        document
+          .querySelector('.points-section')!
+          .compareDocumentPosition(document.getElementById('summary')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ),
+  ).toBeTruthy();
+});
+
+test.describe('point fields on the sheet', () => {
+  test.use({ hasTouch: true, isMobile: true });
+  for (const width of [320, 390])
+    for (const language of ['en', 'pt'] as const)
+      test(`a focused field raises the sheet with its menu in view at ${width}px in ${language}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({
+          width,
+          height: width === 320 ? 568 : 844,
+        });
+        await page.goto(`${base}?lang=${language}`);
+        await expect(page.locator('body')).not.toHaveClass(/sheet-full/);
+        const field = page.locator('#location-1');
+        await field.focus();
+        await expect(page.locator('body')).toHaveClass(/sheet-full/);
+        const list = page.locator(
+          `#${await field.getAttribute('aria-controls')}`,
+        );
+        const options = list.locator('[role=option]');
+        await expect(options.first()).toBeVisible();
+        expect(await aboveActionBar(page, '#location-1')).toBe(true);
+        for (const option of (await options.all()).slice(0, 4)) {
+          const bar = (await page.locator('#action-bar').boundingBox())!,
+            box = (await option.boundingBox())!;
+          expect(box.y + box.height).toBeLessThanOrEqual(bar.y);
+        }
+        // Leaving the fields puts the sheet back where it was.
+        await field.blur();
+        await expect(page.locator('body')).not.toHaveClass(/sheet-full/);
+        await expect(page.locator('#route-panel')).toBeVisible();
+      });
+
+  test('a sheet the traveler moves keeps their height', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(base);
+    await page.locator('#location-1').focus();
+    await expect(page.locator('body')).toHaveClass(/sheet-full/);
+    // Closed from the handle while the field was raised: it stays closed.
+    await page.locator('#panel-toggle').focus();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(page.locator('body')).toHaveClass(/panel-closed/);
+    // Longer than the moment the sheet waits before going back.
+    await page.waitForTimeout(500);
+    await expect(page.locator('body')).toHaveClass(/panel-closed/);
+  });
+});
+
+test('wide screens keep the panel as it is when a field gets focus', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(base);
+  await page.locator('#location-1').focus();
+  await expect(page.locator('body')).not.toHaveClass(/sheet-full/);
+});
+
+test.describe('touch accessibility at 320 px', () => {
+  test.use({
+    viewport: { width: 320, height: 640 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  test('editable text is 16 px on every page, so iOS does not zoom on focus', async ({
+    page,
+  }) => {
+    for (const path of ['', 'help.html', 'changelog.html']) {
+      await page.goto(base + path);
+      await expect(page.locator('#language')).toHaveCSS('font-size', '16px');
+    }
+  });
+  test('a disabled Calculate route keeps 4.5:1 contrast', async ({ page }) => {
+    await page.goto(base);
+    await expect(page.locator('#calculate')).toBeDisabled();
+    const ratio = await page.locator('#calculate').evaluate((button) => {
+      const rgb = (color: string) => color.match(/[\d.]+/g)!.map(Number);
+      const luminance = (color: string) => {
+        const [r, g, b] = rgb(color).map((v) => {
+          const c = v / 255;
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      // The first ancestor (or itself) with an opaque background.
+      let element: Element | null = button;
+      let background = 'rgb(255, 255, 255)';
+      while (element) {
+        const color = getComputedStyle(element).backgroundColor;
+        if (rgb(color)[3] !== 0) {
+          background = color;
+          break;
+        }
+        element = element.parentElement;
+      }
+      const [a, b] = [
+        luminance(getComputedStyle(button).color),
+        luminance(background),
+      ];
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    });
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+  test('the point number and remove buttons answer across 44 px', async ({
+    page,
+  }) => {
+    await page.goto(base);
+    for (const selector of ['.point-number', '.point-remove']) {
+      const button = page.locator(selector).first();
+      const box = (await button.boundingBox())!;
+      const middle = box.x + box.width / 2,
+        y = box.y + box.height / 2;
+      for (const x of [middle - 21, middle + 21])
+        expect(
+          await page.evaluate(
+            ([px, py, s]) =>
+              document.elementFromPoint(px, py)?.closest(s) ===
+              document.querySelector(s),
+            [x, y, selector] as const,
+          ),
+        ).toBe(true);
+    }
+  });
+  test('Navigate is named by what it shows', async ({ page }) => {
+    await page.goto(base);
+    const navigate = page.getByRole('button', {
+      name: 'Navigate',
+      exact: true,
+    });
+    await expect(navigate).toBeVisible();
+    await expect(navigate).toHaveAttribute('title', 'Start navigation');
+  });
+});

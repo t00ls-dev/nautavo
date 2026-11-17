@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base } from './app-helpers';
+import { base, boxSettled } from './app-helpers';
 
 const start = '-22.900000, -43.100000';
 
@@ -156,6 +156,8 @@ test.describe('phone', () => {
       .locator('#suggestions-1')
       .getByRole('option', { name: 'Choose on map' });
     await expect(option).toBeVisible();
+    // The field raised the sheet (#204): aim once the menu stops moving.
+    await boxSettled(page, '#suggestions-1');
     const box = (await option.boundingBox())!;
     const cdp = await page.context().newCDPSession(page);
     const point = { x: box.x + 40, y: box.y + box.height / 2 };
