@@ -463,6 +463,15 @@ header button.icon-control {
   padding: 0;
   border-color: transparent;
 }
+/* The handle of a bottom sheet: the route panel on phones and the
+   navigation bar. */
+.sheet-handle {
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
 #panel-toggle .sheet-handle,
 #panel-toggle .peek {
   display: none;
@@ -1772,10 +1781,6 @@ dialog.settings::backdrop {
   #panel-toggle .sheet-handle {
     display: block;
     align-self: center;
-    width: 40px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--color-border-strong);
   }
   #panel-toggle .peek {
     display: flex;
@@ -3178,6 +3183,13 @@ dialog.home-dialog::backdrop {
   margin: 0 0 16px;
   line-height: 1.4;
 }
+/* Start navigation stays in view at the bottom of the notice, with the
+   notice's background around it, however short the screen (#209). */
+#nav-notice-start {
+  position: sticky;
+  bottom: 0;
+  box-shadow: 0 0 0 12px var(--color-surface);
+}
 #nav-resume-dismiss,
 #favorite-cancel {
   margin-top: 8px;
@@ -3652,11 +3664,14 @@ dialog:modal:not(.nav-screen) {
 .nav-speed[hidden] {
   display: none;
 }
-.nav-speed:has(~ .nav-resume:not([hidden])),
-.nav-speed:has(~ .nav-reroute:not([hidden])) {
+/* Recalculate route comes before the badge in the page, so the stage, not
+   a later sibling, says which buttons show (#207). */
+.nav-stage:has(.nav-resume:not([hidden])) .nav-speed,
+.nav-stage:has(.nav-reroute:not([hidden])) .nav-speed {
   bottom: 92px;
 }
-.nav-speed:has(~ .nav-reroute:not([hidden])):has(~ .nav-resume:not([hidden])) {
+.nav-stage:has(.nav-reroute:not([hidden])):has(.nav-resume:not([hidden]))
+  .nav-speed {
   bottom: 152px;
 }
 .nav-speed-value {
@@ -3808,30 +3823,44 @@ dialog:modal:not(.nav-screen) {
   position: relative;
   z-index: 2;
   flex: none;
-  padding: 4px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  /* A sheet, like the route panel: rounded top and a handle; the iPhone's
+     home indicator area takes the bottom's 12 px rather than adding to it. */
+  padding: 0 16px max(12px, env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
   background: var(--color-surface);
   box-shadow: 0 -4px 20px #1b293426;
 }
-/* The upcoming list (#137): a handle on the bar, a panel over the map. */
-.nav-list-toggle {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  min-height: 24px;
-  margin: 0 0 4px;
-  padding: 8px 0;
-  border: 0;
-  background: none;
+/* With the upcoming list open, the bar and its list cover the map's
+   buttons and badges instead of slipping under them (#207), and the list's
+   rounded top takes over from the bar's. */
+.nav-bar:has(.nav-list:not([hidden])) {
+  z-index: 4;
+  border-radius: 0;
+}
+/* The upcoming list (#137): the whole bar opens it, a chevron beside the
+   time says so, and it shows as a panel over the map. */
+.nav-bar {
   cursor: pointer;
+}
+/* Drags on the bar open and close the list, not the page. */
+.nav-eta {
   touch-action: none;
 }
-.nav-list-grip {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--color-border);
+/* The handle opens the upcoming list; the whole bar around it does too. */
+.nav-list-toggle {
+  grid-column: 1 / -1;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
 }
-.nav-list-toggle[aria-expanded='true'] .nav-list-grip {
+.nav-list-toggle:hover {
+  background: none;
+}
+.nav-list-toggle[aria-expanded='true'] .sheet-handle {
   background: var(--color-primary);
 }
 .nav-list {
@@ -3880,10 +3909,28 @@ dialog:modal:not(.nav-screen) {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
-.nav-bar-row {
-  display: flex;
+/* The handle across the top, then the time and distance on the left and
+   End on the right; the row's wrapper steps aside for the grid, and the
+   replay controls span both columns below. */
+.nav-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
   align-items: center;
-  gap: 12px;
+}
+.nav-bar-row {
+  display: contents;
+}
+.nav-eta {
+  grid-column: 1;
+  margin-top: 4px;
+}
+.nav-stop {
+  grid-column: 2;
+  margin-top: 4px;
+}
+.nav-replay {
+  grid-column: 1 / -1;
 }
 .nav-eta {
   flex: 1;
@@ -3923,8 +3970,7 @@ dialog:modal:not(.nav-screen) {
   gap: 10px;
   margin-top: 10px;
 }
-.nav-replay[hidden],
-.nav-screen.replaying .nav-status {
+.nav-replay[hidden] {
   display: none;
 }
 .nav-replay button {
@@ -3942,42 +3988,6 @@ dialog:modal:not(.nav-screen) {
   flex: none;
   min-height: 44px;
   font-size: 16px;
-}
-.nav-status {
-  display: flex;
-  gap: 14px;
-  margin-top: 8px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  white-space: nowrap;
-}
-.nav-status > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.nav-status > span[hidden] {
-  display: none;
-}
-.nav-status .button-icon {
-  flex: none;
-  width: 16px;
-  height: 16px;
-}
-.nav-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  box-shadow: 0 0 0 3px #12644733;
-}
-.nav-dot.weak {
-  background: #b8730f;
-  box-shadow: 0 0 0 3px #b8730f33;
-}
-.nav-dot.waiting {
-  background: var(--color-border-strong);
-  box-shadow: 0 0 0 3px #8795a133;
 }
 /* Moving a point precisely (src/point-placement.ts): the loupe shown while
    a marker is dragged by touch, and the crosshair's fixed marker and bar. */

@@ -61,7 +61,7 @@ import {
   replayAdvance,
   replayFix,
 } from './navigation-replay';
-import { distanceLabel, shortDistanceLabel } from './units';
+import { distanceLabel } from './units';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
@@ -1046,12 +1046,9 @@ export function setupNavigation(deps: {
     );
     $('nav-rest').textContent =
       `${distanceLabel(remaining, units(), deps.locale())}${r ? ` · ${clock}` : ''}`;
-    const dot = $('nav-dot');
-    dot.classList.toggle('waiting', !last);
-    dot.classList.toggle('weak', !!r?.weak);
-    $('nav-fix-text').textContent = !last
-      ? 'Waiting for GPS'
-      : `${r?.weak ? t('Weak GPS') : t('GPS on')} ±${shortDistanceLabel(last.accuracy, units())}`;
+    // The map's chips say when the signal is missing or weak; the bar keeps
+    // to the time and distance.
+    $('nav-waiting').hidden = !!last || replaying;
     $('nav-gps').hidden = !last || !r?.weak;
     if (r) drawTravelled(Math.min(tracker.total, r.progress + replayLead()));
   }
@@ -1244,16 +1241,25 @@ export function setupNavigation(deps: {
     );
     list.replaceChildren(...rows);
   }
-  // A tap toggles; a drag up opens and a drag down closes.
+  // The bottom bar is a sheet: its handle, and the whole bar around it, open
+  // the list; End, the replay controls and the list itself keep their own
+  // taps. A tap toggles; a drag up opens and a drag down closes.
+  const bar = listToggle.closest<HTMLElement>('.nav-bar')!;
+  const ownTap = (target: EventTarget | null) =>
+    target instanceof Element &&
+    !!target.closest(
+      'button:not(#nav-list-toggle), input, select, a, #nav-list',
+    );
   let dragFrom: number | null = null,
     dragged = false;
-  listToggle.addEventListener('pointerdown', (e) => {
+  bar.addEventListener('pointerdown', (e) => {
+    if (ownTap(e.target)) return;
     dragFrom = e.clientY;
     dragged = false;
-    // The release counts even when the finger has left the handle.
-    listToggle.setPointerCapture(e.pointerId);
+    // The release counts even when the finger has left the bar.
+    bar.setPointerCapture(e.pointerId);
   });
-  listToggle.addEventListener('pointerup', (e) => {
+  bar.addEventListener('pointerup', (e) => {
     if (dragFrom === null) return;
     const dy = e.clientY - dragFrom;
     dragFrom = null;
@@ -1261,10 +1267,11 @@ export function setupNavigation(deps: {
     dragged = true;
     setList(dy < 0);
   });
-  listToggle.onclick = () => {
+  bar.addEventListener('click', (e) => {
+    if (ownTap(e.target)) return;
     if (dragged) dragged = false;
     else setList(!listOpen);
-  };
+  });
   // Escape closes the list first, and only then navigation.
   screen.addEventListener('cancel', (e) => {
     if (!listOpen) return;

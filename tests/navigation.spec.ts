@@ -184,7 +184,7 @@ test.describe('phone navigation', () => {
     // own average takes over.
     await expect(page.locator('#nav-time')).toHaveText('4 min');
     await expect(page.locator('#nav-rest')).toContainText('1.4 km ·');
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect(page.locator('#nav-gps')).toBeHidden();
     await expect(page.locator('#nav-announce')).toHaveText(
       'Turn right · Estrada das Furnas',
@@ -198,7 +198,6 @@ test.describe('phone navigation', () => {
     });
     await expect(page.locator('#nav-road')).toHaveText('Estrada do Joá');
     await expect(page.locator('#nav-gps')).toBeVisible();
-    await expect(page.locator('#nav-fix-text')).toHaveText('Weak GPS ±60 m');
 
     await context.setGeolocation({
       latitude: lat,
@@ -267,7 +266,7 @@ test.describe('phone navigation', () => {
     await expect.poll(watching).toBe(1);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     expect(await watching()).toBe(1);
     const visibility = (hidden: boolean) =>
       page.evaluate((value) => {
@@ -293,7 +292,7 @@ test.describe('phone navigation', () => {
     await setup(page);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     // The screen, not its first button, takes focus: none looks selected.
     await expect(page.locator('#nav-screen')).toBeFocused();
     // From the keyboard, focus moves to the button that replaces it.
@@ -335,7 +334,7 @@ test.describe('phone navigation', () => {
     await setup(page);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     const rotor = page.locator('#nav-rotor'),
       resume = page.locator('#nav-resume'),
       marker = page.locator('.nav-arrow');
@@ -447,7 +446,7 @@ test.describe('phone navigation', () => {
       Number(await page.locator('#nav-rotor').getAttribute('data-zoom'));
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect.poll(zoom).toBeGreaterThan(0);
     const before = await zoom();
     const marker = (await page.locator('.nav-arrow').boundingBox())!;
@@ -488,7 +487,7 @@ test.describe('phone navigation', () => {
     await setup(page);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-fix-text')).toHaveText('GPS on ±6 m');
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     const rotor = page.locator('#nav-rotor'),
       resume = page.getByRole('button', { name: 'Re-center' });
     await expect(rotor).toHaveAttribute('data-turn', '-90');
@@ -946,6 +945,108 @@ test.describe('phone navigation', () => {
     expect(await fits(page)).toEqual([]);
   });
 
+  /** Visible boxes of the map's overlays that overlap one another. */
+  async function overlaps(page: Page) {
+    return page.evaluate(() => {
+      const boxes = [
+        '#nav-speed',
+        '#nav-reroute',
+        '#nav-resume',
+        '.nav-credits-toggle',
+        '#nav-list-toggle',
+      ].flatMap((selector) => {
+        const element = document.querySelector(selector);
+        const box = element?.getBoundingClientRect();
+        return box && box.width && element!.checkVisibility()
+          ? [[selector, box] as const]
+          : [];
+      });
+      const hits: string[] = [];
+      boxes.forEach(([a, p], i) =>
+        boxes.slice(i + 1).forEach(([b, q]) => {
+          if (
+            p.left < q.right &&
+            q.left < p.right &&
+            p.top < q.bottom &&
+            q.top < p.bottom
+          )
+            hits.push(`${a} over ${b}`);
+        }),
+      );
+      return hits;
+    });
+  }
+  for (const width of [320, 360, 390, 430])
+    for (const language of ['en', 'pt'] as const)
+      test(`off the route and with the list open, nothing covers anything at ${width}px in ${language}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({
+          width,
+          height: width === 320 ? 568 : 844,
+        });
+        await rerouting(page, {
+          ok: false,
+          before: () => page.locator('#language').selectOption(language).then(),
+        });
+        // Moving off the route for 5.5 s: the badge and Recalculate show.
+        await sendFix(page, offRoute(), t0 + 2000, 5, 8);
+        await sendFix(page, offRoute(0.00001), t0 + 7500, 5, 8);
+        await expect(page.locator('#nav-reroute')).toBeVisible();
+        await expect(page.locator('#nav-speed')).toBeVisible();
+        expect(await overlaps(page)).toEqual([]);
+        // A sheet like the route panel: rounded top, its handle across the
+        // top and End well apart from it.
+        await expect(page.locator('.nav-bar')).toHaveCSS(
+          'border-top-left-radius',
+          '16px',
+        );
+        const handle = (await page.locator('#nav-list-toggle').boundingBox())!,
+          end = (await page.locator('#nav-stop').boundingBox())!;
+        expect(end.y).toBeGreaterThanOrEqual(handle.y + handle.height);
+        // The time and End share one row.
+        const eta = (await page.locator('.nav-eta').boundingBox())!;
+        expect(
+          Math.abs(eta.y + eta.height / 2 - (end.y + end.height / 2)),
+        ).toBeLessThanOrEqual(4);
+        // The whole bar is the list's touch target (#207).
+        await page.locator('#nav-time').click();
+        const rows = page.locator('#nav-list li');
+        await expect(rows.first()).toBeVisible();
+        // Every row answers at its text and at its distance, uncovered.
+        for (const row of await rows.all()) {
+          const box = (await row.boundingBox())!;
+          for (const x of [box.x + 8, box.x + box.width - 8])
+            expect(
+              await row.evaluate(
+                (li, [px, py]) =>
+                  li.contains(document.elementFromPoint(px, py)),
+                [x, box.y + box.height / 2],
+              ),
+            ).toBe(true);
+        }
+      });
+
+  for (const [width, height] of [
+    [320, 568],
+    [390, 844],
+  ])
+    for (const language of ['en', 'pt'] as const)
+      test(`Start navigation shows without scrolling at ${width}x${height} in ${language}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height });
+        await setup(page);
+        await page.locator('#language').selectOption(language);
+        await page.locator('#navigate').click();
+        const start = page.locator('#nav-notice-start');
+        await expect(start).toBeVisible();
+        const box = (await start.boundingBox())!;
+        expect(box.y + box.height).toBeLessThanOrEqual(height);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(await fits(page)).toEqual([]);
+      });
+
   test('without map tiles the route still shows with a notice', async ({
     page,
   }) => {
@@ -1077,8 +1178,14 @@ test.describe('phone navigation', () => {
     await page.keyboard.press('Escape');
     await expect(list).toBeHidden();
     await expect(page.locator('#nav-screen')).toBeVisible();
-    // A drag up on the handle opens it, a drag down closes it.
-    const box = (await handle.boundingBox())!;
+    // The whole bar opens and closes it, not only its chevron.
+    await page.locator('#nav-time').click();
+    await expect(list).toBeVisible();
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('#nav-rest').click();
+    await expect(list).toBeHidden();
+    // A drag up on the bar opens it, a drag down closes it.
+    const box = (await page.locator('#nav-time').boundingBox())!;
     const x = box.x + box.width / 2,
       y = box.y + box.height / 2;
     await page.mouse.move(x, y);
@@ -1375,7 +1482,9 @@ test.describe('replay on the navigation screen', () => {
     );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
-    await expect(page.locator('.nav-status')).toBeHidden();
+    // No waiting for GPS in a replay; the list's handle shows (#207).
+    await expect(page.locator('#nav-waiting')).toBeHidden();
+    await expect(page.locator('#nav-list-toggle')).toBeVisible();
     // About 610 m along (30 % of 2 km): the right turn at 1 km comes next.
     await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
     await expect(page.locator('#nav-distance')).toHaveText('400 m');
@@ -1954,8 +2063,12 @@ test.describe('speed while navigating', () => {
     page,
   }) => {
     await navigateWithFixes(page);
+    // Before the first fix, a chip says the GPS is awaited; the bar does not.
+    await expect(page.locator('#nav-waiting')).toBeVisible();
+    await expect(page.locator('.nav-bar')).not.toContainText('GPS');
     const badge = page.locator('#nav-speed');
     await fix(page, 100, 5, t0 + 1000);
+    await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect(badge).toBeVisible();
     // 5 m/s is 18 km/h.
     await expect(page.locator('#nav-speed-value')).toHaveText('18');
