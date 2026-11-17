@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaults } from '../src/core';
 import { encodePolyline } from '../src/road-attributes';
 import {
+  ServerError,
   calculate,
   decodePolyline,
   navigationRoute,
   osrmRoute,
   osrmUrl,
   RequestQueue,
-  routingFailure,
   valhallaRoute,
 } from '../src/services';
 afterEach(() => {
@@ -410,7 +410,9 @@ describe('navigation recalculation', () => {
       90,
       () => true,
     );
-    const failed = expect(done).rejects.toThrow('No route available');
+    const failed = expect(done).rejects.toThrow(
+      'Could not calculate the route right now.',
+    );
     await vi.runAllTimersAsync();
     await failed;
     // OSRM, then Valhalla once; no retries.
@@ -433,17 +435,25 @@ describe('navigation recalculation', () => {
   });
 });
 
-describe('routing failure sentence', () => {
-  it('names a failed fetch a network error in every browser', () => {
-    for (const message of ['Failed to fetch', 'Load failed', 'NetworkError'])
-      expect(routingFailure(new TypeError(message))).toBe('Network error.');
-    expect(routingFailure('offline')).toBe('Network error.');
-    expect(routingFailure(new Error(''))).toBe('Network error.');
-  });
-  it('keeps a router message as one sentence', () => {
-    expect(routingFailure(new Error('OSRM HTTP 429'))).toBe('OSRM HTTP 429.');
-    expect(routingFailure(new Error('No route found.'))).toBe(
-      'No route found.',
+describe('routing failure', () => {
+  it('says what failed in plain words and keeps the reason as its cause', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 503 }),
+    );
+    const done = calculate(osrmFirst()).catch((e: unknown) => e);
+    await vi.runAllTimersAsync();
+    const error = (await done) as Error;
+    expect(error.message).toBe(
+      'Could not calculate the route right now. Check the points or try again.',
+    );
+    expect(error.message).not.toMatch(/OSRM|Valhalla|HTTP|\d{3}/);
+    // The server's own status stays on the cause, out of the message.
+    expect(error.cause).toBeInstanceOf(ServerError);
+    expect((error.cause as ServerError).status).toBe(503);
+    expect((error.cause as Error).message).toBe(
+      'The server did not answer correctly.',
     );
   });
 });

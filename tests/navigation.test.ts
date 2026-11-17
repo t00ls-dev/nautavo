@@ -16,6 +16,7 @@ import {
   navigationDurationLabel,
   navigationManeuvers,
   upcomingItems,
+  stopAt,
 } from '../src/navigation';
 import { legPositions } from '../src/track-position';
 
@@ -462,6 +463,12 @@ describe('upcoming list', () => {
       kind: 'stop',
       destination: true,
     });
+  });
+
+  it('names the intermediate stop an arrive maneuver reaches, never the destination', () => {
+    expect(stopAt(stops, 12 * M + 150)).toBe('Café');
+    expect(stopAt(stops, 12 * M + 400)).toBeNull();
+    expect(stopAt(stops, 20 * M)).toBeNull();
   });
 
   it('drops what has been passed', () => {

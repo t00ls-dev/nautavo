@@ -30,6 +30,10 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Error messages say what failed in plain words, without server names or HTTP codes: when a route cannot be calculated, Calculate route becomes Try again, and the Itinerary no longer shows the routing service and point count.
+- Results of an Enter search look like the suggestions shown while typing, with the name, the rest of the address and the distance.
+- While navigating, reaching an intermediate stop shows and says its name instead of Arrive.
+- In Portuguese, each concept has one name: Partida for the departure time (Saída is only a roundabout exit), Início for the first point and Clima for the weather.
 - On the navigation screen, the bottom bar keeps to the time, the distance and End; a chip on the map says when the GPS is awaited, as it already did for a weak signal.
 - Saved routes and Favorite places share one row: tap the name to open the route or see the place on the map, with icon buttons for download, edit and delete; long names take two lines. A deleted saved route or favorite can be brought back with Undo for 8 seconds. With no point set, both lists come right below the points. The GPX name field is now Route name.
 - On phones, the route's distance, time and arrival come first in the panel, on one row even at 320 px; tapping a point's field raises the panel to full height with the field and its menu in view, and lowers it again when you leave the field.
@@ -66,6 +70,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- The status names the point still to set (Set your destination., Set point 2.) instead of always asking for the start and destination.
 - On the navigation screen, the speed badge no longer covers Recalculate route, the upcoming list opens above the map's buttons and badges instead of under them, the whole bottom bar opens it, and on small phones Start navigation shows at once in the shorter start notice.
 - Favorite messages show in Favorite places instead of Saved routes, saving a route says so once, and deleting the saved route on screen no longer leaves its status saying it is saved.
 - Accessibility on touch screens: the language selector of Help and What's new no longer zooms the page on iPhone, disabled buttons keep enough contrast, the point number and remove buttons answer across 44 px, and Navigate is announced by the name it shows.

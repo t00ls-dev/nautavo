@@ -615,11 +615,12 @@
       id="favorite-dialog"
       class="nav-notice favorite-dialog"
       aria-labelledby="favorite-title"
+      tabindex="-1"
     >
       <form id="favorite-form" method="dialog" novalidate>
         <h2 id="favorite-title">Save favorite</h2>
         <fieldset class="favorite-kinds">
-          <legend>Icon</legend>
+          <legend class="sr-only">Icon</legend>
           <label
             ><input type="radio" name="favorite-kind" value="home" /><span
               class="favorite-kind"
@@ -649,7 +650,7 @@
           type="text"
           autocomplete="off"
           enterkeyhint="search"
-          placeholder="Search a place or paste coordinates"
+          placeholder="Place or coordinates"
         />
         <div
           id="favorite-where-results"

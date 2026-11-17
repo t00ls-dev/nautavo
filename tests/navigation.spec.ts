@@ -1279,6 +1279,81 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-screen')).toBeHidden();
   });
 
+  test('the banner and voice name an intermediate stop instead of Arrive', async ({
+    page,
+    context,
+  }) => {
+    const said = await recordSpeech(page);
+    await setup(page);
+    // Two legs: the first arrives at a stop on coords[10].
+    await page.route('**/route/v1/driving/**', (r) =>
+      r.fulfill({
+        json: {
+          code: 'Ok',
+          waypoints: [coords[0], coords[10], coords[20]].map((location) => ({
+            location,
+            distance: 0,
+          })),
+          routes: [
+            {
+              distance: 2100,
+              duration: 150,
+              geometry: { coordinates: coords },
+              legs: [
+                {
+                  steps: [
+                    {
+                      name: 'Rua Uruguai',
+                      distance: 1050,
+                      duration: 70,
+                      maneuver: { type: 'depart', location: coords[0] },
+                    },
+                    {
+                      name: '',
+                      distance: 0,
+                      duration: 0,
+                      maneuver: { type: 'arrive', location: coords[10] },
+                    },
+                  ],
+                },
+                {
+                  steps: [
+                    {
+                      name: 'Estrada do Joá',
+                      distance: 1050,
+                      duration: 80,
+                      maneuver: { type: 'depart', location: coords[10] },
+                    },
+                    {
+                      name: '',
+                      distance: 0,
+                      duration: 0,
+                      maneuver: { type: 'arrive', location: coords[20] },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    await page.locator('#add').click();
+    await page.locator('#location-1').fill(`${lat}, ${lon(10)}`);
+    await page.locator('#location-1').press('Tab');
+    await expect(page.locator('#navigate')).toBeEnabled({ timeout: 15000 });
+    await page.locator('#navigate').click();
+    await page.getByRole('checkbox', { name: 'Speak the directions' }).check();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Stop 1');
+    // Near the stop, the voice names it too.
+    await context.setGeolocation({ latitude: lat, longitude: lon(9.2) });
+    await expect(page.locator('#nav-distance')).toHaveText('100 m');
+    await expect
+      .poll(async () => (await said()).map(([text]) => text))
+      .toContainEqual(expect.stringMatching(/, you reach Stop 1\.$/));
+  });
+
   for (const [width, language] of [
     [320, 'pt'],
     [430, 'en'],

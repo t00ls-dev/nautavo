@@ -84,6 +84,7 @@ import {
   calculate,
   defaultPhotonUrl,
   osrmMatch,
+  ROAD_DATA_LIMIT,
   searchAddress,
 } from './services';
 import {
@@ -128,7 +129,7 @@ import {
 import { checkTrack, type TrackCheck } from './track-check';
 import { PASS_OFFSET } from './route-overlays';
 import { routeDaylight } from './daylight';
-import { addressAutocomplete, splitPlace } from './autocomplete';
+import { addressAutocomplete, placeOption, splitPlace } from './autocomplete';
 import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
@@ -780,7 +781,8 @@ function renderPoints() {
     input.readOnly = locked;
     const results = document.createElement('div');
     results.id = `point-results-${i}`;
-    results.className = 'point-results';
+    // Enter results read like the suggestions, in the same card (#214).
+    results.className = 'point-results suggestions';
     // A named group: aria-label is not allowed on a plain div.
     results.setAttribute('role', 'group');
     results.setAttribute('aria-label', `Results for point ${i + 1}`);
@@ -804,12 +806,10 @@ function renderPoints() {
         status(
           count
             ? 'Choose a place.'
-            : 'No suggestions found. Press Enter to search with Nominatim.',
+            : 'No suggestions found. Press Enter to search addresses.',
         ),
       failed: () =>
-        status(
-          'Suggestions unavailable. Press Enter to search with Nominatim.',
-        ),
+        status('Suggestions unavailable. Press Enter to search addresses.'),
       actions: () => [
         {
           label: 'My location',
@@ -934,8 +934,9 @@ function renderPoints() {
               return;
             }
             matches.forEach((r) => {
-              const b = text('button', r.display_name) as HTMLButtonElement;
+              const b = document.createElement('button');
               b.type = 'button';
+              placeOption(b, r, (coord) => suggestionDistance(point, coord));
               b.onclick = () => {
                 if (editBlocked()) return;
                 const c = parseCoordinates(`${r.lat},${r.lon}`);
@@ -1255,15 +1256,11 @@ function renderSummary(route: Route) {
   // Street-by-street detail: the Itinerary row of the summary card.
   const roads = document.createElement('details');
   roads.className = 'road-list';
+  // The router and the point count are not shown (#210): Help explains them.
   roads.append(
     text(
       'summary',
       `Itinerary (${route.steps.filter((s) => s.distance > 0).length})`,
-    ),
-    text(
-      'p',
-      `${route.provider} · ${route.segments.reduce((n, s) => n + s.length, 0).toLocaleString(locale)} points`,
-      'hint',
     ),
   );
   // Directions missing (imported track, or saved before they existed) are
@@ -1566,7 +1563,7 @@ async function followImported(base: Route) {
   if (outcome.kind !== 'checked' || !outcome.check.complete) {
     status(
       outcome.kind === 'limit'
-        ? 'Valhalla usage limit reached. Try again later.'
+        ? ROAD_DATA_LIMIT
         : 'The route could not be calculated along the imported track now. The imported track is kept.',
       true,
     );
@@ -1604,9 +1601,35 @@ function renderRoute(route: Route) {
   updateSaveButton();
   weather.render();
 }
+/**
+ * The first point still to set, named by its role or its number in the
+ * editor (#212): an empty field or typed text not yet resolved to a place.
+ */
+function missingPoint(): string | null {
+  const i = state.points.findIndex((p) => !p.coord || dirty.has(p));
+  if (i < 0) return null;
+  if (i === 0)
+    return state.points.at(-1)!.coord
+      ? 'Set your start.'
+      : 'Set your start and destination.';
+  if (i === state.points.length - 1) return 'Set your destination.';
+  return `Set point ${i + 1}.`;
+}
+/**
+ * After a failed calculation, Calculate route says Try again, beside the
+ * message (#210): the same action on the same queue, never automatic.
+ */
+function routingFailed(failed: boolean) {
+  iconControl(
+    $('calculate'),
+    'refresh',
+    failed ? 'Try again' : 'Calculate route',
+  );
+}
 function changed(preserveEditor = false, forceRouting = false) {
   weather.invalidate();
   revision++;
+  routingFailed(false);
 
   current = null;
   $<HTMLButtonElement>('download').disabled = true;
@@ -1620,14 +1643,9 @@ function changed(preserveEditor = false, forceRouting = false) {
   settings();
   line.clearLayers();
   clearSummary();
-  if (state.points.some((p) => !p.coord) || dirty.size) {
-    status(
-      !state.points[0].coord
-        ? 'Set your start.'
-        : !state.points.at(-1)!.coord
-          ? 'Set your destination.'
-          : 'Set all stops.',
-    );
+  const missing = missingPoint();
+  if (missing) {
+    status(missing);
     return;
   }
   status('Updating…');
@@ -1660,6 +1678,7 @@ function changed(preserveEditor = false, forceRouting = false) {
         if (version !== revision) return;
         current = route;
         renderRoute(route);
+        routingFailed(false);
         status('Route ready.');
         updateSelection();
         if (version === fitRevision) fit();
@@ -1689,6 +1708,7 @@ function changed(preserveEditor = false, forceRouting = false) {
             : 'Routing server unavailable. Please try again.',
           true,
         );
+        routingFailed(true);
       });
   }, 900);
 }
@@ -1702,8 +1722,9 @@ setupPointMenu(map, {
 });
 $('calculate').onclick = () => {
   if (editBlocked()) return;
-  if (dirty.size || state.points.some((p) => !p.coord)) {
-    status('Set your start and destination.', true);
+  const missing = missingPoint();
+  if (missing) {
+    status(missing, true);
     return;
   }
   // Without a connection the request can only fail: keep the route on screen.
@@ -2050,7 +2071,9 @@ $<HTMLSelectElement>('language').onchange = () => {
 
 function updateSpeedEstimate() {
   if (current) renderRoute(current);
-  status(current ? 'Route ready.' : 'Set your start and destination.');
+  // A route still calculating or failed keeps its own status.
+  const missing = current ? null : missingPoint();
+  if (current || missing) status(missing ?? 'Route ready.');
 }
 /** The chosen speed in the slider's value, readout and accessible text. */
 function showSpeed(value: number) {

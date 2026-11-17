@@ -210,7 +210,7 @@ for (const language of ['en', 'pt'] as const)
     );
     expect(fields).toEqual(
       (language === 'pt'
-        ? ['Ponto de partida', 'Adicionar parada', 'Destino']
+        ? ['Início', 'Adicionar parada', 'Destino']
         : ['Starting point', 'Add a stop', 'Destination']
       ).map((text) => ({ text, fits: true })),
     );

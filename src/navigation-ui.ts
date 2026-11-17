@@ -27,6 +27,7 @@ import {
   createRerouteSchedule,
   upcomingItems,
   spliceRoute,
+  stopAt,
   isMoving,
   turnToward,
   navigationDistanceLabel,
@@ -811,7 +812,8 @@ export function setupNavigation(deps: {
     renderSun();
     // A maneuver comes first; the sunset waits for a quiet readout.
     say(
-      voice.next(r, speedNow, units(), deps.locale()) ?? voice.sunset(sunsetIn),
+      voice.next(r, speedNow, units(), deps.locale(), nextStop(r)) ??
+        voice.sunset(sunsetIn),
     );
     renderBar(r);
     renderList();
@@ -929,7 +931,7 @@ export function setupNavigation(deps: {
     $('nav-road').textContent = arrived
       ? 'You have arrived'
       : step
-        ? roadText(step)
+        ? t(nextStop(r) ?? roadText(step))
         : 'Destination';
     const after = !arrived && r?.after ? r.after : null;
     $('nav-then').hidden = !after;
@@ -1097,6 +1099,11 @@ export function setupNavigation(deps: {
     list = $<HTMLOListElement>('nav-list');
   let listOpen = false,
     stopPlaces: { at: number | null; name: string }[] = [];
+  /** The intermediate stop the next maneuver arrives at, by name. */
+  function nextStop(r: NavigationReadout | null): string | null {
+    const next = r?.next;
+    return next?.step.kind === 'arrive' ? stopAt(stopPlaces, next.at) : null;
+  }
   function placeStops() {
     if (!route) return;
     const points = deps

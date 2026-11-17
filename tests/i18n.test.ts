@@ -63,16 +63,13 @@ it('translates generated stop names and short status messages', () => {
   expect(t('Use link servers')).toBe('Usar servidores do link');
   expect(
     t(
-      'No route available. Check the points or try again later. OSRM returned an invalid route. The fallback server also failed.',
+      'Could not calculate the route right now. Check the points or try again.',
     ),
   ).toBe(
-    'Rota indisponível. Confira os pontos ou tente mais tarde. O OSRM devolveu uma rota inválida. O servidor alternativo também falhou.',
+    'Não foi possível calcular a rota agora. Confira os pontos ou tente de novo.',
   );
-  expect(
-    t(
-      'No route available. Check the points or try again later. Server returned HTTP 500. The fallback server also failed.',
-    ),
-  ).toContain('O servidor respondeu HTTP 500.');
+  expect(t('Set point 3.')).toBe('Defina o ponto 3.');
+  expect(t('Set your start.')).toBe('Defina o início.');
   expect(t('Keep default servers')).toBe('Manter servidores padrão');
   expect(t('Stop 2')).toBe('Parada 2');
   expect(t('Return to start')).toBe('Volta ao início');
@@ -196,21 +193,13 @@ describe('translation coverage', () => {
     expect(untranslated(messages)).toEqual([]);
   });
 
-  it('uses singular forms and translated provider labels', () => {
+  it('uses singular forms', () => {
     setLanguage('pt');
     expect(t('1 road section to review')).toBe('1 trecho para conferir');
     expect(t('3 road sections to review')).toBe('3 trechos para conferir');
     expect(t('Imported 1 route. Existing names were kept.')).toBe(
       '1 rota importada. Os nomes existentes foram mantidos.',
     );
-    expect(t('Imported GPX + OSRM + Valhalla (fallback) · 1.234 points')).toBe(
-      'GPX importado + OSRM + Valhalla (alternativo) · 1.234 pontos',
-    );
-    expect(
-      t(
-        'No route available. Check the points or try again later. Valhalla could not find a route. The fallback server also failed.',
-      ),
-    ).toContain('O Valhalla não encontrou uma rota.');
   });
 });
 

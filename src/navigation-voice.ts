@@ -54,10 +54,15 @@ function sentence(
   maneuver: NavigationManeuver,
   stage: Stage,
   distance: string,
+  stop: string | null,
 ): string | null {
   const { step } = maneuver;
   if (step.kind === 'arrive')
-    return stage === 'now' ? null : `In ${distance}, you will arrive.`;
+    return stage === 'now'
+      ? null
+      : stop
+        ? `In ${distance}, you reach ${stop}.`
+        : `In ${distance}, you will arrive.`;
   const instruction = maneuverText(step) ?? 'Continue';
   const road = stepRoad(step);
   const onto = road ? ` onto ${road}` : '';
@@ -84,6 +89,8 @@ export function createVoiceSchedule() {
       speed: number,
       units: DistanceUnits,
       locale: string,
+      /** The intermediate stop an arrive maneuver reaches, by name. */
+      stop: string | null = null,
     ): string | null {
       if (!readout) return null;
       if (readout.arrived) {
@@ -120,7 +127,12 @@ export function createVoiceSchedule() {
       if (order.slice(order.indexOf(stage) + 1).some((s) => done.has(s)))
         return null;
       for (const s of order.slice(0, order.indexOf(stage) + 1)) done.add(s);
-      return sentence(readout.next, stage, spokenDistance(d, units, locale));
+      return sentence(
+        readout.next,
+        stage,
+        spokenDistance(d, units, locale),
+        stop,
+      );
     },
     /** A recalculated route was taken (#145). */
     rerouted(): string {

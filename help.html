@@ -719,28 +719,27 @@
           options, right below it, holds the departure date, the average speed
           and Prefer main roads, and is available before a route exists.
           Itinerary, the first row below Trip options, shows the highway
-          references, each road with its distance and the routing provider. When
-          the router provides it, each road starts with its maneuver and an
-          arrow: turn left or right (slightly, sharp), U-turn, keep left or
-          right, ramps and exits, and the roundabout exit to take. Each
-          instruction also shows its position along the route (for example km
-          12.3, or mi in miles); select it to center the map on that spot, which
-          stays marked until you click the map. With Prefer main roads, long
-          local roads are highlighted; select the road-review warning in the
-          summary to open the itinerary at the first one. To keep each
-          instruction on one line, common words in road names are abbreviated
-          (R., Av., Estr., Prof., St, Ave…); the full name appears when you
-          hover and is read by screen readers. When you open the Itinerary of an
-          imported track, the app asks the OSRM server to match the track to the
-          roads (points about every 300 to 400 m, 10 per request, so long tracks
-          take up to a minute; after an edit, only the stretches next to the
-          changed point are asked again) and shows the directions on the exact
-          imported track; stretches off the road network have none. A route
-          saved before turn directions existed gets them with one request when
-          you open its Itinerary, only if the road is the same; the saved route
-          keeps its geometry and stores the directions; if the road has changed,
-          it remembers that and does not ask again. Instructions follow the
-          driving profile and describe the road network.
+          references, each road with its distance. When the router provides it,
+          each road starts with its maneuver and an arrow: turn left or right
+          (slightly, sharp), U-turn, keep left or right, ramps and exits, and
+          the roundabout exit to take. Each instruction also shows its position
+          along the route (for example km 12.3, or mi in miles); select it to
+          center the map on that spot, which stays marked until you click the
+          map. With Prefer main roads, long local roads are highlighted; select
+          the road-review warning in the summary to open the itinerary at the
+          first one. To keep each instruction on one line, common words in road
+          names are abbreviated (R., Av., Estr., Prof., St, Ave…); the full name
+          appears when you hover and is read by screen readers. When you open
+          the Itinerary of an imported track, the app asks the OSRM server to
+          match the track to the roads (points about every 300 to 400 m, 10 per
+          request, so long tracks take up to a minute; after an edit, only the
+          stretches next to the changed point are asked again) and shows the
+          directions on the exact imported track; stretches off the road network
+          have none. A route saved before turn directions existed gets them with
+          one request when you open its Itinerary, only if the road is the same;
+          the saved route keeps its geometry and stores the directions; if the
+          road has changed, it remembers that and does not ask again.
+          Instructions follow the driving profile and describe the road network.
         </p>
         <h2>Units and undo</h2>
         <p>
@@ -915,11 +914,11 @@
           fixo no centro e escolha Confirmar, ou Cancelar para deixar o ponto
           onde estava. Calcular rota repete o cálculo. Cada ponto mostra seu
           número: o 1 é o início, o último é o destino e os do meio são paradas;
-          um campo vazio mostra o seu papel (Ponto de partida, Adicionar parada,
-          Destino); toque num número para selecionar o ponto e vê-lo no mapa.
-          Para reordenar, segure a alça ≡ no fim de um campo e arraste para cima
-          ou para baixo, ou dê foco a ela e use as setas do teclado. Use
-          Desfazer para recuperar uma alteração ou × para remover um ponto.
+          um campo vazio mostra o seu papel (Início, Adicionar parada, Destino);
+          toque num número para selecionar o ponto e vê-lo no mapa. Para
+          reordenar, segure a alça ≡ no fim de um campo e arraste para cima ou
+          para baixo, ou dê foco a ela e use as setas do teclado. Use Desfazer
+          para recuperar uma alteração ou × para remover um ponto.
         </p>
         <p>
           Em telas pequenas, a coluna à direita contém ícones de localização,
@@ -951,7 +950,7 @@
         <p>
           Colorir a rota, em Camadas do mapa, colore a linha da rota por um tema
           de cada vez, com uma legenda no canto inferior esquerdo do mapa. Luz
-          do dia mostra, depois que você escolhe a data de saída, os trechos
+          do dia mostra, depois que você escolhe a data de partida, os trechos
           percorridos de dia (âmbar), no crepúsculo civil (violeta) ou no escuro
           (azul-escuro), com os mesmos horários de passagem do detalhe Luz do
           dia. Inclinação mostra onde a rota sobe ou desce: azul nas descidas
@@ -1151,7 +1150,7 @@
         <h2>GPX, importação e links</h2>
         <p>
           Defina Nome da rota acima do botão de download para nomear o arquivo e
-          o trajeto. Se ficar vazio, usa origem e destino. O botão “Baixar GPX”
+          o trajeto. Se ficar vazio, usa início e destino. O botão “Baixar GPX”
           exporta o trajeto completo e suas paradas. Importar GPX, FIT ou TCX lê
           arquivos GPX, cursos e atividades FIT (aparelhos Garmin, Wahoo e
           similares) e arquivos TCX, reconhecidos pelo conteúdo, até 10 MB,
@@ -1194,27 +1193,27 @@
           separadas, confira se os pontos estão na pista desejada. As durações
           não incluem paradas nem trânsito em tempo real.
         </p>
-        <h2>Saída e clima</h2>
+        <h2>Partida e clima</h2>
         <p>
-          Escolha Saída em Opções da viagem. Quando a rota está pronta, o clima
-          carrega automaticamente após uma breve pausa. Sem data não há
-          consulta. Sem uma saída escolhida por você, Saída automática, abaixo
-          do campo, sai na próxima meia hora (10:07 vira 10:30) e avança a cada
-          30 minutos enquanto você planeja, então clima, chegada e luz do dia
-          ficam prontos sem clique. Editar ou apagar o campo fixa a sua escolha
-          e a desmarca; marque de novo para voltar à próxima meia hora.
-          Desmarcá-la você mesmo a desliga neste aparelho, e aí não há consulta
-          de clima até você escolher uma data; o Clima avisa. Links e rotas
-          salvas guardam só a saída que você escolheu. Escolher uma data envia
-          pontos de amostragem e datas/horários previstos ao Open-Meteo. Os
-          horários de passagem do clima usam a sua Velocidade média. Ajuste ao
-          seu deslocamento. Paradas e trânsito não são incluídos. Todos os
-          horários usam o fuso do aparelho. São aceitas saídas nos últimos 90
-          dias de calendário UTC. Saídas anteriores e janelas de chegada além de
-          16 dias de calendário UTC incluindo hoje são rejeitadas. Para datas
+          Escolha Partida em Opções da viagem. Quando a rota está pronta, o
+          clima carrega automaticamente após uma breve pausa. Sem data não há
+          consulta. Sem uma partida escolhida por você, Partida automática,
+          abaixo do campo, parte na próxima meia hora (10:07 vira 10:30) e
+          avança a cada 30 minutos enquanto você planeja, então clima, chegada e
+          luz do dia ficam prontos sem clique. Editar ou apagar o campo fixa a
+          sua escolha e a desmarca; marque de novo para voltar à próxima meia
+          hora. Desmarcá-la você mesmo a desliga neste aparelho, e aí não há
+          consulta de clima até você escolher uma data; o Clima avisa. Links e
+          rotas salvas guardam só a partida que você escolheu. Escolher uma data
+          envia pontos de amostragem e datas/horários previstos ao Open-Meteo.
+          Os horários de passagem do clima usam a sua Velocidade média. Ajuste
+          ao seu deslocamento. Paradas e trânsito não são incluídos. Todos os
+          horários usam o fuso do aparelho. São aceitas partidas nos últimos 90
+          dias de calendário UTC. Partidas anteriores e janelas de chegada além
+          de 16 dias de calendário UTC incluindo hoje são rejeitadas. Para datas
           passadas, os valores são estimativas arquivadas dos modelos, não
           observações exatas em cada ponto da rota. Também funciona com trajetos
-          GPX, FIT e TCX importados. As amostras incluem origem, destino e
+          GPX, FIT e TCX importados. As amostras incluem início, destino e
           passagens, aproximadamente a cada 20 km, distribuídas por igual entre
           os pontos da rota para nenhuma cair colada a um deles. Abaixo de 20
           km/h, o espaçamento é reduzido para cerca de uma hora de deslocamento
@@ -1223,7 +1222,7 @@
           depois de cada curva e a pelo menos 2 km das outras amostras, para a
           relação com o vento acompanhar a nova direção. O máximo de 20 pontos
           tem prioridade e pode exigir intervalos maiores. Uma rota com mais de
-          20 pontos mantém origem e destino e amostra as paradas mais próximas
+          20 pontos mantém início e destino e amostra as paradas mais próximas
           de uma distribuição uniforme ao longo da rota, preferindo as paradas
           com nome; o painel informa quantas paradas foram amostradas. Selecione
           um ícone de tempo no mapa para abrir seu card de clima no painel.
@@ -1247,16 +1246,16 @@
           automaticamente o clima. Erros permitem tentar manualmente, sem ciclos
           automáticos de repetição. Dados do clima e coordenadas de amostragem
           ficam só na memória da página, nunca em armazenamento, logs ou links.
-          Apenas a saída é um novo dado da viagem persistido, nos links normais
-          e rotas salvas explicitamente. Ao reabrir, o clima é consultado
-          novamente. Não são adicionados horários aos pontos do GPX.
+          Apenas a partida é um novo dado da viagem persistido, nos links
+          normais e rotas salvas explicitamente. Ao reabrir, o clima é
+          consultado novamente. Não são adicionados horários aos pontos do GPX.
         </p>
         <p>
           Temperatura horária, probabilidade/volume de precipitação, código do
           tempo, velocidade/direção do vento, rajadas e visibilidade vêm do
           <a href="https://open-meteo.com/">Open-Meteo</a>, sob
           <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
-          Dados do tempo por Open-Meteo; horários de passagem e resumos de risco
+          Dados de clima por Open-Meteo; horários de passagem e resumos de risco
           calculados pelo route-gpx. A API gratuita é só para uso não comercial,
           sem chave, com HTTPS/CORS; a URL base é configurável em Configurações.
           Limites: 600 chamadas/minuto, 5.000/hora, 10.000/dia e 300.000/mês.
@@ -1358,8 +1357,8 @@
         <p>
           Subidas, abaixo das estatísticas, lista cada subida contínua na ordem
           da rota: onde começa, a extensão, o ganho de elevação, a inclinação
-          média, a inclinação máxima e, com uma saída, quando você chega lá. Uma
-          subida vai de um ponto baixo até o topo; ela termina quando a rota
+          média, a inclinação máxima e, com uma partida, quando você chega lá.
+          Uma subida vai de um ponto baixo até o topo; ela termina quando a rota
           desce mais de 15 m ou fica abaixo do topo por 1,5 km, então pequenas
           descidas não a dividem. Só aparecem subidas com pelo menos 40 m de
           ganho, 400 m de extensão e 2,5% de média. A inclinação máxima é medida
@@ -1468,15 +1467,15 @@
           fechar, com a navegação continuando por baixo. Para ouvir as
           instruções, marque Falar as instruções no aviso inicial ou nas
           Configurações, ou toque no botão de alto-falante na tela de navegação:
-          a própria voz do celular fala cada curva adiante, a chegada, a saída
-          da rota e um recálculo, no idioma da interface, sem nenhuma consulta e
-          sem conexão; vem desligada e fica em silêncio com a página oculta. No
-          iPhone, a voz do navegador obedece à chave do modo silencioso, então
-          desligue o modo silencioso para ouvir, e ela pausa a música ou o
-          podcast tocando em outros apps; só apps nativos conseguem misturar a
-          voz com eles. Um selo redondo no canto inferior esquerdo mostra a sua
-          velocidade atual (0 parado, escondido com sinal fraco). O tempo
-          restante e a chegada começam pela sua velocidade média e, nos
+          a própria voz do celular fala cada curva adiante, a chegada, quando
+          você sai da rota e um recálculo, no idioma da interface, sem nenhuma
+          consulta e sem conexão; vem desligada e fica em silêncio com a página
+          oculta. No iPhone, a voz do navegador obedece à chave do modo
+          silencioso, então desligue o modo silencioso para ouvir, e ela pausa a
+          música ou o podcast tocando em outros apps; só apps nativos conseguem
+          misturar a voz com eles. Um selo redondo no canto inferior esquerdo
+          mostra a sua velocidade atual (0 parado, escondido com sinal fraco). O
+          tempo restante e a chegada começam pela sua velocidade média e, nos
           primeiros 10 minutos, passam a seguir a média da própria viagem, com
           as paradas, medida no seu aparelho. O clima aparece no planejador,
           onde está atualizado, e não durante a navegação. Quando o sol se põe
@@ -1500,7 +1499,7 @@
           pausada no início. O rótulo Reprodução, com o relógio da viagem, fica
           no topo. Toque em reproduzir e escolha 1×, 2×, 5× ou 10× (1× anda 250
           m por segundo, 10× anda 2,5 km por segundo), ou arraste o controle
-          embaixo; o relógio segue a sua saída na sua velocidade média, ou o
+          embaixo; o relógio segue a sua partida na sua velocidade média, ou o
           horário atual sem ela. Numa janela larga, a tela mantém a proporção
           9:16 de um celular. Não usa a localização e não faz pedidos além do
           mapa; Sair volta ao planejador.
@@ -1508,10 +1507,10 @@
         <h2>Luz do dia</h2>
         <p>
           O resumo da rota mostra o nascer e o pôr do sol no início, com ícones
-          de sol nascendo e se pondo. Sem data de saída, mostra os horários de
+          de sol nascendo e se pondo. Sem data de partida, mostra os horários de
           hoje; com ela, mostra também quanto da rota fica no escuro. Abra Luz
           do dia no resumo para ver os trechos no escuro com os horários de
-          passagem, a distância no crepúsculo civil, a saída mais tarde que
+          passagem, a distância no crepúsculo civil, a partida mais tarde que
           chega antes do pôr do sol e quando a luz do dia começa no início.
         </p>
         <p>
@@ -1536,13 +1535,13 @@
           trocar a unidade converte para a posição mais próxima. Links e rotas
           salvas não levam a velocidade, então abrir um deles nunca muda a sua.
           A estimativa não inclui paradas nem trânsito. O resumo da rota mostra
-          a distância, o tempo e, quando há saída, o horário de chegada, com a
-          velocidade usada. Opções da viagem, logo abaixo, traz a data de saída,
-          a velocidade média e Preferir vias principais, e fica disponível antes
-          de existir uma rota. Itinerário, a primeira linha abaixo de Opções da
-          viagem, mostra as rodovias, cada via com sua distância e o provedor de
-          rotas. Quando o roteador informa, cada via começa com a manobra e uma
-          seta: virar à esquerda ou à direita (levemente, acentuadamente),
+          a distância, o tempo e, quando há partida, o horário de chegada, com a
+          velocidade usada. Opções da viagem, logo abaixo, traz a data de
+          partida, a velocidade média e Preferir vias principais, e fica
+          disponível antes de existir uma rota. Itinerário, a primeira linha
+          abaixo de Opções da viagem, mostra as rodovias, cada via com sua
+          distância. Quando o roteador informa, cada via começa com a manobra e
+          uma seta: virar à esquerda ou à direita (levemente, acentuadamente),
           retorno, manter-se à esquerda ou à direita, acessos e saídas e a saída
           a pegar na rotatória. Cada instrução também mostra sua posição na rota
           (por exemplo km 12,3, ou mi em milhas); selecione-a para centralizar o
@@ -1709,7 +1708,7 @@
           >. Feito com MapLibre GL JS, OSRM, Valhalla, Nominatim e Photon.
           Região por IP pelo ipwho.is; mapa por MapLibre GL JS e OpenFreeMap, ©
           OpenMapTiles; relevo do Terrain Tiles (Mapzen) e satélite da EOX.
-          Dados do tempo por Open-Meteo (CC BY 4.0); dados de elevação do
+          Dados de clima por Open-Meteo (CC BY 4.0); dados de elevação do
           Copernicus DEM GLO-90 via Open-Meteo. A bússola é corrigida para o
           norte verdadeiro com o World Magnetic Model (NOAA NCEI e BGS, domínio
           público). Links das fontes e licenças estão nas respectivas seções
