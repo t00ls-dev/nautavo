@@ -8,7 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
-- Favorite places: choose Save as favorite in a point's field menu, name it and pick its icon (Home, Work or Favorite), then pick the place in any point's menu, with its distance, no search and offline; edit or delete them under Saved routes. Backups now include favorites (format version 2); older backups still import.
+- Favorite places: choose Save as favorite in a point's field menu, or Add favorite in Favorite places, name it and pick its icon (Home, Work or Favorite), then pick the place in any point's menu, with its address and distance, no search and offline; edit or delete them in Favorite places. Backups now include favorites (format version 2); older backups still import.
 - While navigating, tap or drag up the handle on the bottom bar to list the turns and route points ahead, with their distances and arrival times; navigation goes on underneath.
 - Spoken directions while navigating, off by default: turn them on in the start notice, in Settings or with the speaker button on the navigation screen, and the phone's own voice says each turn ahead, the arrival, leaving the route and a recalculated route, in the interface language, with no request.
 - If the page reloads during navigation (a phone discarding the tab, an accidental refresh), it offers to continue on the same route with one tap, even without a connection; this tab keeps the route and the distance travelled for that, never your position, until you end the navigation, arrive or after 30 minutes.

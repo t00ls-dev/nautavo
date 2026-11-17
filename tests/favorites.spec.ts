@@ -150,6 +150,45 @@ test('editing a favorite moves it by search or coordinates, and typing filters t
   await expect(home.locator('small')).toHaveText('-22.90000, -43.10000');
 });
 
+test('Add favorite in Favorite places starts an empty sheet, and the menu lists favorites in their own section', async ({
+  page,
+}) => {
+  await routed(page);
+  await page.locator('.favorites > summary').click();
+  await expect(page.locator('.favorites .hint')).toHaveText(
+    "No favorites. Add one here or from a point's menu.",
+  );
+  await page.getByRole('button', { name: 'Add favorite' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Add favorite' });
+  const where = sheet.locator('#favorite-where');
+  await expect(where).toHaveValue('');
+  await expect(where).toBeFocused();
+  // No place yet: the sheet asks for one.
+  await sheet.locator('#favorite-name').fill('Bakery');
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(sheet.locator('#favorite-error')).toHaveText(
+    'Choose the place from the search, or paste coordinates.',
+  );
+  await where.fill('-22.95, -43.2');
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.locator('#favorite-count')).toHaveText('(1)');
+  await expect(page.locator('#library-status')).toHaveText('Favorite saved.');
+  // The route is unchanged, and the point menu shows the favorite under
+  // its heading, below the commands, with its place on a second line.
+  await expect(page.locator('#location-0')).toHaveValue(start);
+  await page.locator('#location-1').focus();
+  const list = page.locator('#suggestions-1');
+  await expect(list.locator('.suggestion-heading')).toHaveText(
+    'Favorite places',
+  );
+  const favorite = menu(page, 1).filter({ hasText: 'Bakery' });
+  await expect(favorite.locator('small')).toHaveText('-22.95000, -43.20000');
+  await expect(
+    list.locator('.suggestion-heading ~ .suggestion-action'),
+  ).toHaveCount(0);
+});
+
 test('favorites travel in the backup and import on another device', async ({
   page,
   browser,

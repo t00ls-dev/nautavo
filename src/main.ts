@@ -741,8 +741,10 @@ function renderPoints() {
               },
             ]
           : []),
-        ...favoritesFor(input.value, point).map((favorite) => ({
+        ...favoritesFor(input.value, point).map((favorite, n) => ({
+          heading: n ? undefined : t('Favorite places'),
           label: favorite.name,
+          note: favorite.place ?? coordText(favorite.coord),
           icon: FAVORITE_ICONS[favorite.kind ?? 'place'],
           detail:
             point.coord && favoriteAt(point.coord) === favorite
@@ -2024,6 +2026,19 @@ function saveAsFavorite(point: Point) {
       }),
   });
 }
+/** Add favorite, in Favorite places: the same sheet, starting empty. */
+iconControl($('add-favorite'), 'plus', 'Add favorite');
+$('add-favorite').onclick = () =>
+  editFavoriteSheet({
+    title: 'Add favorite',
+    name: '',
+    kind: 'place',
+    save: (name, kind, where, place) =>
+      saveFavorite(name, where, kind, place).then(() => {
+        libraryMessage('Favorite saved.');
+        return refreshFavorites();
+      }),
+  });
 async function refreshFavorites() {
   try {
     favoriteEntries = await listFavorites();
@@ -2035,11 +2050,7 @@ async function refreshFavorites() {
   list.replaceChildren();
   if (!favoriteEntries.length)
     list.append(
-      text(
-        'p',
-        "No favorites. Save one from a point's menu: Save as favorite.",
-        'hint',
-      ),
+      text('p', "No favorites. Add one here or from a point's menu.", 'hint'),
     );
   for (const favorite of favoriteEntries) {
     const row = document.createElement('div');

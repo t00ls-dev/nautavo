@@ -25,7 +25,8 @@ export interface FavoriteEdit {
   title: string;
   name: string;
   kind: FavoriteKind;
-  coord: Coord;
+  /** The place, unless the sheet starts empty to add a new favorite. */
+  coord?: Coord;
   /** The place's address, if known. */
   place?: string;
   /** Stores the choice; a rejection keeps the sheet open with its message. */
@@ -151,9 +152,9 @@ export function favoriteDialog(services: {
   dialog.addEventListener('close', () => closeSuggestions());
   form.onsubmit = (event) => {
     event.preventDefault();
-    if (!current || !chosen) return;
+    if (!current) return;
     // Text typed but not chosen is not a place yet.
-    if (where.value.trim() !== chosen.shown) {
+    if (where.value.trim() !== chosen?.shown) {
       const coord = parseCoordinates(where.value);
       if (coord) choose(coord);
       else {
@@ -164,6 +165,7 @@ export function favoriteDialog(services: {
     }
     const edit = current,
       place = chosen;
+    if (!place) return;
     error.hidden = true;
     void edit
       .save(name.value, kind(), place.coord, place.place)
@@ -180,8 +182,18 @@ export function favoriteDialog(services: {
     error.hidden = true;
     for (const k of kinds) k.checked = k.value === edit.kind;
     dialog.showModal();
-    choose(edit.coord, edit.place);
-    name.value = edit.name;
-    name.focus();
+    if (edit.coord) {
+      choose(edit.coord, edit.place);
+      name.value = edit.name;
+      name.focus();
+    } else {
+      // A new favorite starts from the place: search it, paste coordinates
+      // or use My location.
+      chosen = null;
+      where.value = '';
+      where.removeAttribute('aria-invalid');
+      results.replaceChildren();
+      where.focus();
+    }
   };
 }

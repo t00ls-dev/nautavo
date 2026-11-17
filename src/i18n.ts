@@ -138,8 +138,9 @@ const pt: Record<string, string> = {
   'Favorite saved on this device.': 'Favorito salvo neste aparelho.',
   'Favorite deleted.': 'Favorito excluído.',
   'Could not access favorites.': 'Não foi possível acessar os favoritos.',
-  "No favorites. Save one from a point's menu: Save as favorite.":
-    'Nenhum favorito. Salve um pelo menu de um ponto: Salvar como favorito.',
+  "No favorites. Add one here or from a point's menu.":
+    'Nenhum favorito. Adicione aqui ou pelo menu de um ponto.',
+  'Add favorite': 'Adicionar favorito',
   'Favorite places': 'Lugares favoritos',
   'Name the favorite before saving.': 'Dê um nome ao favorito antes de salvar.',
   'Invalid favorite place.': 'Lugar favorito inválido.',
