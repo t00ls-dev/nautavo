@@ -435,6 +435,12 @@ export function setupWeather(
       };
       return Math.round((day(b) - day(a)) / 86_400_000);
     };
+    // The date shows on a card only when its day differs from the card
+    // before (the departure's day for the first card) (#215).
+    const dayOf = (v: number) => new Date(v).toDateString();
+    let shownDay = departureOf(getState())
+      ? dayOf(Date.parse(departureOf(getState())!))
+      : '';
     groups.forEach((group) => {
       const first = group[0],
         last = group.at(-1)!,
@@ -463,30 +469,48 @@ export function setupWeather(
         : '';
 
       const severity = risks[0]?.severity ?? 0;
+      // The badge names the main risk (#215); no badge without one.
+      const main = severity ? risks[0].text : null;
       const item = document.createElement('li');
       const detail = document.createElement('button');
       detail.type = 'button';
       detail.className = 'weather-card';
       detail.id = `weather-point-${first}`;
       detail.dataset.severity = String(severity);
+      // Line 1: when and where.
       const header = document.createElement('span');
-      header.className = 'weather-card-header';
+      header.className = 'weather-card-header weather-card-line';
       const heading = document.createElement('strong');
-      heading.textContent = when;
-      const badge = document.createElement('span');
-      badge.className = 'weather-card-severity';
-      badge.textContent = t(severity ? `Alert ${severity}` : 'No alert');
-      header.append(heading, badge);
-      // Where along the route, on its own line like the other topics, so the
-      // header keeps the time and the badge on one line.
+      const day = dayOf(passage[first]);
+      const date =
+        day === shownDay
+          ? ''
+          : `${new Date(passage[first]).toLocaleDateString(locale, {
+              month: 'short',
+              day: 'numeric',
+            })} · `;
+      shownDay = day;
+      heading.textContent = `${date}${
+        first === last
+          ? clock(passage[first])
+          : `${clock(passage[first])}–${until(passage[first], passage[last])}`
+      }`;
       const place = document.createElement('span');
       place.className = 'weather-card-place';
-      place.append(icon('route'), `${km}${passText}`);
+      place.textContent = `${km}${passText}`;
+      header.append(heading, place);
+      if (main) {
+        const badge = document.createElement('span');
+        badge.className = 'weather-card-severity';
+        badge.textContent = t(main);
+        detail.append(badge);
+      }
+      // Line 2: the sky, the temperature and the rain; line 3: the wind and
+      // UV, in the chosen units and the interface's number format; a merged
+      // card shows ranges.
       const conditions = document.createElement('span');
       conditions.className = 'weather-card-conditions';
       conditions.append(icon(weather.icon), t(weather.text));
-      // One topic per line, as wind and UV, in the chosen units and the
-      // interface's number format; a merged card shows ranges.
       const temperature = document.createElement('span');
       temperature.className = 'weather-card-temperature';
       temperature.append(
@@ -500,15 +524,13 @@ export function setupWeather(
       rain.className = 'weather-card-rain';
       rain.append(
         icon('droplet'),
-        t(
-          `Rain ${range(
-            values((i) => at(i).hour.probability),
-            (v) => `${v ?? '—'}%`,
-          )} · ${range(
-            values((i) => at(i).hour.precipitation),
-            (v) => precipitationLabel(v, temperatureUnits(), locale),
-          )}`,
-        ),
+        `${range(
+          values((i) => at(i).hour.probability),
+          (v) => `${v ?? '—'}%`,
+        )} · ${range(
+          values((i) => at(i).hour.precipitation),
+          (v) => precipitationLabel(v, temperatureUnits(), locale),
+        )}`,
       );
       const wind = document.createElement('span');
       wind.className = 'weather-card-wind';
@@ -524,7 +546,13 @@ export function setupWeather(
           `${t(relation)}${windRange === null ? '' : ` · ${windRange}`}`,
         ),
       );
-      detail.append(header, place, conditions, temperature, rain, wind);
+      const sky = document.createElement('span');
+      sky.className = 'weather-card-line';
+      sky.append(conditions, temperature, rain);
+      const air = document.createElement('span');
+      air.className = 'weather-card-line';
+      air.append(wind);
+      detail.append(header, sky, air);
       // UV only while the sun counts (rounded index 1 or more). With a UV
       // alert the line carries it, from the nearest hour up to the worst one.
       let uvText = '';
@@ -548,10 +576,14 @@ export function setupWeather(
           icon(uvRisk ? 'alert' : 'weather-sun'),
           document.createTextNode(uvText),
         );
-        detail.append(uv);
+        air.append(uv);
       }
+      // Line 4, only with other risks than the badge's, the sky's and UV's.
       const extraRisks = risks.filter(
-        (risk) => risk.text !== weather.text && !UV_RISKS.has(risk.text),
+        (risk) =>
+          risk.text !== main &&
+          risk.text !== weather.text &&
+          !UV_RISKS.has(risk.text),
       );
       if (extraRisks.length) {
         const warnings = document.createElement('span');
@@ -665,7 +697,7 @@ export function setupWeather(
       });
       detail.setAttribute(
         'aria-label',
-        `${t('Show on map')}: ${when} · ${km}${passText} · ${conditions.textContent} · ${temperature.textContent} · ${rain.textContent} · ${wind.textContent} · ${t(severity ? `Alert ${severity}` : 'No alert')}${uvRisk ? ` · ${uvText}` : ''}${extraRisks.length ? ` · ${extraRisks.map((risk) => t(risk.text)).join(' · ')}` : ''}`,
+        `${t('Show on map')}: ${when} · ${km}${passText} · ${conditions.textContent} · ${temperature.textContent} · ${t('Rain')} ${rain.textContent} · ${wind.textContent}${uvText ? ` · ${uvText}` : ''} · ${risks.length ? risks.map((risk) => t(risk.text)).join(' · ') : t('No alert')}`,
       );
       detail.setAttribute('aria-controls', 'map');
       detail.onclick = () => {

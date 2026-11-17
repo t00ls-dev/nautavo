@@ -30,6 +30,10 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Weather cards are compact: the time and place, then the sky, temperature and rain, then the wind and UV, with other risks on one more line only when there are any; the date shows only when the day changes, and the tab on the card names the main risk (Heavy rain) instead of a level number.
+- Settings come in sections: Units, Map and points, Navigation and Backup apply at once, and Advanced, folded, holds the servers, satellite imagery, the IP region and the JSON editor, with Apply servers.
+- The automatic stops of an imported track are named by their place on the route (Stop · km 1.2) instead of coordinates cut short on phones.
+- Without WebGL, the map's tools (layers, location, full screen, fit and lock) are hidden with the map; Undo and the notice stay.
 - Error messages say what failed in plain words, without server names or HTTP codes: when a route cannot be calculated, Calculate route becomes Try again, and the Itinerary no longer shows the routing service and point count.
 - Results of an Enter search look like the suggestions shown while typing, with the name, the rest of the address and the distance.
 - While navigating, reaching an intermediate stop shows and says its name instead of Arrive.

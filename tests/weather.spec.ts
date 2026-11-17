@@ -9,7 +9,7 @@ import {
   holdMap,
   overlayCount,
 } from './map-helpers';
-import { base } from './app-helpers';
+import { base, openAdvancedSettings } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
 async function setup(
@@ -121,8 +121,9 @@ for (const mobile of [false, true])
       'data-severity',
       '3',
     );
+    // The tab names the main risk (#215).
     await expect(page.locator('.weather-card-severity').first()).toHaveText(
-      'Alert 3',
+      'Heavy rain',
     );
     // UV 7 from the fixture: shown with its WHO category, below the alert threshold.
     await expect(page.locator('.weather-card-uv').first()).toHaveText(
@@ -150,7 +151,7 @@ for (const mobile of [false, true])
       'Chuva forte',
     );
     await expect(page.locator('.weather-card-severity').first()).toHaveText(
-      'Alerta 3',
+      'Chuva forte',
     );
     await expect(page.locator('.weather-card-uv').first()).toHaveText(
       'UV 7 · alto',
@@ -1220,7 +1221,7 @@ test('changing only the weather server refreshes weather without rerouting', asy
     if (r.url().includes('/v1/forecast?')) hosts.push(new URL(r.url()).host);
     if (r.url().includes('/route/v1/')) hosts.push('routing');
   });
-  await page.locator('#open-settings').click();
+  await openAdvancedSettings(page);
   await page.locator('#weather-server').fill('https://weather.example.org');
   await page.locator('#save-settings').click();
   await expect(page.locator('#status')).toHaveText('Settings applied.');
@@ -1403,7 +1404,7 @@ for (const language of ['en', 'pt'])
       pt ? '24,1 °C' : '24.1 °C',
     );
     await expect(card.locator('.weather-card-rain')).toHaveText(
-      pt ? 'Chuva 13% · 0,2 mm' : 'Rain 13% · 0.2 mm',
+      pt ? '13% · 0,2 mm' : '13% · 0.2 mm',
     );
     await expect(
       card.locator('.weather-card-temperature .icon-thermometer'),
@@ -1411,20 +1412,25 @@ for (const language of ['en', 'pt'])
     await expect(card.locator('.weather-card-rain .icon-droplet')).toHaveCount(
       1,
     );
-    // One topic per line: each line is as tall as the one-line wind row.
-    const heights = await card.evaluate((element) =>
-      [
-        '.weather-card-conditions',
-        '.weather-card-temperature',
-        '.weather-card-rain',
-        '.weather-card-wind',
-      ].map((selector) =>
+    // Three lines (#215): when and where; sky, temperature and rain; wind
+    // and UV. A line breaks only between whole topics: at 320 px the sky
+    // line may take two, never more, and no topic wraps inside.
+    const lines = await card.evaluate((element) => {
+      const count = (e: Element) =>
         Math.round(
-          element.querySelector(selector)!.getBoundingClientRect().height,
+          e.getBoundingClientRect().height /
+            parseFloat(getComputedStyle(e).lineHeight),
+        );
+      return {
+        lines: [...element.querySelectorAll('.weather-card-line')].map(count),
+        topics: [...element.querySelectorAll('.weather-card-line > *')].map(
+          count,
         ),
-      ),
-    );
-    expect(new Set(heights).size).toBe(1);
+      };
+    });
+    expect(lines.lines).toHaveLength(3);
+    expect(Math.max(...lines.lines)).toBeLessThanOrEqual(2);
+    expect(new Set(lines.topics)).toEqual(new Set([1]));
     await expect(card).toHaveAttribute(
       'aria-label',
       pt
@@ -1604,9 +1610,14 @@ test('consecutive samples with equivalent weather share one card and one marker'
     '9.3–101.9 km',
   );
   // From the first to the last hour of the stretch, ending the next day:
-  // the date once, then the end time with its day offset.
+  // the end time with its day offset. The day is the departure's, so the
+  // card leaves the date to its accessible name (#215).
   await expect(merged.locator('.weather-card-header strong')).toHaveText(
-    /^Nov 8, \d{2}:\d{2} [AP]M–\d{2}:\d{2} [AP]M \(\+1\)$/,
+    /^\d{2}:\d{2} [AP]M–\d{2}:\d{2} [AP]M \(\+1\)$/,
+  );
+  // The card after it starts on the next day, so it shows the date.
+  await expect(cards.nth(2).locator('.weather-card-header strong')).toHaveText(
+    /^Nov 9 · \d{2}:\d{2} [AP]M$/,
   );
   await expect(merged).toHaveAttribute(
     'aria-label',
@@ -1622,9 +1633,7 @@ test('consecutive samples with equivalent weather share one card and one marker'
   await expect(merged.locator('.weather-card-place')).toContainText(
     '9,3–101,9 km',
   );
-  await expect(merged.locator('.weather-card-rain')).toHaveText(
-    'Chuva 10% · 0 mm',
-  );
+  await expect(merged.locator('.weather-card-rain')).toHaveText('10% · 0 mm');
   // Merging only changes the presentation: still one weather request.
   expect(calls).toBe(1);
 });
@@ -1705,8 +1714,8 @@ for (const width of [320, 360, 390, 430])
               '.weather-card-place',
             )!;
             const tab = card
-              .querySelector('.weather-card-severity')!
-              .getBoundingClientRect();
+              .querySelector('.weather-card-severity')
+              ?.getBoundingClientRect();
             const box = heading.getBoundingClientRect();
             const oneLine = (element: HTMLElement) =>
               element.getBoundingClientRect().height <
@@ -1719,7 +1728,7 @@ for (const width of [320, 360, 390, 430])
               issues.push(`overflow: ${heading.textContent}`);
             if (!oneLine(heading)) issues.push(`wrap: ${heading.textContent}`);
             if (!oneLine(place)) issues.push(`wrap: ${place.textContent}`);
-            if (tab.bottom > box.top + 1)
+            if (tab && tab.bottom > box.top + 1)
               issues.push(`tab over: ${heading.textContent}`);
             return issues;
           }),
@@ -1828,21 +1837,16 @@ test('temperature units switch the weather card to °F and inches without anothe
   await fetchWeather(page);
   const card = page.locator('.weather-card').first();
   await expect(card.locator('.weather-card-temperature')).toHaveText('24.1 °C');
-  await expect(card.locator('.weather-card-rain')).toHaveText(
-    'Rain 13% · 12.7 mm',
-  );
+  await expect(card.locator('.weather-card-rain')).toHaveText('13% · 12.7 mm');
   const requests = calls;
   await chooseUnits(page, { temperature: 'fahrenheit' });
   await expect(card.locator('.weather-card-temperature')).toHaveText('75.4 °F');
-  await expect(card.locator('.weather-card-rain')).toHaveText(
-    'Rain 13% · 0.5 in',
-  );
+  await expect(card.locator('.weather-card-rain')).toHaveText('13% · 0.5 in');
   // Distance units are a separate choice.
   await expect(card.locator('.weather-card-place')).toContainText('km');
   await page.locator('#language').selectOption('pt');
-  await expect(card.locator('.weather-card-rain')).toHaveText(
-    'Chuva 13% · 0,5 in',
-  );
+  await expect(card.locator('.weather-card-rain')).toHaveText('13% · 0,5 in');
+  await expect(card).toHaveAttribute('aria-label', /Chuva 13% · 0,5 in/);
   expect(calls).toBe(requests);
 });
 
@@ -1867,12 +1871,14 @@ test('a UV alert shows on the UV line as the range up to the worst hour of its w
   await date(page);
   await fetchWeather(page);
   const card = page.locator('.weather-card').first();
-  await expect(card.locator('.weather-card-severity')).toHaveText('Alert 1');
+  await expect(card.locator('.weather-card-severity')).toHaveText(
+    'Very high UV',
+  );
   const uv = card.locator('.weather-card-uv');
   await expect(uv).toHaveText('UV 7–8 · Very high');
   await expect(uv.locator('.icon-alert')).toHaveCount(1);
   // One UV line: the alert is not repeated as a separate warning.
-  await expect(card).not.toContainText('Very high UV');
+  await expect(card.locator('.weather-card-risks')).toHaveCount(0);
   await expect(card).toHaveAttribute('aria-label', /UV 7–8 · Very high/);
   await page.locator('#language').selectOption('pt');
   await expect(uv).toHaveText('UV 7–8 · muito alto');
@@ -1908,12 +1914,18 @@ for (const [severity, color] of [
     const card = page.locator('.weather-card').first();
     await expect(card).toHaveAttribute('data-severity', String(severity));
     await expect(card).toHaveCSS('background-color', color);
-    await expect(card.locator('.weather-card-severity')).toHaveText(
-      severity ? `Alert ${severity}` : 'No alert',
-    );
+    // The tab names the main risk; a card without one has no tab (#215).
+    const tab = card.locator('.weather-card-severity');
+    if (severity)
+      await expect(tab).toHaveText(
+        ['', 'Rain risk', 'Strong wind gusts', 'Heavy rain'][severity],
+      );
+    else await expect(tab).toHaveCount(0);
     await expect(card).toContainText('20 °C');
     await expect(card).toContainText('0 km');
-    await expect(card.locator('.weather-card-header')).toContainText('Nov 8');
+    // The first card's day is the departure's: the date is in its name only.
+    await expect(card.locator('.weather-card-header')).not.toContainText('Nov');
+    await expect(card).toHaveAttribute('aria-label', /Nov 8/);
     expect(
       await card.locator('.weather-card-conditions').textContent(),
     ).not.toContain('Heavy rain · Heavy rain');

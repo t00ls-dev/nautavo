@@ -171,3 +171,14 @@ export function libraryEntry(
     [store, id] as const,
   );
 }
+
+/**
+ * Opens Settings with its Advanced section expanded (#211): the servers,
+ * satellite imagery, IP region and JSON editor, and Apply servers.
+ */
+export async function openAdvancedSettings(page: Page) {
+  await page.locator('#open-settings').click();
+  const advanced = page.locator('.settings-advanced');
+  if ((await advanced.getAttribute('open')) === null)
+    await advanced.locator('> summary').click();
+}

@@ -35,12 +35,12 @@ it('switches existing content and placeholders without overwriting typed place n
   expect(document.querySelector('input')?.placeholder).toBe('My road trip');
 });
 
-it('translates the weather card rain line', () => {
+it('translates the weather card rain and an automatic stop by its place', () => {
   setLanguage('pt');
-  expect(t('Rain 13% · 0.2 mm')).toBe('Chuva 13% · 0.2 mm');
-  expect(t('Rain —% · — mm')).toBe('Chuva —% · — mm');
+  expect(t('Rain')).toBe('Chuva');
+  expect(t('Stop · km 1,2')).toBe('Parada · km 1,2');
   setLanguage('en');
-  expect(t('Rain 13% · 0.2 mm')).toBe('Rain 13% · 0.2 mm');
+  expect(t('Stop · km 1.2')).toBe('Stop · km 1.2');
 });
 it('translates the map hint for each kind of point', () => {
   setLanguage('pt');
@@ -114,6 +114,8 @@ describe('translation coverage', () => {
     'route',
     '-gpx',
     'route-gpx',
+    // The format's name, the Settings › Advanced row of the JSON editor.
+    'JSON',
     // Required map attribution, kept as written.
     '© OpenStreetMap',
     'Language / Idioma',
