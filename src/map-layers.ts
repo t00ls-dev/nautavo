@@ -119,6 +119,8 @@ export function setupMapLayers(map: PlannerMap) {
   const start = async () => {
     if (!webglSupported()) {
       $('map-no-gl').hidden = false;
+      // Tools for a map that cannot be drawn go too (#216); Undo stays.
+      $('map').parentElement!.classList.add('no-map');
       return;
     }
     try {

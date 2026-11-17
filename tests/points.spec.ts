@@ -18,6 +18,7 @@ import {
   valhallaAnswer,
   libraryEntry,
   routedPoints,
+  openAdvancedSettings,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
@@ -604,9 +605,21 @@ test('editing an imported track reroutes only the track around the edit', async 
   await expect(page.locator('#download')).toBeEnabled();
   const count = await page.locator('#points li').count();
   expect(count).toBeGreaterThan(3);
+  // Automatic stops are named by their place on the route (#208), in order.
+  const stops = await Promise.all(
+    Array.from({ length: count - 2 }, (_, i) =>
+      page.locator(`#location-${i + 1}`).inputValue(),
+    ),
+  );
+  for (const stop of stops) expect(stop).toMatch(/^Stop · km \d+\.\d$/);
+  const kms = stops.map((s) => Number(s.split('km ')[1]));
+  expect(kms).toEqual([...kms].sort((a, b) => a - b));
+  await page.locator('#language').selectOption('pt');
+  await expect(page.locator('#location-1')).toHaveValue(/^Parada · km \d+,\d$/);
+  await page.locator('#language').selectOption('en');
 
   await page.locator('#route-name').fill('Renamed spur');
-  await page.locator('#open-settings').click();
+  await openAdvancedSettings(page);
   await page.locator('#save-settings').click();
   await expect(page.locator('#status')).toHaveText('Settings applied.');
   await expect(page.locator('#download')).toBeEnabled();
@@ -909,7 +922,7 @@ test('an invalid settings URL leaves every server unchanged', async ({
   await setup(page);
   await fillPair(page);
   const hash = new URL(page.url()).hash;
-  await page.locator('#open-settings').click();
+  await openAdvancedSettings(page);
   await page.locator('#valhalla').fill('https://example.org/valhalla');
   await page.locator('#weather-server').fill('https://example.org/weather');
   await page.locator('#nominatim').fill('not a server');

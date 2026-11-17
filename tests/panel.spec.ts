@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
-import { base, mockRouting } from './app-helpers';
+import { base, mockRouting, openAdvancedSettings } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
@@ -28,7 +28,7 @@ test('settings open in a dialog, report errors inside it and close when applied'
   await page.goto(base);
   const dialog = page.getByRole('dialog', { name: 'Settings' });
   await expect(dialog).toBeHidden();
-  await page.locator('#open-settings').click();
+  await openAdvancedSettings(page);
   await expect(dialog).toBeVisible();
   await page.locator('#osrm').fill('https://user:secret@router.example');
   await page.locator('#save-settings').click();
@@ -52,6 +52,48 @@ test('settings open in a dialog, report errors inside it and close when applied'
     'Configurações',
   );
 });
+
+for (const [width, language] of [
+  [320, 'pt'],
+  [1280, 'en'],
+] as const)
+  test(`settings come in sections with Advanced folded at ${width}px in ${language}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto(base);
+    await page.locator('#language').selectOption(language);
+    await page.locator('#open-settings').click();
+    const dialog = page.locator('#settings-dialog');
+    // What applies at once comes first, in sections (#211).
+    await expect(dialog.locator('.settings-section h3')).toHaveText(
+      language === 'pt'
+        ? ['Unidades', 'Mapa e pontos', 'Navegação', 'Cópia de segurança']
+        : ['Units', 'Map and points', 'Navigation', 'Backup'],
+    );
+    // Servers and their Apply button wait folded in Advanced.
+    await expect(page.locator('.settings-advanced')).not.toHaveAttribute(
+      'open',
+      '',
+    );
+    await expect(page.locator('#osrm')).toBeHidden();
+    await expect(page.locator('#save-settings')).toBeHidden();
+    // A unit change applies without Apply.
+    await page.locator('#distance-units').selectOption('imperial');
+    await expect(page.locator('#settings-dialog')).toBeVisible();
+    await page.locator('.settings-advanced > summary').click();
+    await expect(page.locator('#save-settings')).toBeVisible();
+    const escaped = await dialog.evaluate((d) => {
+      const box = d.getBoundingClientRect();
+      return [...d.querySelectorAll('h3,summary,label,button,select,input')]
+        .filter((e) => {
+          const r = e.getBoundingClientRect();
+          return r.width && (r.left < box.left || r.right > box.right + 0.5);
+        })
+        .map((e) => e.id || e.textContent);
+    });
+    expect(escaped).toEqual([]);
+  });
 
 test('wide screens collapse the side panel from its header', async ({
   page,

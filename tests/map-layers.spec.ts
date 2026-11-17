@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASEMAP_STYLE, mockBasemap, mapCanvas } from './map-helpers';
 import { readFile } from 'node:fs/promises';
-import { base } from './app-helpers';
+import { base, openAdvancedSettings } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await mockBasemap(page);
@@ -76,7 +76,7 @@ test('draws one vector map, loads only the selected layer, updates credits and k
     'OpenStreetMap',
   );
   watch.requests.length = 0;
-  await page.locator('#open-settings').click();
+  await openAdvancedSettings(page);
   await page.locator('#satellite-vintage').selectOption('2016');
   await expect(page.locator('.map-credits-dialog')).toContainText(
     '2016 & 2017',
@@ -192,6 +192,17 @@ test('without the style or WebGL the route still draws with a notice', async ({
   await page.reload();
   await expect(page.locator('#map-no-gl')).toBeVisible();
   await expect(page.locator('#map-no-style')).toBeHidden();
+  // The tools of a map that cannot be drawn are hidden; Undo stays (#216).
+  for (const tool of [
+    '#layers-toggle',
+    '#locate',
+    '#fullscreen',
+    '#lock',
+    '#fit',
+    '#map-note',
+  ])
+    await expect(page.locator(tool)).toBeHidden();
+  await expect(page.locator('#undo')).toBeVisible();
   await page.locator('#language').selectOption('pt');
   await expect(page.locator('#map-no-gl')).toContainText(
     'Este navegador não consegue desenhar o mapa',

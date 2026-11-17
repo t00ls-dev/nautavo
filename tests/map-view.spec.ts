@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { closePanel, mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, decodeState } from '../src/core';
-import { base, mockRouting } from './app-helpers';
+import { base, mockRouting, openAdvancedSettings } from './app-helpers';
 import { weatherResponse } from './weather-fixture';
 const ipUrl = 'https://ipwho.is/**';
 const position = { latitude: 48.1234567, longitude: 11.7654321, accuracy: 35 };
@@ -375,7 +375,7 @@ test('IP detection can be disabled in Settings and stays disabled after reload',
   page,
 }) => {
   await page.goto(base);
-  await page.locator('#open-settings').click();
+  await openAdvancedSettings(page);
   await page.locator('#detect-region').uncheck();
   await page.evaluate(() => sessionStorage.removeItem('region-attempted'));
   let calls = 0;

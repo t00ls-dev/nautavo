@@ -469,44 +469,52 @@
         <button id="close-settings" type="button">Close</button>
       </div>
       <div class="dialog-body">
-        <label for="distance-units">Distance units</label
-        ><select id="distance-units">
-          <option value="auto">Automatic (km)</option>
-          <option value="metric">Kilometers</option>
-          <option value="imperial">Miles</option>
-        </select>
-        <label for="temperature-units">Temperature units</label
-        ><select id="temperature-units">
-          <option value="auto">Automatic (°C)</option>
-          <option value="celsius">Celsius</option>
-          <option value="fahrenheit">Fahrenheit</option>
-        </select>
-        <label for="point-placement">Moving points on the map</label
-        ><select id="point-placement">
-          <option value="loupe">Drag with a magnifier</option>
-          <option value="crosshair">Tap, then move the map</option>
-        </select>
-        <label class="check"
-          ><input id="nav-notice-setting" type="checkbox" checked /><span
-            >Show the notice when navigation starts</span
-          ></label
-        >
-        <label class="check"
-          ><input id="auto-reroute-setting" type="checkbox" checked /><span
-            >Recalculate the route automatically while navigating</span
-          ></label
-        >
-        <label class="check"
-          ><input id="voice-setting" type="checkbox" /><span
-            >Speak the directions while navigating</span
-          ></label
-        >
-        <div
-          class="settings-backup"
-          role="group"
+        <section class="settings-section" aria-labelledby="settings-units">
+          <h3 id="settings-units">Units</h3>
+          <label for="distance-units">Distance units</label
+          ><select id="distance-units">
+            <option value="auto">Automatic (km)</option>
+            <option value="metric">Kilometers</option>
+            <option value="imperial">Miles</option>
+          </select>
+          <label for="temperature-units">Temperature units</label
+          ><select id="temperature-units">
+            <option value="auto">Automatic (°C)</option>
+            <option value="celsius">Celsius</option>
+            <option value="fahrenheit">Fahrenheit</option>
+          </select>
+        </section>
+        <section class="settings-section" aria-labelledby="settings-map">
+          <h3 id="settings-map">Map and points</h3>
+          <label for="point-placement">Moving points on the map</label
+          ><select id="point-placement">
+            <option value="loupe">Drag with a magnifier</option>
+            <option value="crosshair">Tap, then move the map</option>
+          </select>
+        </section>
+        <section class="settings-section" aria-labelledby="settings-navigation">
+          <h3 id="settings-navigation">Navigation</h3>
+          <label class="check"
+            ><input id="nav-notice-setting" type="checkbox" checked /><span
+              >Show the notice when navigation starts</span
+            ></label
+          >
+          <label class="check"
+            ><input id="auto-reroute-setting" type="checkbox" checked /><span
+              >Recalculate the route automatically while navigating</span
+            ></label
+          >
+          <label class="check"
+            ><input id="voice-setting" type="checkbox" /><span
+              >Speak the directions while navigating</span
+            ></label
+          >
+        </section>
+        <section
+          class="settings-section settings-backup"
           aria-labelledby="backup-title"
         >
-          <span id="backup-title" class="settings-label">Backup</span>
+          <h3 id="backup-title">Backup</h3>
           <p class="hint">
             Your saved routes and favorite places in one file, to keep or to
             move to another device.
@@ -522,48 +530,49 @@
             /></label>
           </div>
           <p id="backup-status" class="hint" role="status"></p>
-        </div>
-        <label for="osrm">OSRM server</label><input id="osrm" type="url" />
-        <label for="valhalla">Valhalla server</label
-        ><input id="valhalla" type="url" />
-        <label for="nominatim">Nominatim server</label
-        ><input id="nominatim" type="url" />
-        <label for="photon">Photon server</label
-        ><input id="photon" type="url" />
-        <label for="weather-server">Open-Meteo server</label
-        ><input id="weather-server" type="url" />
-        <label for="satellite-vintage">Satellite imagery</label
-        ><select id="satellite-vintage" aria-label="Satellite imagery">
-          <option value="2025">EOX 2025 · CC BY-NC-SA 4.0</option>
-          <option value="2016">EOX 2016 · CC BY 4.0</option>
-        </select>
-        <label class="check"
-          ><input id="detect-region" type="checkbox" checked /><span
-            >Detect region by IP</span
-          ></label
-        >
-        <label for="region-url">IP region service</label
-        ><input id="region-url" type="url" />
-        <p class="hint">
-          The region service receives your IP address. Only an approximate city
-          view is used.
-        </p>
-        <details class="json-settings">
-          <summary>Advanced: JSON</summary>
-          <label for="state-json" class="sr-only"
-            >Points and settings (latitude, longitude)</label
-          ><textarea id="state-json" rows="8" spellcheck="false"></textarea>
-          <div class="notice-actions">
-            <button id="export-json" type="button">Load current state</button
-            ><button id="apply-json" type="button">Apply JSON</button>
-          </div>
+        </section>
+        <details class="settings-advanced">
+          <summary>Advanced</summary>
+          <label for="osrm">OSRM server</label><input id="osrm" type="url" />
+          <label for="valhalla">Valhalla server</label
+          ><input id="valhalla" type="url" />
+          <label for="nominatim">Nominatim server</label
+          ><input id="nominatim" type="url" />
+          <label for="photon">Photon server</label
+          ><input id="photon" type="url" />
+          <label for="weather-server">Open-Meteo server</label
+          ><input id="weather-server" type="url" />
+          <label for="satellite-vintage">Satellite imagery</label
+          ><select id="satellite-vintage" aria-label="Satellite imagery">
+            <option value="2025">EOX 2025 · CC BY-NC-SA 4.0</option>
+            <option value="2016">EOX 2016 · CC BY 4.0</option>
+          </select>
+          <label class="check"
+            ><input id="detect-region" type="checkbox" checked /><span
+              >Detect region by IP</span
+            ></label
+          >
+          <label for="region-url">IP region service</label
+          ><input id="region-url" type="url" />
+          <p class="hint">
+            The region service receives your IP address. Only an approximate
+            city view is used.
+          </p>
+          <details class="json-settings">
+            <summary>JSON</summary>
+            <label for="state-json" class="sr-only"
+              >Points and settings (latitude, longitude)</label
+            ><textarea id="state-json" rows="8" spellcheck="false"></textarea>
+            <div class="notice-actions">
+              <button id="export-json" type="button">Load current state</button
+              ><button id="apply-json" type="button">Apply JSON</button>
+            </div>
+          </details>
+          <p id="settings-status" class="hint error" role="status"></p>
+          <button id="save-settings" class="primary" type="button">
+            Apply servers
+          </button>
         </details>
-      </div>
-      <div class="dialog-footer">
-        <p id="settings-status" class="hint error" role="status"></p>
-        <button id="save-settings" class="primary" type="button">
-          Apply settings
-        </button>
       </div>
     </dialog>
     <dialog

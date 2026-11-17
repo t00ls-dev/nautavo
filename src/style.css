@@ -252,8 +252,7 @@ textarea {
   line-height: 1.5;
   resize: vertical;
 }
-label[for],
-.settings-label {
+label[for] {
   display: block;
   margin: 10px 0 4px;
   font-size: 14px;
@@ -1191,7 +1190,7 @@ div.step-item {
 }
 /* Backup in Settings: saved routes and favorite places in one file. */
 .settings-backup .hint {
-  margin: 0 0 8px;
+  margin: 6px 0 8px;
 }
 /* Export and Import side by side, equal; stacked where both do not fit. */
 .settings-backup .library-actions {
@@ -1355,8 +1354,7 @@ dialog.settings[open] {
 dialog.settings::backdrop {
   background: #1b293466;
 }
-.dialog-header,
-.dialog-footer {
+.dialog-header {
   display: flex;
   flex: none;
   align-items: center;
@@ -1380,13 +1378,33 @@ dialog.settings::backdrop {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.dialog-footer {
-  padding: 12px 20px;
-  border-top: 1px solid var(--color-border);
+/* Settings in sections (#211): what applies at once, then Advanced,
+   folded, with the servers and their Apply button. */
+.settings-section {
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--color-border);
 }
-.dialog-footer p {
-  flex: 1 1 0;
-  margin: 0;
+.settings-section h3 {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+.settings-section > .check:first-of-type {
+  margin-top: 8px;
+}
+.settings-advanced {
+  padding: 2px 0 8px;
+}
+#settings-status {
+  margin: 12px 0 0;
+}
+#settings-status:empty {
+  display: none;
+}
+#save-settings {
+  width: 100%;
+  margin-top: 12px;
 }
 .dialog-body select {
   width: 100%;
@@ -2531,46 +2549,64 @@ input[type='range'].range-input:disabled {
   --weather-card-background: #fff0f0;
   --weather-card-badge: #9a2227;
 }
-.weather-card-header {
-  display: block;
+.weather-card {
+  font-weight: 400;
 }
-/* One line: the date and time, or a range ending with its day offset. */
 .weather-card-header strong {
-  display: block;
   font-weight: 650;
-  white-space: nowrap;
 }
-/* The alert level is a tab on the card's top border, out of the text flow,
-   so the time keeps the card's full width on the narrowest phones. Half of
-   it sits in the card's top padding, clear of the first line. */
+/* The main risk is a tab on the card's top border, out of the text flow;
+   half of it sits in the card's top padding, clear of the first line. A
+   long name is shortened; the card's accessible name keeps it whole. */
 .weather-card-severity {
   position: absolute;
   top: -9px;
   right: 12px;
+  max-width: calc(100% - 24px);
   height: 18px;
+  overflow: hidden;
   padding: 0 7px;
   border-radius: 4px;
   background: var(--weather-card-badge);
   color: #fff;
   font-weight: 650;
   line-height: 18px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.weather-card-place,
-.weather-card-conditions,
-.weather-card-temperature,
-.weather-card-rain,
-.weather-card-wind,
-.weather-card-uv,
+/* Three lines (#215): when and where; sky, temperature and rain; wind and
+   UV. Each topic keeps its words together; a line breaks only between
+   topics, when the longest names do not fit. */
+.weather-card-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  margin: 4px 0 0;
+}
+.weather-card-line:first-child {
+  margin-top: 0;
+}
+.weather-card-line > span,
+.weather-card-line > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
 .weather-card-risks {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin: 6px 0 0;
+  gap: 4px;
+  margin: 4px 0 0;
 }
 .weather-card-risks,
 .weather-card-uv[data-alert] {
   font-weight: 550;
+}
+/* Room above only for a card with a risk tab on its border. */
+.weather-card:not(:has(.weather-card-severity)) {
+  margin-top: 8px;
 }
 
 @media (max-width: 759px) {
@@ -3972,5 +4008,14 @@ dialog:modal:not(.nav-screen) {
 .placement-loupe[hidden],
 .placement-pin[hidden],
 .placement-bar[hidden] {
+  display: none;
+}
+/* Without WebGL there is no map (#216): only the notice and Undo remain. */
+.no-map .layer-control,
+.no-map #map-note,
+.no-map #locate,
+.no-map #fullscreen,
+.no-map #lock,
+.no-map #fit {
   display: none;
 }

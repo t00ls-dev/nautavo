@@ -186,12 +186,13 @@
           shading and contour lines from Terrain Tiles on AWS Open Data) or
           Satellite (EOX Sentinel-2 cloudless 2025, CC BY-NC-SA 4.0,
           non-commercial only), with the map's labels on top. For commercial
-          use, choose the EOX 2016 edition (CC BY 4.0) in Settings. Satellite
-          imagery is a regional mosaic, not live or street-level imagery;
-          zooming beyond its native level enlarges pixels. Without access to the
-          map, the route still shows on a plain background. A browser without
-          WebGL cannot draw the map; the panel still plans, calculates and
-          exports the route.
+          use, choose the EOX 2016 edition (CC BY 4.0) in Settings › Advanced.
+          Satellite imagery is a regional mosaic, not live or street-level
+          imagery; zooming beyond its native level enlarges pixels. Without
+          access to the map, the route still shows on a plain background. A
+          browser without WebGL cannot draw the map; the panel still plans,
+          calculates and exports the route, and the map tools are hidden except
+          Undo.
         </p>
         <p>
           Only the active layer requests tiles. Their providers receive your IP
@@ -288,9 +289,9 @@
           never sent); when location is denied, or there is no last view, it
           uses the approximate IP region, then the browser timezone/language.
           The app never asks for location on its own. To stop IP requests, open
-          Settings and disable Detect region by IP. The selected provider
-          receives your IP address. The location dot is never stored or sent;
-          GPS only leaves the device as a route point you chose or as the
+          Settings › Advanced and disable Detect region by IP. The selected
+          provider receives your IP address. The location dot is never stored or
+          sent; GPS only leaves the device as a route point you chose or as the
           current position of a navigation recalculation; tile requests reveal
           the visible area.
         </p>
@@ -358,7 +359,8 @@
           in TCX files each track (for example each lap) is a segment. Downloads
           are always GPX. Import preserves the original geometry. A track
           without waypoints gets stops where its shape needs them (loops,
-          out-and-back sections and large bends). After the import, the track is
+          out-and-back sections and large bends), each named by its place on the
+          route, for example Stop · km 12.3. After the import, the track is
           checked once against the roads (Valhalla map matching, by car and,
           where a road is closed to cars, by bicycle): wherever the road matches
           the recording closely, the track is aligned to the road actually
@@ -473,25 +475,28 @@
         </p>
         <p>
           Each sampled point has one card combining weather and risk, without a
-          separate alert list: the time and alert level, the distance along the
-          route (with Outbound or Return on a road used both ways), the
-          conditions, the temperature, rain (chance and amount, for example Rain
-          13% · 0.2 mm), the wind relative to the route and, in daylight, UV,
-          one per line. In daylight the card also shows the UV index with its
-          WHO category (low 0–2, moderate 3–5, high 6–7, very high 8–10, extreme
+          separate alert list, in three lines: the time and the distance along
+          the route (with Outbound or Return on a road used both ways); the
+          conditions, the temperature and rain (chance and amount, for example
+          13% · 0.2 mm); the wind relative to the route and, in daylight, UV.
+          Other risks take one more line, only when there are any, and the date
+          shows only when the day changes from the card before (or from the
+          departure). In daylight the card also shows the UV index with its WHO
+          category (low 0–2, moderate 3–5, high 6–7, very high 8–10, extreme
           11+); it is a model estimate for open sky, without shade or
           reflection, and is omitted when the service has no value. When the UV
           alert applies, the UV line carries it and shows the range from the
           passage hour to the worst hour around it, for example UV 7–8 · very
-          high. Alert 1, 2 and 3 use yellow, orange and red plus text labels;
-          no-alert cards are neutral. Consecutive samples with the same
-          conditions share one card and one map marker, with time, distance and
-          value ranges (a range ending the next day shows the end time with +1)
-          (for example 10:30–12:30 · 4–9 km and 22–23 °C): the same condition,
-          alerts, wind relation and UV category, and temperature within 2 °C,
-          rain chance within 20 points and wind within 10 km/h of the first of
-          them. The start, stops and destination always keep their own card. All
-          cards use the main panel scroll.
+          high. Cards with risks use yellow, orange and red by level, and a tab
+          on the card names the main risk (for example Heavy rain); cards
+          without risks are neutral and have no tab. Consecutive samples with
+          the same conditions share one card and one map marker, with time,
+          distance and value ranges (a range ending the next day shows the end
+          time with +1) (for example 10:30–12:30 · 4–9 km and 22–23 °C): the
+          same condition, alerts, wind relation and UV category, and temperature
+          within 2 °C, rain chance within 20 points and wind within 10 km/h of
+          the first of them. The start, stops and destination always keep their
+          own card. All cards use the main panel scroll.
         </p>
         <p>
           Cards use matching outline SVG icons; map markers use colored,
@@ -767,17 +772,18 @@
         </p>
         <h2>Settings and JSON</h2>
         <p>
-          Open Settings with the gear icon in the header to choose units (they
-          apply at once) and to change server base URLs; Apply settings saves
-          the servers and closes the dialog. A route link that suggests other
-          routing or search servers opens with the default servers; a notice
-          names them, and Use link servers applies them only if you choose. Use
-          HTTPS and servers that allow browser requests (CORS). The advanced
-          JSON editor gives you the same points and options used by route links.
-          Routing and address-search servers belong to the route and travel with
-          links, saved routes and backups; the suggestion, weather and IP-region
-          servers stay on this device only. Provider behavior and usage limits
-          are described in the
+          Open Settings with the gear icon in the header. Units, Map and points,
+          Navigation and Backup apply at once. Advanced, folded at the bottom,
+          holds the server base URLs, satellite imagery, the IP region and the
+          JSON editor; Apply servers saves the servers and closes the dialog. A
+          route link that suggests other routing or search servers opens with
+          the default servers; a notice names them, and Use link servers applies
+          them only if you choose. Use HTTPS and servers that allow browser
+          requests (CORS). The advanced JSON editor gives you the same points
+          and options used by route links. Routing and address-search servers
+          belong to the route and travel with links, saved routes and backups;
+          the suggestion, weather and IP-region servers stay on this device
+          only. Provider behavior and usage limits are described in the
           <a
             href="https://github.com/t00ls-dev/route-gpx/blob/main/docs/SERVICES.md"
             >services and privacy details</a
@@ -980,12 +986,13 @@
           com sombreamento do relevo e curvas de nível do Terrain Tiles no AWS
           Open Data) ou Satélite (EOX Sentinel-2 cloudless 2025, CC BY-NC-SA
           4.0, apenas uso não comercial), com os rótulos do mapa por cima. Para
-          uso comercial, escolha a edição EOX 2016 (CC BY 4.0) em Configurações.
-          O satélite é um mosaico regional, não uma imagem ao vivo nem em nível
-          de rua; o zoom acima do nível nativo amplia os pixels. Sem acesso ao
-          mapa, a rota ainda aparece sobre um fundo neutro. Um navegador sem
-          WebGL não consegue desenhar o mapa; o painel continua planejando,
-          calculando e exportando a rota.
+          uso comercial, escolha a edição EOX 2016 (CC BY 4.0) em Configurações
+          › Avançado. O satélite é um mosaico regional, não uma imagem ao vivo
+          nem em nível de rua; o zoom acima do nível nativo amplia os pixels.
+          Sem acesso ao mapa, a rota ainda aparece sobre um fundo neutro. Um
+          navegador sem WebGL não consegue desenhar o mapa; o painel continua
+          planejando, calculando e exportando a rota, e as ferramentas do mapa
+          somem, menos Desfazer.
         </p>
         <p>
           Só a camada ativa requisita tiles. Seus provedores recebem seu IP e a
@@ -1087,12 +1094,12 @@
           só no aparelho e nunca são enviados); com a localização negada, ou sem
           essa última vista, usa a região aproximada por IP e depois o
           fuso/idioma do navegador. O app nunca pede a localização sozinho. Para
-          impedir consultas por IP, abra Configurações e desative Detectar
-          região pelo IP. O provedor escolhido recebe seu endereço IP. O ponto
-          de localização nunca é guardado nem enviado; o GPS só sai do aparelho
-          como um ponto da rota que você escolheu ou como a posição atual num
-          recálculo da navegação; as requisições de tiles revelam a área
-          visível.
+          impedir consultas por IP, abra Configurações › Avançado e desative
+          Detectar região pelo IP. O provedor escolhido recebe seu endereço IP.
+          O ponto de localização nunca é guardado nem enviado; o GPS só sai do
+          aparelho como um ponto da rota que você escolheu ou como a posição
+          atual num recálculo da navegação; as requisições de tiles revelam a
+          área visível.
         </p>
         <h2>Escolher vias principais</h2>
         <p>
@@ -1163,7 +1170,8 @@
           exemplo, cada volta) é um segmento. Os downloads são sempre GPX.
           Importar preserva a geometria original. Um trajeto sem paradas ganha
           paradas onde o formato precisa delas (laços, idas e voltas e curvas
-          grandes). Depois da importação, o trajeto é conferido uma vez com as
+          grandes), cada uma com o nome do seu lugar na rota, por exemplo Parada
+          · km 12,3. Depois da importação, o trajeto é conferido uma vez com as
           ruas (map matching do Valhalla, por carro e, onde uma via é fechada a
           carros, por bicicleta): onde a rua acompanha a gravação de perto, o
           trajeto é alinhado à rua realmente percorrida, sem o ruído e as falhas
@@ -1284,25 +1292,28 @@
         </p>
         <p>
           Cada ponto amostrado tem um único card com condições e riscos, sem
-          lista separada de alertas: o horário e o nível de alerta, a distância
-          na rota (com Ida ou Volta numa via usada nos dois sentidos), as
-          condições, a temperatura, a chuva (chance e quantidade, por exemplo
-          Chuva 13% · 0,2 mm), o vento em relação à rota e, durante o dia, o UV,
-          um por linha. Durante o dia, o card também mostra o índice UV com a
-          categoria da OMS (baixo 0–2, moderado 3–5, alto 6–7, muito alto 8–10,
-          extremo 11+); é uma estimativa do modelo para céu aberto, sem sombra
-          nem reflexo, e é omitido quando o serviço não tem o valor. Quando há
-          alerta de UV, a própria linha de UV o indica e mostra a faixa da hora
-          da passagem até a pior hora em torno dela, por exemplo UV 7–8 · muito
-          alto. Alerta 1, 2 e 3 usam amarelo, laranja e vermelho, além de
-          rótulos; sem alerta, o card é neutro. Amostras seguidas com as mesmas
-          condições dividem um card e um marcador no mapa, com faixas de
-          horário, distância e valores (uma faixa que termina no dia seguinte
-          mostra o horário final com +1) (por exemplo 10:30–12:30 · 4–9 km e
-          22–23 °C): mesma condição, mesmos alertas, mesma relação com o vento e
-          mesma categoria de UV, com temperatura até 2 °C, chance de chuva até
-          20 pontos e vento até 10 km/h da primeira delas. A partida, as paradas
-          e a chegada sempre têm card próprio. Todos usam a rolagem do painel
+          lista separada de alertas, em três linhas: o horário e a distância na
+          rota (com Ida ou Volta numa via usada nos dois sentidos); as
+          condições, a temperatura e a chuva (chance e quantidade, por exemplo
+          13% · 0,2 mm); o vento em relação à rota e, durante o dia, o UV.
+          Outros riscos ganham mais uma linha, só quando existem, e a data só
+          aparece quando o dia muda em relação ao card anterior (ou à partida).
+          Durante o dia, o card também mostra o índice UV com a categoria da OMS
+          (baixo 0–2, moderado 3–5, alto 6–7, muito alto 8–10, extremo 11+); é
+          uma estimativa do modelo para céu aberto, sem sombra nem reflexo, e é
+          omitido quando o serviço não tem o valor. Quando há alerta de UV, a
+          própria linha de UV o indica e mostra a faixa da hora da passagem até
+          a pior hora em torno dela, por exemplo UV 7–8 · muito alto. Cards com
+          riscos usam amarelo, laranja e vermelho conforme o nível, e uma aba no
+          card diz o risco principal (por exemplo Chuva forte); sem riscos, o
+          card é neutro e não tem aba. Amostras seguidas com as mesmas condições
+          dividem um card e um marcador no mapa, com faixas de horário,
+          distância e valores (uma faixa que termina no dia seguinte mostra o
+          horário final com +1) (por exemplo 10:30–12:30 · 4–9 km e 22–23 °C):
+          mesma condição, mesmos alertas, mesma relação com o vento e mesma
+          categoria de UV, com temperatura até 2 °C, chance de chuva até 20
+          pontos e vento até 10 km/h da primeira delas. A partida, as paradas e
+          a chegada sempre têm card próprio. Todos usam a rolagem do painel
           principal.
         </p>
         <p>
@@ -1590,17 +1601,18 @@
         </p>
         <h2>Configurações e JSON</h2>
         <p>
-          Abra as Configurações pelo ícone de engrenagem no cabeçalho para
-          escolher as unidades (valem na hora) e alterar as URLs base dos
-          servidores; Aplicar configurações salva os servidores e fecha a
-          janela. Um link de rota que sugere outros servidores de rota ou busca
-          abre com os servidores padrão; um aviso mostra quais são, e Usar
-          servidores do link só os aplica se você escolher. Use HTTPS e
-          servidores que permitam requisições do navegador (CORS). O editor JSON
-          avançado usa os mesmos pontos e opções dos links de rota. Os
-          servidores de rota e de busca de endereço fazem parte da rota e
-          acompanham links, rotas salvas e backups; os servidores de sugestões,
-          clima e região por IP ficam só neste aparelho. Os
+          Abra as Configurações pelo ícone de engrenagem no cabeçalho. Unidades,
+          Mapa e pontos, Navegação e Cópia de segurança valem na hora. Avançado,
+          recolhido no fim, traz as URLs base dos servidores, as imagens de
+          satélite, a região por IP e o editor JSON; Aplicar servidores salva os
+          servidores e fecha a janela. Um link de rota que sugere outros
+          servidores de rota ou busca abre com os servidores padrão; um aviso
+          mostra quais são, e Usar servidores do link só os aplica se você
+          escolher. Use HTTPS e servidores que permitam requisições do navegador
+          (CORS). O editor JSON avançado usa os mesmos pontos e opções dos links
+          de rota. Os servidores de rota e de busca de endereço fazem parte da
+          rota e acompanham links, rotas salvas e backups; os servidores de
+          sugestões, clima e região por IP ficam só neste aparelho. Os
           <a
             href="https://github.com/t00ls-dev/route-gpx/blob/main/docs/SERVICES.md"
             >detalhes de serviços e privacidade</a

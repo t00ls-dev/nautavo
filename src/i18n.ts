@@ -189,9 +189,7 @@ const pt: Record<string, string> = {
   'Departure must be within the last 90 days.':
     'A partida deve estar nos últimos 90 dias.',
   'No alert': 'Sem alerta',
-  'Alert 1': 'Alerta 1',
-  'Alert 2': 'Alerta 2',
-  'Alert 3': 'Alerta 3',
+  Rain: 'Chuva',
   'Weather along the route': 'Clima ao longo da rota',
   'Loading weather…': 'Buscando clima…',
   'Weather data license: CC BY 4.0': 'Licença dos dados de clima: CC BY 4.0',
@@ -359,7 +357,9 @@ const pt: Record<string, string> = {
   'Add a stop': 'Adicionar parada',
   'Prefer main roads': 'Preferir vias principais',
   Settings: 'Configurações',
-  'Advanced: JSON': 'Avançado: JSON',
+  Advanced: 'Avançado',
+  Units: 'Unidades',
+  'Map and points': 'Mapa e pontos',
   'Fit route': 'Ver rota',
   'Set your start and destination.': 'Defina o início e o destino.',
   'Updating…': 'Atualizando…',
@@ -413,7 +413,7 @@ const pt: Record<string, string> = {
   'OSRM server': 'Servidor OSRM',
   'Valhalla server': 'Servidor Valhalla',
   'Nominatim server': 'Servidor Nominatim',
-  'Apply settings': 'Aplicar configurações',
+  'Apply servers': 'Aplicar servidores',
   'Points and settings (latitude, longitude)':
     'Pontos e configurações (latitude, longitude)',
   'Load current state': 'Carregar estado atual',
@@ -644,10 +644,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Delete saved route: (.*?)$/, (n) => `Excluir rota salva: ${n}`],
 
   [/^At (.*?) (km\/h|mph) · no stops$/, (n, u) => `A ${n} ${u} · sem paradas`],
-  [
-    /^Rain (.+)% · (.+) (mm|in)$/,
-    (chance, amount, unit) => `Chuva ${chance}% · ${amount} ${unit}`,
-  ],
   [/^Location of point (\d+)$/, (n) => `Local do ponto ${n}`],
   [/^Results for point (\d+)$/, (n) => `Resultados do ponto ${n}`],
   [
@@ -744,6 +740,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
 
   [/^(\d+) points$/, (n) => `${n} pontos`],
   [/^Set point (\d+)\.$/, (n) => `Defina o ponto ${n}.`],
+  [/^Stop · (.+)$/, (at) => `Parada · ${at}`],
   [/^Select point (\d+)$/, (n) => `Selecionar ponto ${n}`],
   [/^Remove point (\d+)$/, (n) => `Remover ponto ${n}`],
   [/^Move point (\d+)$/, (n) => `Mover ponto ${n}`],

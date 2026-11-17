@@ -22,7 +22,7 @@ import {
   type SavedRoute,
 } from './saved-routes';
 import { missingDirections, sameRoad } from './directions';
-import { legDistances } from './track-position';
+import { legDistances, legPositions } from './track-position';
 import {
   speedToKmh,
   speedFromKmh,
@@ -723,14 +723,42 @@ function setPoint(
     $(`point-results-${index}`).replaceChildren();
   }
 }
-function pointValue(point: Point): string {
+/** Names the app gives points: the field shows the point, not the name. */
+const generatedName = (point: Point) =>
+  /^(Start|Destination|Stop \d+|Point \d+|Return to start)$/.test(point.name);
+/** Along-track distance of each point on the route shown, in order. */
+const pointPositions = new WeakMap<Route, Map<Point, number>>();
+/**
+ * An automatic stop of an imported track, named by its place on the route
+ * ("Stop · km 1.2", #208), locally: phones cut its coordinates, which stay in
+ * the GPX and on the map.
+ */
+function stopLabel(point: Point, route = current): string | null {
+  if (!/^Stop \d+$/.test(point.name) || !point.coord || !route) return null;
+  let positions = pointPositions.get(route);
+  if (!positions) {
+    const placed = state.points.filter((p) => p.coord);
+    const at = legPositions(
+      route.segments,
+      placed.map((p) => p.coord!),
+    );
+    positions = new Map(
+      placed.flatMap((p, i) => (at[i] === null ? [] : [[p, at[i]!]])),
+    );
+    pointPositions.set(route, positions);
+  }
+  const at = positions.get(point);
+  if (at === undefined) return null;
+  const locale = getLanguage() === 'pt' ? 'pt-BR' : 'en';
+  return t(`Stop · ${milepostLabel(at, distanceUnits(), locale)}`);
+}
+function pointValue(point: Point, route = current): string {
   return (
     drafts.get(point) ??
     (point.coord
-      ? /^(Start|Destination|Stop \d+|Point \d+|Return to start)$/.test(
-          point.name,
-        )
-        ? point.coord.map((n) => n.toFixed(6)).join(', ')
+      ? generatedName(point)
+        ? (stopLabel(point, route) ??
+          point.coord.map((n) => n.toFixed(6)).join(', '))
         : point.name
       : '')
   );
@@ -1585,6 +1613,12 @@ async function followImported(base: Route) {
 }
 function renderRoute(route: Route) {
   undoHistory.attach(route);
+  // Automatic stops are named by their place on this route (#208).
+  state.points.forEach((point, i) => {
+    const input = optionalById<HTMLInputElement>(`location-${i}`);
+    if (input && document.activeElement !== input && !drafts.has(point))
+      input.value = pointValue(point, route);
+  });
   trackBase =
     isImportedRoute(route) && state.points.every((p) => p.coord)
       ? { route, points: state.points.map((p) => p.coord!) }
@@ -2130,8 +2164,8 @@ function saveAsFavorite(point: Point) {
   const coord = point.coord;
   if (!coord) return;
   const value = pointValue(point);
-  // A point typed as coordinates has no name to suggest.
-  const named = !parseCoordinates(value);
+  // A point typed as coordinates, or named by the app, has no name to suggest.
+  const named = !generatedName(point) && !parseCoordinates(value);
   editFavoriteSheet({
     title: 'Save favorite',
     coord,
