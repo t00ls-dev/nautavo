@@ -64,9 +64,67 @@ export function metersPerPixel(lat: number, zoom: number): number {
   return (40075016.686 * Math.cos((lat * Math.PI) / 180)) / (TILE * 2 ** zoom);
 }
 
+/** Pixels from each edge of a box. */
+export interface Insets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+/** A box in page pixels, as `getBoundingClientRect` gives it. */
+type Box = Pick<DOMRect, 'top' | 'right' | 'bottom' | 'left'>;
+const EDGES = ['top', 'right', 'bottom', 'left'] as const;
+/** The larger of two insets on each side. */
+export const widestInsets = (a: Insets, b: Insets): Insets => ({
+  top: Math.max(a.top, b.top),
+  right: Math.max(a.right, b.right),
+  bottom: Math.max(a.bottom, b.bottom),
+  left: Math.max(a.left, b.left),
+});
+export const sameInsets = (a: Insets, b: Insets): boolean =>
+  EDGES.every((edge) => a[edge] === b[edge]);
+
+/**
+ * The insets of `map` that keep clear of the boxes drawn over it (the bottom
+ * sheet, the header, the map tools): larger boxes first, each is avoided
+ * from the edge that takes the least extra share of the map, so a box beside
+ * one already avoided reuses that edge.
+ */
+export function clearInsets(map: Box, covers: Box[]): Insets {
+  const insets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  const width = map.right - map.left,
+    height = map.bottom - map.top;
+  const inside = covers
+    .map((c) => ({
+      top: Math.max(c.top, map.top),
+      right: Math.min(c.right, map.right),
+      bottom: Math.min(c.bottom, map.bottom),
+      left: Math.max(c.left, map.left),
+    }))
+    .filter((c) => c.right > c.left && c.bottom > c.top)
+    .sort(
+      (a, b) =>
+        (b.right - b.left) * (b.bottom - b.top) -
+        (a.right - a.left) * (a.bottom - a.top),
+    );
+  for (const c of inside) {
+    const needs: Insets = {
+      top: c.bottom - map.top,
+      right: map.right - c.left,
+      bottom: map.bottom - c.top,
+      left: c.right - map.left,
+    };
+    const cost = (edge: keyof Insets) =>
+      Math.max(0, needs[edge] - insets[edge]) /
+      (edge === 'top' || edge === 'bottom' ? height : width);
+    const edge = EDGES.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+    insets[edge] = Math.max(insets[edge], needs[edge]);
+  }
+  return insets;
+}
+
 export interface FitOptions {
-  padding?:
-    number | { top: number; bottom: number; left: number; right: number };
+  padding?: number | Insets;
   maxZoom?: number;
 }
 
@@ -96,6 +154,8 @@ export interface MarkerOptions {
   interactive?: boolean;
   /** CSS z-index of the marker on the map; higher draws above. */
   z?: number;
+  /** Kept whole inside the view when the route is fitted (`markerReach`). */
+  framed?: boolean;
 }
 
 /** A DOM marker on the map, kept while the map loads. */
@@ -233,6 +293,8 @@ export class PlannerMap {
   private overlays: Overlay[] = [];
   private images = new Map<string, () => HTMLImageElement | ImageData>();
   private markers = new Set<MapMarker>();
+  private framedListeners: (() => void)[] = [];
+  private framedPending = false;
   private styleReady = false;
   /** A fit asked before the map existed, done exactly once it does. */
   private pendingFit: { coords: Coord[]; options: FitOptions } | null = null;
@@ -390,11 +452,45 @@ export class PlannerMap {
     const marker = new MapMarker(this, coord, options);
     this.markers.add(marker);
     if (this.ml && this.map) marker.attach(this.ml, this.map);
+    if (options.framed) this.framedChanged();
     return marker;
   }
   /** @internal */
   forget(marker: MapMarker) {
     this.markers.delete(marker);
+    if (marker.options.framed) this.framedChanged();
+  }
+  /**
+   * How far the shown framed markers reach past their coordinate on each
+   * side, in pixels: a fit adds it to its padding so they stay whole.
+   */
+  markerReach(): Insets {
+    const reach: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+    for (const { options, element } of this.markers) {
+      // Hidden by a switch (Weather on the map) once on the page.
+      if (!options.framed || (element.isConnected && !element.offsetParent))
+        continue;
+      const [w, h] = options.size,
+        [ax, ay] = options.anchor;
+      reach.top = Math.max(reach.top, ay);
+      reach.right = Math.max(reach.right, w - ax);
+      reach.bottom = Math.max(reach.bottom, h - ay);
+      reach.left = Math.max(reach.left, ax);
+    }
+    return reach;
+  }
+  /** Calls `fn` once after framed markers are added or removed. */
+  onFramedChange(fn: () => void) {
+    this.framedListeners.push(fn);
+  }
+  private framedChanged() {
+    if (this.framedPending) return;
+    this.framedPending = true;
+    // Markers come and go in batches (a weather render): one call per batch.
+    queueMicrotask(() => {
+      this.framedPending = false;
+      for (const fn of this.framedListeners) fn();
+    });
   }
 
   // The view, kept here while the map loads.
