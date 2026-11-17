@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- While navigating, a chip says when the sun sets or rises before the arrival, within the hour (Sunset in 40 min), worked out on the device with no request; with the voice on, the sunset is said once, 30 minutes before.
 - Favorite places: choose Save as favorite in a point's field menu, or Add favorite in Favorite places, name it and pick its icon (Home, Work or Favorite), then pick the place in any point's menu, with its address and distance, no search and offline; edit or delete them in Favorite places. Backups now include favorites (format version 2); older backups still import.
 - While navigating, tap or drag up the bottom bar, a sheet with a handle like the route panel, to list the turns and route points ahead, with their distances and arrival times; navigation goes on underneath.
 - Spoken directions while navigating, off by default: turn them on in the start notice, in Settings or with the speaker button on the navigation screen, and the phone's own voice says each turn ahead, the arrival, leaving the route and a recalculated route, in the interface language, with no request.
@@ -59,6 +60,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Removed
 
+- Weather on the navigation screen: it stays in the planner, where it is current, since a forecast from when the route was planned may be hours old on the way.
 - The map point menu no longer sets route points: Set as start, Add as stop and Set as destination were removed, and it keeps Elevation here. Type points, click the map on desktop or move a marker.
 - The Halfway point route mark, the ½ badge at the middle of the route.
 

@@ -5,6 +5,7 @@ import type { NavigationReadout } from '../src/navigation';
 import {
   createVoiceSchedule,
   spokenDistance,
+  VOICE_SUNSET_MINUTES,
   VOICE_THRESHOLDS,
 } from '../src/navigation-voice';
 
@@ -110,5 +111,34 @@ describe('voice announcements', () => {
     expect(translate('You are off the route.', 'pt')).toBe(
       'Você saiu da rota.',
     );
+  });
+});
+
+describe('sunset ahead', () => {
+  it('is said once, when it is 30 minutes away or less', () => {
+    const voice = createVoiceSchedule();
+    expect(voice.sunset(null)).toBeNull();
+    expect(voice.sunset(VOICE_SUNSET_MINUTES + 1)).toBeNull();
+    expect(voice.sunset(VOICE_SUNSET_MINUTES)).toBe('Sunset in 30 minutes.');
+    expect(voice.sunset(20)).toBeNull();
+  });
+  it('says the minutes left when navigation starts closer to it', () => {
+    expect(createVoiceSchedule().sunset(12.4)).toBe('Sunset in 12 minutes.');
+    expect(createVoiceSchedule().sunset(0.6)).toBe('Sunset in 1 minute.');
+  });
+  it('is quiet off the route', () => {
+    const voice = createVoiceSchedule();
+    voice.next(at(5000, turn, { offRoute: true }), 0, 'metric', 'en');
+    expect(voice.sunset(10)).toBeNull();
+  });
+  it('is said and shown in Portuguese', () => {
+    expect(translate('Sunset in 30 minutes.', 'pt')).toBe(
+      'O sol se põe em 30 minutos.',
+    );
+    expect(translate('Sunset in 1 minute.', 'pt')).toBe(
+      'O sol se põe em 1 minuto.',
+    );
+    expect(translate('Sunset in 40 min', 'pt')).toBe('Sol se põe em 40 min');
+    expect(translate('Sunrise in 60 min', 'pt')).toBe('Sol nasce em 60 min');
   });
 });

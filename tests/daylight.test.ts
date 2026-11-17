@@ -6,6 +6,7 @@ import {
   lightAt,
   routeDaylight,
   solarElevation,
+  sunAhead,
   sunTimes,
 } from '../src/daylight';
 
@@ -192,5 +193,29 @@ describe('route daylight', () => {
     const result = routeDaylight(equator, departure, 60);
     const next = sunTimes(Date.UTC(2026, 10, 9, 12), [0, 1]).sunset!;
     expect(result.latestDeparture).toBe(next - (result.arrival - departure));
+  });
+});
+
+describe('sun ahead while navigating', () => {
+  // About 20 km east along the equator.
+  const east = route([
+    Array.from({ length: 21 }, (_, i) => [0, i * 0.009] as Coord),
+  ]);
+  const sun = sunTimes(Date.UTC(2026, 2, 20, 12), [0, 0]);
+  it('finds the sunset before the arrival', () => {
+    // 40 minutes before sunset; 20 km at 15 km/h takes 80 minutes.
+    const ahead = sunAhead(east, 0, sun.sunset! - 40 * 60_000, 15)!;
+    expect(ahead.kind).toBe('sunset');
+    expect(minutes(ahead.time, sun.sunset!)).toBeLessThan(3);
+  });
+  it('finds the sunrise on a ride before dawn', () => {
+    const ahead = sunAhead(east, 0, sun.sunrise! - 20 * 60_000, 15)!;
+    expect(ahead.kind).toBe('sunrise');
+    expect(minutes(ahead.time, sun.sunrise!)).toBeLessThan(3);
+  });
+  it('says nothing when the arrival comes first', () => {
+    expect(sunAhead(east, 0, sun.sunset! - 3 * 60 * 60_000, 15)).toBeNull();
+    // Halfway along, with ten minutes of light more than needed.
+    expect(sunAhead(east, 10_000, sun.sunset! - 50 * 60_000, 15)).toBeNull();
   });
 });

@@ -36,7 +36,6 @@ import {
 } from './weather';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
 import { weatherPasses } from './route-marks';
-import type { RouteWeather } from './navigation-weather';
 import {
   MARKER_SIZE,
   OUTBOUND_ANCHOR,
@@ -943,29 +942,6 @@ export function setupWeather(
   return {
     invalidate,
     render,
-    /**
-     * The forecast already fetched for the route shown, for the navigation
-     * screen (#155); null when it is missing or belongs to another route,
-     * departure or server. Reading it sends no request.
-     */
-    routeWeather(): RouteWeather | null {
-      if (
-        !forecast ||
-        stale ||
-        !sourceRoute ||
-        getRoute() !== sourceRoute ||
-        departureOf(getState()) !== sourceDeparture ||
-        endpoint !== sourceEndpoint
-      )
-        return null;
-      return {
-        route: sourceRoute,
-        points,
-        hours: forecast.hours,
-        start: forecast.start,
-        end: forecast.end,
-      };
-    },
     syncInputs: showDeparture,
     /** The Open-Meteo base URL (device preference), also used for elevation. */
     endpoint: () => endpoint,

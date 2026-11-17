@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
-import { weatherResponse } from './weather-fixture';
+import { sunTimes } from '../src/daylight';
 import { decimalYear, magneticDeclination } from '../src/declination';
 import { base, osrmFirst } from './app-helpers';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
@@ -1047,6 +1047,83 @@ test.describe('phone navigation', () => {
         expect(await fits(page)).toEqual([]);
       });
 
+  /** Sunset and sunrise on the route's start, on the day of `t0`. */
+  const sun = sunTimes(t0, [lat, lon(0)]);
+  /** Navigation at 1 km/h, so the 2.1 km route takes about two hours. */
+  async function slowNavigation(page: Page, language: 'en' | 'pt' = 'en') {
+    await page.addInitScript(() => localStorage.setItem('average-speed', '1'));
+    await ownFixes(page);
+    await setup(page);
+    await page.locator('#language').selectOption(language);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+  }
+  /** The minutes a sun chip announces, from its text in either language. */
+  const chipMinutes = async (page: Page) =>
+    Number(/(\d+) min$/.exec(await page.locator('#nav-sun').innerText())![1]);
+
+  test('a sunset before the arrival shows within the hour, never at midday', async ({
+    page,
+  }) => {
+    await slowNavigation(page);
+    const chip = page.locator('#nav-sun');
+    await sendFix(page, [lat, lon(0)], t0 + 1000);
+    await expect(chip).toBeHidden();
+    await sendFix(page, [lat, lon(0)], sun.sunset! - 70 * 60_000);
+    await expect(chip).toBeHidden();
+    await sendFix(page, [lat, lon(0)], sun.sunset! - 40 * 60_000);
+    await expect(chip).toHaveText(/^Sunset in \d+ min$/);
+    expect(Math.abs((await chipMinutes(page)) - 40)).toBeLessThanOrEqual(2);
+    await page.keyboard.press('Escape');
+    await page.locator('#language').selectOption('pt');
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await sendFix(page, [lat, lon(0)], sun.sunset! - 39 * 60_000);
+    await expect(chip).toHaveText(/^Sol se põe em \d+ min$/);
+  });
+
+  for (const width of [320, 390])
+    test(`a sunrise ahead stays on one line beside the map tools at ${width}px in pt`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 640 });
+      await slowNavigation(page, 'pt');
+      // The longest text: "Sol nasce em 60 min".
+      await sendFix(page, [lat, lon(0)], sun.sunrise! - 59.6 * 60_000);
+      const chip = page.locator('#nav-sun');
+      await expect(chip).toHaveText(/^Sol nasce em \d+ min$/);
+      expect(await fits(page)).toEqual([]);
+      const box = (await chip.boundingBox())!,
+        tools = (await page.locator('.nav-map-tools').boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(tools.x);
+      // One line: no taller than the chip's own single-line height.
+      expect(box.height).toBeLessThanOrEqual(44);
+    });
+
+  test('voice on, the sunset is said once, half an hour ahead', async ({
+    page,
+  }) => {
+    const said = await recordSpeech(page);
+    await page.addInitScript(() =>
+      localStorage.setItem('navigation-voice', 'on'),
+    );
+    await slowNavigation(page);
+    const sunsets = async () =>
+      (await said())
+        .map(([text]) => text)
+        .filter((s) => s.startsWith('Sunset'));
+    await sendFix(page, [lat, lon(0)], sun.sunset! - 45 * 60_000);
+    await expect(page.locator('#nav-sun')).toBeVisible();
+    expect(await sunsets()).toEqual([]);
+    await sendFix(page, [lat, lon(0)], sun.sunset! - 29 * 60_000);
+    await expect
+      .poll(sunsets)
+      .toEqual([expect.stringMatching(/^Sunset in \d+ minutes\.$/)]);
+    await sendFix(page, [lat, lon(0)], sun.sunset! - 20 * 60_000);
+    await page.waitForTimeout(300);
+    expect(await sunsets()).toHaveLength(1);
+  });
+
   test('without map tiles the route still shows with a notice', async ({
     page,
   }) => {
@@ -1809,117 +1886,6 @@ test('a playing replay greys the road right behind the arrow', async ({
     const [redAhead, greenAhead] = await colorAt(x, arrow.y - 6);
     expect(greenAhead - redAhead).toBeGreaterThan(30);
   }
-});
-
-test.describe('weather while navigating', () => {
-  test.use({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
-    permissions: ['geolocation'],
-    geolocation: { latitude: lat + 0.00003, longitude: lon(1), accuracy: 6 },
-  });
-  /** The route with its weather fetched, and a count of weather requests. */
-  async function withWeather(page: Page) {
-    await page.clock.setFixedTime(new Date('2026-11-14T12:10:00Z'));
-    const asked = { count: 0 };
-    await setup(page);
-    await page.route('**/v1/forecast?**', (r) => {
-      asked.count++;
-      return r.fulfill({ json: weatherResponse(new URL(r.request().url())) });
-    });
-    await page.locator('#weather-section > summary').click();
-    await expect(page.locator('#weather-details li').first()).toBeVisible({
-      timeout: 15000,
-    });
-    return asked;
-  }
-
-  test('shows the weather here and ahead from the route forecast, with no request', async ({
-    page,
-  }) => {
-    const asked = await withWeather(page);
-    const before = asked.count;
-    await page.locator('#navigate').click();
-    await page.locator('#nav-notice-start').click();
-    const chip = page.locator('#nav-weather-toggle');
-    // The start sample: 21 °C, 80 % rain, with alerts.
-    await expect(chip).toContainText('21°');
-    await expect(chip).toContainText('80%');
-    await expect(chip).toHaveClass(/alert/);
-    await expect(chip).toHaveAttribute('aria-expanded', 'false');
-    await chip.click();
-    // Only the samples ahead: the middle one, then the destination's.
-    const items = page.locator('#nav-weather-list li');
-    await expect(items).toHaveCount(2);
-    await expect(items.nth(0).locator('.nav-weather-when')).toHaveText(
-      /^\+[\d.]+ km$/,
-    );
-    await expect(items.nth(0).locator('.nav-weather-note')).toContainText(
-      /^\d\d:\d\d( [AP]M)? · /,
-    );
-    await expect(items.nth(0)).toContainText('24°');
-    await expect(items.nth(0)).toContainText('Heavy rain');
-    expect(await fits(page)).toEqual([]);
-    expect(asked.count).toBe(before);
-  });
-
-  test('follows the replay along the route', async ({ page }) => {
-    await withWeather(page);
-    await page.locator('#travel-details > summary').click();
-    await page.locator('#travel-route').click();
-    const chip = page.locator('#nav-weather-toggle');
-    await expect(chip).toContainText('21°');
-    // Halfway, the middle sample (24 °C) is the one here; near the end,
-    // the destination's (21 °C).
-    await page.locator('#nav-replay-position').fill('500');
-    await expect(chip).toContainText('24°');
-    await page.locator('#nav-replay-position').fill('950');
-    await expect(chip).toContainText('21°');
-    // At the destination there is nothing ahead, so the chip opens nothing.
-    await page.locator('#nav-replay-position').fill('1000');
-    await chip.click();
-    await expect(chip).toHaveAttribute('aria-expanded', 'false');
-    await expect(page.locator('#nav-weather-list')).toBeHidden();
-  });
-
-  for (const [width, language] of [
-    [320, 'pt'],
-    [320, 'en'],
-  ] as const)
-    test(`the weather list fits at ${width} px in ${language} with °F`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 640 });
-      await withWeather(page);
-      await chooseUnits(page, { temperature: 'fahrenheit' });
-      await page.locator('#language').selectOption(language);
-      await page.locator('#navigate').click();
-      await page.locator('#nav-notice-start').click();
-      await page.locator('#nav-weather-toggle').click();
-      // The middle and destination samples ahead.
-      await expect(page.locator('#nav-weather-list li')).toHaveCount(2);
-      await expect(page.locator('#nav-weather-list li').first()).toContainText(
-        language === 'pt' ? 'Chuva forte' : 'Heavy rain',
-      );
-      await expect(page.locator('#nav-weather-toggle')).toContainText('70°');
-      expect(
-        await page.evaluate(() => {
-          const out: string[] = [];
-          for (const e of document.querySelectorAll<HTMLElement>(
-            '#nav-weather, #nav-weather-list li, #nav-weather-toggle, .nav-weather-when, .nav-weather-note',
-          )) {
-            const box = e.getBoundingClientRect();
-            if (box.right > innerWidth + 0.5)
-              out.push(`${e.id || e.tagName} leaves`);
-            if (e.scrollWidth > e.clientWidth + 1)
-              out.push(`${e.id || e.tagName} overflows`);
-          }
-          return out;
-        }),
-      ).toEqual([]);
-      expect(await fits(page)).toEqual([]);
-    });
 });
 
 test.describe('replay going back', () => {
