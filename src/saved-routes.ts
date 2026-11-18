@@ -416,7 +416,9 @@ export async function importLibraryBackup(
         const request = store.add(record);
         request.onsuccess = () => added[name]++;
         request.onerror = (event) => {
-          // ConstraintError: the name exists; skip it, keep the transaction.
+          // The name exists: skip it and keep the transaction. Any other
+          // error aborts the whole import, so nothing is lost silently.
+          if (request.error?.name !== 'ConstraintError') return;
           event.preventDefault();
           event.stopPropagation();
         };

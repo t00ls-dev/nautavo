@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pageKey, precacheList, precacheUrl } from '../src/precache';
+import { isPageUrl, pageKey, precacheList, precacheUrl } from '../src/precache';
 
 describe('app-shell precache', () => {
   const files = precacheList([
@@ -63,10 +63,23 @@ describe('app-shell precache', () => {
     // An old address with the extension still opens offline.
     expect(pageKey('/help.html', urls)).toBe('/help');
     expect(pageKey('/index.html', urls)).toBe('/');
+    // So does the trailing-slash address Cloudflare redirects.
+    expect(pageKey('/help/', urls)).toBe('/help');
     // Anything else goes to the network only.
     expect(pageKey('/sitemap.xml', urls)).toBeUndefined();
     expect(pageKey('/missing.html', urls)).toBeUndefined();
     expect(pageKey('/missing', urls)).toBeUndefined();
     expect(pageKey('/api/region', urls)).toBeUndefined();
+  });
+
+  it('tells pages, answered network-first, from cached files', () => {
+    for (const url of ['/', '/help', '/changelog'])
+      expect(isPageUrl(url)).toBe(true);
+    for (const url of [
+      '/assets/main-abc.js',
+      '/manifest.webmanifest',
+      '/THIRD_PARTY_NOTICES.txt',
+    ])
+      expect(isPageUrl(url), url).toBe(false);
   });
 });

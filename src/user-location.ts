@@ -217,9 +217,10 @@ export function setupUserLocation(
     follow();
     status?.addEventListener('change', follow);
   });
-  // A page kept by the back/forward cache comes back with location as it
-  // was: on (also when a tap turned it on where the browser cannot tell the
-  // permission) unless the permission is now denied.
+  // A page restored from the back/forward cache: where the browser cannot
+  // tell the permission, location comes back on if a tap had turned it on;
+  // where it can, `follow` decides from it, so a one-time grant that went
+  // back to 'prompt' asks nothing without a tap.
   let resume = false;
   window.addEventListener('pagehide', () => {
     resume = active;
@@ -227,7 +228,7 @@ export function setupUserLocation(
   });
   window.addEventListener('pageshow', (event) => {
     if (!event.persisted) return;
-    if (resume && permission?.state !== 'denied') start(false, true);
+    if (resume && permission === null) start(false, true);
     else follow();
   });
   render();

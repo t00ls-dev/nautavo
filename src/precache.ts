@@ -29,8 +29,16 @@ export function precacheList(files: readonly string[]): string[] {
  * navigation, and the app would not open offline.
  */
 export function precacheUrl(file: string): string {
+  // `/help/` also redirects to `/help` on Cloudflare.
+  const slash = /^(\/[^/.]+)\/$/.exec(file);
+  if (slash) return slash[1];
   if (!/^\/[^/]+\.html$/.test(file)) return file;
   return file === '/index.html' ? '/' : file.slice(0, -'.html'.length);
+}
+
+/** A page's public URL (`/`, `/help`): answered network-first, never from the cache alone. */
+export function isPageUrl(url: string): boolean {
+  return url === '/' || /^\/[^/.]+$/.test(url);
 }
 
 /**

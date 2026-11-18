@@ -107,6 +107,18 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
   expect(sent.join('\n')).not.toContain(String(position.latitude));
   expect(sent.join('\n')).not.toContain(String(position.longitude));
 });
+/** Fires a page transition, as the browser does around the back/forward cache. */
+const transition = (page: Page, type: string, persisted: boolean) =>
+  page.evaluate(
+    ([type, persisted]) =>
+      window.dispatchEvent(
+        new PageTransitionEvent(type as string, {
+          persisted: persisted as boolean,
+        }),
+      ),
+    [type, persisted],
+  );
+
 test('a location turned on by tap comes back with a page restored from the back/forward cache', async ({
   page,
   context,
@@ -120,22 +132,44 @@ test('a location turned on by tap comes back with a page restored from the back/
   await page.goto(base);
   await locate(page);
   await expect(page.locator('.location-dot')).toHaveCount(1);
-  const transition = (type: string, persisted: boolean) =>
-    page.evaluate(
-      ([type, persisted]) =>
-        window.dispatchEvent(
-          new PageTransitionEvent(type as string, {
-            persisted: persisted as boolean,
-          }),
-        ),
-      [type, persisted],
-    );
   // Left for Help: location stops, as on every page hide.
-  await transition('pagehide', true);
+  await transition(page, 'pagehide', true);
   await expect(page.locator('.location-dot')).toHaveCount(0);
   // Back from the cache: the dot returns without another tap.
-  await transition('pageshow', true);
+  await transition(page, 'pageshow', true);
   await expect(page.locator('.location-dot')).toHaveCount(1);
+});
+
+test('a one-time grant gone back to prompt is not used again from the back/forward cache', async ({
+  page,
+  context,
+}) => {
+  // The browser reports 'prompt' again, as after Chrome's Allow this time.
+  await page.addInitScript(() => {
+    navigator.permissions.query = async () =>
+      ({
+        state: 'prompt',
+        addEventListener() {},
+      }) as unknown as PermissionStatus;
+  });
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(position);
+  await page.goto(base);
+  await locate(page);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  await transition(page, 'pagehide', true);
+  await page.evaluate(() => {
+    navigator.geolocation.watchPosition = () => {
+      document.documentElement.dataset.gpsCalls = 'unexpected';
+      return 0;
+    };
+  });
+  await transition(page, 'pageshow', true);
+  await page.waitForTimeout(300);
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.gpsCalls),
+  ).toBeUndefined();
 });
 
 test('denial is actionable and points remain editable without automatic re-prompts', async ({

@@ -83,18 +83,21 @@ test('after one online visit, the app, help and What’s new open offline', asyn
   // An old .html address also opens its page offline.
   await page.goto(base + 'help.html?lang=en');
   await expect(page.locator('#help-en')).toBeVisible();
+  await page.goto(base + 'changelog/?lang=en');
+  await expect(page.locator('#changelog-en')).toBeVisible();
   await context.setOffline(false);
   await page.goto(base);
   await expect(page.locator('#offline-notice')).toBeHidden();
 });
 
-test('the preview redirects .html pages to their public URL, as Cloudflare does', async ({
+test('the preview redirects .html and trailing-slash pages to their public URL, as Cloudflare does', async ({
   request,
 }) => {
   for (const [from, to] of [
     ['index.html', base],
     ['help.html?lang=pt', base + 'help?lang=pt'],
     ['changelog.html', base + 'changelog'],
+    ['help/', base + 'help'],
   ]) {
     const response = await request.get(base + from, { maxRedirects: 0 });
     expect(response.status(), from).toBe(307);

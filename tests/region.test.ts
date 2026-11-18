@@ -67,12 +67,17 @@ describe('the site Worker', () => {
     });
   });
 
-  it('answers 204 without a usable location and 404 elsewhere', async () => {
+  it('answers 204 without a usable location, 405 to other methods and 404 elsewhere', async () => {
     const empty = await ask(REGION_PATH, {});
     expect(empty.status).toBe(204);
     expect(empty.headers.get('Cache-Control')).toBe('no-store');
-    expect((await ask(REGION_PATH, {}, 'POST')).status).toBe(404);
-    expect((await ask('/api/other')).status).toBe(404);
+    const post = await ask(REGION_PATH, {}, 'POST');
+    expect(post.status).toBe(405);
+    expect(post.headers.get('Allow')).toBe('GET, HEAD');
+    // Paths no file matches reach the Worker too; its 404 is never indexed.
+    const missing = await ask('/api/other');
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get('X-Robots-Tag')).toBe('noindex');
   });
 
   it('answers HEAD like GET, without a body', async () => {

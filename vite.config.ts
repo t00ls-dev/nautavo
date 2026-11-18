@@ -135,7 +135,8 @@ function workersParity(): Plugin {
         res.statusCode = response.status;
         response.headers.forEach((value, name) => res.setHeader(name, value));
         res.end(Buffer.from(await response.arrayBuffer()));
-      }, next);
+      })
+      .catch(next);
   };
   const cleanUrls: Connect.NextHandleFunction = (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://localhost');

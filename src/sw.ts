@@ -4,7 +4,7 @@
 // answers cross-origin requests (tiles, routing, search, weather, elevation,
 // road attributes), and same-origin requests outside its list, such as the
 // approximate region (/api/region, never to be cached), go to the network.
-import { CACHE_PREFIX, pageKey } from './precache';
+import { CACHE_PREFIX, isPageUrl, pageKey } from './precache';
 
 // The worker scope's events, declared locally because the project's types are
 // the DOM ones.
@@ -118,6 +118,8 @@ self.addEventListener('fetch', (event) => {
     if (key) event.respondWith(networkFirst(request, key));
     return;
   }
-  if (urls.includes(url.pathname))
+  // A page fetched by script (not a navigation) goes to the network: its
+  // cached copy may belong to an older deploy.
+  if (urls.includes(url.pathname) && !isPageUrl(url.pathname))
     event.respondWith(cacheFirst(request, url.pathname));
 });

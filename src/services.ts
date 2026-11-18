@@ -519,13 +519,7 @@ export async function osrmMatch(
           throw new Error('Directions unavailable for this track.');
         return body;
       }, isCurrent);
-      part = data
-        ? checkedSteps(
-            (data.matchings ?? []).flatMap((m) =>
-              m.legs.flatMap((l) => l.steps.map(osrmStep)),
-            ),
-          )
-        : null;
+      part = data ? matchedSteps(data) : null;
       matchCache.set(matchKey(base, chunk), { steps: part, at: Date.now() });
       // Bounded: drop the oldest entries first.
       while (matchCache.size > MATCH_CACHE)
@@ -539,6 +533,23 @@ export async function osrmMatch(
   }
   if (!matched) throw new Error('Directions unavailable for this track.');
   return steps;
+}
+
+/**
+ * The steps of an OSRM match answer, which is untrusted: a body of another
+ * shape yields no steps for its chunk, never an error.
+ */
+function matchedSteps(data: OsrmMatchResponse): Route['steps'] | null {
+  const list = (value: unknown) => (Array.isArray(value) ? value : []);
+  try {
+    return checkedSteps(
+      list(data.matchings).flatMap((m) =>
+        list(m?.legs).flatMap((l) => list(l?.steps).map(osrmStep)),
+      ),
+    );
+  } catch {
+    return null;
+  }
 }
 
 /** One OSRM step in the shared vocabulary (as in `osrmRoute`). */
