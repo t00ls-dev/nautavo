@@ -25,7 +25,7 @@ function cachedFetch(name: string) {
   const live = globalThis.fetch;
   return vi.fn(async (url: string, init: RequestInit) => {
     const hash = createHash('sha1')
-      .update(`${url}|${String(init.body)}`)
+      .update(`${url}|${init.body as string}`)
       .digest('hex')
       .slice(0, 16);
     const file = `${DIR}/${name}.trace-${hash}.json`;

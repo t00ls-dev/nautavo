@@ -494,9 +494,9 @@ describe('valhallaTrace', () => {
     const { valhallaTrace } = await fresh();
     const [route] = await valhallaTrace('https://valhalla.test', [piece()]);
     expect(fetch).toHaveBeenCalledTimes(1);
-    const [url, init] = fetch.mock.calls[0];
+    const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://valhalla.test/trace_route');
-    expect(JSON.parse(init.body)).toMatchObject({
+    expect(JSON.parse(init.body as string)).toMatchObject({
       costing: 'auto',
       shape_match: 'map_snap',
     });

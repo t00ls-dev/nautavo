@@ -73,5 +73,5 @@ export const recordFields: Field[] = [
 ];
 export const name = (text: string, size = 16) => {
   const bytes = [...new TextEncoder().encode(text)];
-  return [...bytes, ...Array(size - bytes.length).fill(0)];
+  return [...bytes, ...new Array<number>(size - bytes.length).fill(0)];
 };

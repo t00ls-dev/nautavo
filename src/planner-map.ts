@@ -420,8 +420,8 @@ export class PlannerMap {
       overlay.data = Array.isArray(data)
         ? { type: 'FeatureCollection', features: data }
         : data;
-      const source = this.map?.getSource(id) as GeoJSONSource | undefined;
-      source?.setData(overlay.data);
+      const source = this.map?.getSource<GeoJSONSource>(id);
+      void source?.setData(overlay.data);
     };
   }
   /** Repaints one overlay's layers (after a base-map change of colors). */
@@ -640,7 +640,7 @@ export function highlightLayers(
       type: 'line',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#be812b', 'line-width': 7, 'line-opacity': 0.85 },
-    } as Omit<LayerSpecification, 'source'>,
+    },
   ];
 }
 

@@ -12,7 +12,7 @@ const KINDS = [
 
 interface Release {
   name: string;
-  date?: string;
+  date?: string | undefined;
   /** Kind → references of each entry ('' when an entry has none). */
   kinds: Record<string, string[]>;
 }
@@ -27,11 +27,11 @@ function markdownReleases(markdown: string): Release[] {
     const release = releases.at(-1);
     if (line.startsWith('## ')) {
       expect(heading, line).not.toBeNull();
-      releases.push({ name: heading![1]!, date: heading![2], kinds: {} });
+      releases.push({ name: heading![1], date: heading![2], kinds: {} });
     } else if (line.startsWith('### ') && release)
       release.kinds[(kind = line.slice(4).trim())] = [];
     else if (line.startsWith('- ') && release && kind)
-      release.kinds[kind]!.push(refs(line));
+      release.kinds[kind].push(refs(line));
   }
   return releases;
 }
@@ -43,7 +43,7 @@ function pageReleases(article: Element): Release[] {
       for (const heading of section.querySelectorAll('h3[data-kind]'))
         kinds[heading.getAttribute('data-kind')!] = [
           ...heading.nextElementSibling!.querySelectorAll('li'),
-        ].map((item) => refs(item.textContent!));
+        ].map((item) => refs(item.textContent));
       return {
         name: section.getAttribute('data-release')!,
         date:
@@ -95,7 +95,7 @@ describe("changelog and What's new page", () => {
     const { version } = JSON.parse(read('package.json')) as {
       version: string;
     };
-    expect(releases[1]!.name).toBe(version);
+    expect(releases[1].name).toBe(version);
   });
 
   it('lists the same releases, dates, kinds and entries in both page languages', () => {

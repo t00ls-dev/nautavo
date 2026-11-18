@@ -22,7 +22,7 @@ export async function mockRegion(page: Page, answer?: object) {
 /** The points ([lon, lat]) of an OSRM route request URL. */
 export function osrmPoints(url: string): number[][] {
   return new URL(url).pathname
-    .split('/driving/')[1]!
+    .split('/driving/')[1]
     .split(';')
     .map((p) => p.split(',').map(Number));
 }
@@ -169,11 +169,13 @@ export function libraryEntry(
     ([name, key]) =>
       new Promise<unknown>((resolve, reject) => {
         const request = indexedDB.open('route-gpx');
-        request.onerror = () => reject(request.error);
+        request.onerror = () =>
+          reject(request.error ?? new Error('IndexedDB request failed'));
         request.onsuccess = () => {
           const db = request.result;
           const read = db.transaction(name).objectStore(name).get(key);
-          read.onerror = () => reject(read.error);
+          read.onerror = () =>
+            reject(read.error ?? new Error('IndexedDB request failed'));
           read.onsuccess = () => {
             db.close();
             resolve(read.result ?? null);

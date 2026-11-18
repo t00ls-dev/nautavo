@@ -8,7 +8,7 @@ import { meters, type Coord, type Route, type State, type Step } from './core';
 import { decimalYear, magneticDeclination } from './declination';
 import { byId as $, text } from './dom';
 import { t } from './i18n';
-import { icon, iconControl, type IconName } from './icons';
+import { icon, iconControl } from './icons';
 import { gpsPoint, locationError } from './location';
 import { navigationRoute } from './services';
 import { creditsDialog } from './map-credits';
@@ -166,9 +166,7 @@ function roadText(step: Step): string {
 }
 function maneuverGlyph(step: Step | null): SVGSVGElement {
   const arrow = step ? maneuverIcon(step) : null;
-  const svg = icon(
-    (arrow?.name ?? (step ? 'maneuver-straight' : 'pin')) as IconName,
-  );
+  const svg = icon(arrow?.name ?? (step ? 'maneuver-straight' : 'pin'));
   if (arrow?.mirror) svg.classList.add('mirror');
   return svg;
 }
@@ -668,7 +666,7 @@ export function setupNavigation(deps: {
   function drawRejoin() {
     const rejoin = readout?.rejoin;
     const lonLat = (c: Coord) => [c[1], c[0]];
-    source('rejoin')?.setData(
+    void source('rejoin')?.setData(
       rejoin && last
         ? {
             type: 'FeatureCollection',
@@ -701,8 +699,8 @@ export function setupNavigation(deps: {
   const source = (id: string) => map?.getSource<GeoJSONSource>(id);
 
   function drawRoute(next: Route) {
-    source('route')?.setData(lines(next.segments));
-    source('travelled')?.setData(lines([]));
+    void source('route')?.setData(lines(next.segments));
+    void source('travelled')?.setData(lines([]));
   }
 
   /**
@@ -775,7 +773,7 @@ export function setupNavigation(deps: {
         .addTo(map);
     } else marker?.setLngLat([last.coord[1], last.coord[0]]);
     marker?.getElement().classList.toggle('weak', !!readout?.weak);
-    source('accuracy')?.setData(
+    void source('accuracy')?.setData(
       readout?.weak ? circleAround(last.coord, last.accuracy) : lines([]),
     );
     applyHeading();
@@ -1476,7 +1474,7 @@ export function setupNavigation(deps: {
     window.removeEventListener('offline', onNetwork);
     marker?.remove();
     marker = null;
-    source('accuracy')?.setData(lines([]));
+    void source('accuracy')?.setData(lines([]));
     last = null;
     readout = null;
     tracker = null;

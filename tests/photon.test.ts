@@ -27,7 +27,7 @@ it('caches suggestions by query and coarse bias and aborts obsolete queued searc
   await vi.runAllTimersAsync();
   const results = await first;
   expect(results[0].lat).toBe('38.72');
-  const [url, options] = fetch.mock.calls[0];
+  const [url, options] = fetch.mock.calls[0] as [URL, RequestInit];
   expect(String(url)).toContain('lat=38.7');
   expect(String(url)).not.toContain('38.712345');
   expect(options.credentials).toBe('omit');

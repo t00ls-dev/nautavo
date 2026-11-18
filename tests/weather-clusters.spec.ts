@@ -113,7 +113,7 @@ function layout(page: Page) {
           if (!c) return null;
           const r = c.getBoundingClientRect();
           return {
-            n: Number(c.textContent!.slice(1)),
+            n: Number(c.textContent.slice(1)),
             alerts: c.classList.contains('has-alerts'),
             box: [r.left, r.top, r.right, r.bottom],
           };
@@ -198,7 +198,7 @@ test('a count rings hidden alerts, zooms in when tapped, and markers then show o
   );
   // A count without hidden alerts has no ring.
   for (const m of before.visible)
-    if (m.count && !/ with alerts/.test(m.note!))
+    if (m.count && !/ with alerts/.test(m.note))
       expect(m.count.alerts).toBe(false);
   // Tapping counts zooms in until every sample has its own marker.
   for (let i = 0; i < 8; i++) {

@@ -8,11 +8,11 @@ export interface SearchAction {
   icon: IconName;
   run: () => void;
   /** A short note at the end of the row, such as a distance. */
-  detail?: string;
+  detail?: string | undefined;
   /** A second line below the label, such as a favorite's address. */
   note?: string;
   /** A section title shown above this choice, such as Favorite places. */
-  heading?: string;
+  heading?: string | undefined;
 }
 /** The first part of a result's name as its title, the rest below it. */
 export function splitPlace(name: string): [string, string] {
@@ -173,10 +173,10 @@ export function addressAutocomplete(
           input.setAttribute('aria-expanded', String(list.children.length > 0));
           config.completed(results.length);
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           if (
             requestVersion === version &&
-            error?.name !== 'AbortError' &&
+            (error as Error | null)?.name !== 'AbortError' &&
             config.valid()
           )
             config.failed();

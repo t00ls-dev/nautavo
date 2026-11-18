@@ -216,10 +216,13 @@ test('favorites travel in the backup and import on another device', async ({
     page.waitForEvent('download'),
     page.locator('#backup-routes').click(),
   ]);
-  const backup = await readFile((await download.path())!);
-  const json = JSON.parse(backup.toString());
+  const backup = await readFile(await download.path());
+  const json = JSON.parse(backup.toString()) as {
+    version: number;
+    favorites: { name: string }[];
+  };
   expect(json.version).toBe(2);
-  expect(json.favorites.map((f: { name: string }) => f.name)).toEqual(['Home']);
+  expect(json.favorites.map((f) => f.name)).toEqual(['Home']);
   // A fresh browser profile, as another device.
   const other = await browser.newPage();
   await other.route('https://**/*', (r) => r.fulfill({ status: 204 }));
@@ -286,9 +289,11 @@ test('saved routes stay when the library upgrades to hold favorites', async ({
             request.result.close();
             resolve();
           };
-          tx.onerror = () => reject(tx.error);
+          tx.onerror = () =>
+            reject(tx.error ?? new Error('IndexedDB request failed'));
         };
-        request.onerror = () => reject(request.error);
+        request.onerror = () =>
+          reject(request.error ?? new Error('IndexedDB request failed'));
       }),
   );
   await page.goto(base);

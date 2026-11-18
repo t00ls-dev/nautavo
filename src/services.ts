@@ -166,21 +166,7 @@ export async function osrmRoute(
     if (d.waypoints.length !== state.points.length) throw new Error();
     return {
       segments: [r.geometry.coordinates.map(([lon, lat]) => [lat, lon])],
-      steps: r.legs.flatMap((l) =>
-        l.steps.map((s) => ({
-          name: s.name || 'Unnamed road',
-          ref: s.ref || '',
-          distance: s.distance,
-          duration: s.duration,
-          kind: s.maneuver?.type,
-          ...maneuverDetails(
-            s.maneuver?.modifier,
-            s.maneuver?.exit,
-            s.maneuver?.location &&
-              ([s.maneuver.location[1], s.maneuver.location[0]] as Coord),
-          ),
-        })),
-      ),
+      steps: r.legs.flatMap((l) => l.steps.map(osrmStep)),
       distance: r.distance,
       duration: r.duration,
       provider,
@@ -540,7 +526,8 @@ export async function osrmMatch(
  * shape yields no steps for its chunk, never an error.
  */
 function matchedSteps(data: OsrmMatchResponse): Route['steps'] | null {
-  const list = (value: unknown) => (Array.isArray(value) ? value : []);
+  const list = <T>(value: T[] | undefined): T[] =>
+    Array.isArray(value) ? value : [];
   try {
     return checkedSteps(
       list(data.matchings).flatMap((m) =>
@@ -561,7 +548,7 @@ function osrmStep(
     ref: s.ref || '',
     distance: s.distance,
     duration: s.duration,
-    kind: s.maneuver?.type,
+    ...(s.maneuver?.type === undefined ? {} : { kind: s.maneuver.type }),
     ...maneuverDetails(
       s.maneuver?.modifier,
       s.maneuver?.exit,
@@ -680,6 +667,13 @@ export function approximateRegion(enabled: boolean): Promise<View | null> {
 export const defaultPhotonUrl = 'https://photon.komoot.io';
 const photonQueue = new RequestQueue(1000);
 const photonCache = new Map<string, SearchResult[]>();
+/** Photon's GeoJSON answer, untrusted: every field is checked before use. */
+interface PhotonResponse {
+  features?: ({
+    geometry?: { type?: unknown; coordinates?: unknown };
+    properties?: Record<string, unknown>;
+  } | null)[];
+}
 /** Serialized, cancellable search-as-you-type. Bias is deliberately city-scale. */
 export async function photonSearch(
   query: string,
@@ -703,22 +697,18 @@ export async function photonSearch(
     }).toString();
     const response = await request(url, 8000, { signal });
     if (!response.ok) throw new Error('Photon unavailable');
-    const data = await response.json();
+    const data = (await response.json()) as PhotonResponse | null;
     if (!Array.isArray(data?.features))
       throw new Error('Invalid Photon response');
     const results: SearchResult[] = [];
     for (const feature of data.features.slice(0, 5)) {
-      const coords = feature?.geometry?.coordinates;
+      const coords: unknown = feature?.geometry?.coordinates;
+      const lonLat: unknown[] = Array.isArray(coords) ? coords : [];
+      const at: unknown = [lonLat[1], lonLat[0]];
       const p = feature?.properties;
       if (
         feature?.geometry?.type !== 'Point' ||
-        !Array.isArray(coords) ||
-        coords.length < 2 ||
-        !coords
-          .slice(0, 2)
-          .every((n: unknown) => typeof n === 'number' && Number.isFinite(n)) ||
-        Math.abs(coords[0]) > 180 ||
-        Math.abs(coords[1]) > 90 ||
+        !validCoord(at) ||
         !p ||
         typeof p.name !== 'string'
       )
@@ -726,14 +716,14 @@ export async function photonSearch(
       const name = [
         ...new Set(
           [p.name, p.street, p.city, p.state, p.country].filter(
-            (v) => typeof v === 'string' && v,
+            (v): v is string => typeof v === 'string' && v !== '',
           ),
         ),
       ].join(', ');
       results.push({
         display_name: name,
-        lat: String(coords[1]),
-        lon: String(coords[0]),
+        lat: String(at[0]),
+        lon: String(at[1]),
       });
     }
     signal.throwIfAborted();
@@ -967,7 +957,7 @@ export async function weatherForecast(
     points.map((point) => weatherCache.get(base, point, start, end));
   const hit = cached();
   if (hit.every((hours) => hours !== undefined))
-    return { hours: hit as WeatherHour[][], start, end };
+    return { hours: hit, start, end };
   return weatherQueue.run(
     async () => {
       signal.throwIfAborted();

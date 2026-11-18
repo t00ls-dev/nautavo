@@ -17,7 +17,13 @@ const turn: Step = {
   kind: 'turn',
   modifier: 'right',
 };
-const arrive: Step = { ...turn, name: '', kind: 'arrive', modifier: undefined };
+const arrive: Step = {
+  name: '',
+  ref: '',
+  distance: 500,
+  duration: 60,
+  kind: 'arrive',
+};
 /** A readout `toNext` meters before `step`. */
 const at = (
   toNext: number,

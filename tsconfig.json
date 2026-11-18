@@ -11,7 +11,8 @@
     "esModuleInterop": true,
     "types": ["vite/client"],
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true
   },
   "include": ["src", "tests", "vite.config.ts", "playwright.config.ts"]
 }

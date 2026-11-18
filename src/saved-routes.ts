@@ -47,6 +47,12 @@ const NAME_LIMIT = 160;
 const validName = (value: unknown): value is string =>
   typeof value === 'string' && !!value.trim() && value.length <= NAME_LIMIT;
 
+/** A failed storage step as an Error; IndexedDB may give no reason (null). */
+const storageError = (error: unknown): Error =>
+  error instanceof Error
+    ? error
+    : new Error('Local route storage is unavailable in this browser.');
+
 let connection: Promise<IDBDatabase> | undefined;
 function database(): Promise<IDBDatabase> {
   if (!connection)
@@ -65,10 +71,10 @@ function database(): Promise<IDBDatabase> {
         };
         resolve(request.result);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(storageError(request.error));
       request.onblocked = () =>
         reject(new Error('Local route storage is blocked by another tab.'));
-    }).catch((e) => {
+    }).catch((e: unknown) => {
       connection = undefined;
       throw e;
     });
@@ -84,8 +90,8 @@ async function operation<T>(
     const tx = db.transaction(name, mode);
     const request = run(tx.objectStore(name));
     tx.oncomplete = () => resolve(request.result);
-    tx.onabort = () => reject(tx.error ?? request.error);
-    tx.onerror = () => reject(tx.error ?? request.error);
+    tx.onabort = () => reject(storageError(tx.error ?? request.error));
+    tx.onerror = () => reject(storageError(tx.error ?? request.error));
   });
 }
 /**
@@ -107,8 +113,8 @@ async function readWrite<T>(
     };
     const result = work(tx, fail);
     tx.oncomplete = () => resolve(result());
-    tx.onabort = () => reject(failure ?? tx.error);
-    tx.onerror = () => reject(failure ?? tx.error);
+    tx.onabort = () => reject(storageError(failure ?? tx.error));
+    tx.onerror = () => reject(storageError(failure ?? tx.error));
   });
 }
 /**
@@ -171,8 +177,10 @@ async function putBack(name: Store, record: { id: string }): Promise<boolean> {
   return restored;
 }
 export async function listSavedRoutes(): Promise<SavedRoute[]> {
-  const rows = await operation<SavedRoute[]>('routes', 'readonly', (s) =>
-    s.getAll(),
+  const rows = await operation(
+    'routes',
+    'readonly',
+    (s) => s.getAll() as IDBRequest<SavedRoute[]>,
   );
   return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
@@ -231,8 +239,10 @@ export const deleteSavedRoute = (id: string) => take<SavedRoute>('routes', id);
 export const restoreSavedRoute = (record: SavedRoute) =>
   putBack('routes', record);
 export async function listFavorites(): Promise<Favorite[]> {
-  const rows = await operation<Favorite[]>('favorites', 'readonly', (s) =>
-    s.getAll(),
+  const rows = await operation(
+    'favorites',
+    'readonly',
+    (s) => s.getAll() as IDBRequest<Favorite[]>,
   );
   const rank = (f: Favorite) => FAVORITE_KINDS.indexOf(f.kind ?? 'place');
   return rows.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));

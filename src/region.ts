@@ -63,7 +63,7 @@ export function regionAnswer(
 /** The map view for an answer, which is untrusted like any response. */
 export function regionView(data: unknown): View | null {
   if (!data || typeof data !== 'object') return null;
-  const answer = regionAnswer(data as RegionFields);
+  const answer = regionAnswer(data);
   return answer
     ? {
         center: [answer.latitude, answer.longitude] as Coord,

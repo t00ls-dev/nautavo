@@ -8,6 +8,11 @@ import {
   type Favorite,
   type SavedRoute,
 } from '../src/saved-routes';
+/** A backup as plain data, to break on purpose. */
+interface EditableBackup {
+  routes: { route: { steps: Record<string, unknown>[] } }[];
+  favorites: Record<string, unknown>[];
+}
 const route: Route = {
   segments: [
     [
@@ -55,7 +60,7 @@ it('keeps favorites in a version 2 backup, and still reads version 1', () => {
     routes: [record()],
     favorites: [favorite()],
   });
-  expect(JSON.parse(text).version).toBe(2);
+  expect((JSON.parse(text) as { version: number }).version).toBe(2);
   expect(parseLibraryBackup(text)).toEqual({
     routes: [record()],
     favorites: [favorite()],
@@ -76,7 +81,7 @@ it('rejects the whole backup when one favorite is malformed', () => {
       routes: [record()],
       favorites: [favorite(), favorite('Work')],
     }),
-  );
+  ) as EditableBackup;
   backup.favorites[1].coord = [95, 0];
   expect(() => parseLibraryBackup(JSON.stringify(backup))).toThrow(
     'Invalid favorite in the backup.',
@@ -119,7 +124,7 @@ it('imports backups with old steps and with maneuver details, rejecting invalid 
   expect(roundtrip([current])[0].route).toEqual(current.route);
   const broken = JSON.parse(
     exportLibraryBackup({ routes: [old, current], favorites: [] }),
-  );
+  ) as EditableBackup;
   broken.routes[1].route.steps[0].modifier = 'sideways';
   expect(() => parseLibraryBackup(JSON.stringify(broken))).toThrow(
     'Invalid saved route geometry.',
@@ -158,7 +163,7 @@ it('keeps the kind of a favorite, a place when absent, and rejects others', () =
       routes: [],
       favorites: [{ ...favorite(), kind: 'home' }, favorite('Gym')],
     }),
-  );
+  ) as EditableBackup;
   delete backup.favorites[1].kind;
   expect(
     parseLibraryBackup(JSON.stringify(backup)).favorites.map((f) => f.kind),
@@ -174,7 +179,7 @@ it("keeps a favorite's address, and rejects one too long", () => {
       routes: [],
       favorites: [{ ...favorite(), place: 'Rua A, 10, Rio de Janeiro' }],
     }),
-  );
+  ) as EditableBackup;
   expect(parseLibraryBackup(JSON.stringify(backup)).favorites[0].place).toBe(
     'Rua A, 10, Rio de Janeiro',
   );
