@@ -6,6 +6,8 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-18
+
 ### Changed
 
 - nautavo.com sends security headers that let it connect only to HTTPS servers: a routing, search or weather server on your own computer over plain HTTP now works only when you run nautavo there yourself.
@@ -135,6 +137,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 - A side panel on wide screens and a bottom sheet on phones, with one-finger zoom on touch screens. ([#82](https://github.com/t00ls-dev/nautavo/pull/82), [#63](https://github.com/t00ls-dev/nautavo/pull/63))
 - English and Portuguese interface, a help page and a What's new page. ([#83](https://github.com/t00ls-dev/nautavo/issues/83))
 
-[Unreleased]: https://github.com/t00ls-dev/nautavo/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/t00ls-dev/nautavo/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/t00ls-dev/nautavo/releases/tag/v2.0.1
 [2.0.0]: https://github.com/t00ls-dev/nautavo/releases/tag/v2.0.0
 [1.0.0]: https://github.com/t00ls-dev/nautavo/releases/tag/v1.0.0
