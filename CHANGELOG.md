@@ -10,6 +10,10 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 - nautavo.com sends security headers that let it connect only to HTTPS servers: a routing, search or weather server on your own computer over plain HTTP now works only when you run nautavo there yourself.
 
+### Fixed
+
+- Locking the route disables opening saved routes at once, and unlocking enables it again; before, Saved routes could keep the state it was last drawn with.
+
 ## [2.0.0] - 2026-11-18
 
 ### Added

@@ -2568,7 +2568,7 @@ function setLocked(value: boolean) {
     $<HTMLButtonElement>(id).disabled = locked;
   $<HTMLInputElement>('import').disabled = locked;
   document
-    .querySelectorAll<HTMLButtonElement>('#saved-list .open-saved')
+    .querySelectorAll<HTMLButtonElement>('#saved-list .library-open')
     .forEach((button) => (button.disabled = locked));
   // Rebuild the editor and markers with the new read-only/draggable state.
   renderPoints();
