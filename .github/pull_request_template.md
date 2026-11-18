@@ -6,7 +6,7 @@ Related issue: <!-- #123, or "none" -->
 
 ## Checklist
 
-- [ ] Validation commands run, with real results (lint, format check, unit tests, build and the browser specs covering the change, with the complete browser suite in this pull request's CI; or format check only for documentation):
+- [ ] Validation commands run, with real results (lint, format check, unused code check, unit tests, build and the browser specs covering the change, with the complete browser suite in this pull request's CI; or format check only for documentation):
 
 <!-- paste commands and results, including failures or skipped checks -->
 
