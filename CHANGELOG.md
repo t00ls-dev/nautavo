@@ -6,6 +6,10 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ## [Unreleased]
 
+### Changed
+
+- nautavo.com sends security headers that let it connect only to HTTPS servers: a routing, search or weather server on your own computer over plain HTTP now works only when you run nautavo there yourself.
+
 ## [2.0.0] - 2026-11-18
 
 ### Added
