@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { REGION_PATH, regionFromCf, regionView } from '../src/region';
+import { REGION_PATH, regionAnswer, regionView } from '../src/region';
 import worker from '../src/worker';
 
 describe('approximate region', () => {
   it('keeps only a position rounded to 0.1° and the place names', () => {
     expect(
-      regionFromCf({
+      regionAnswer({
         latitude: '-22.90685',
         longitude: '-43.17290',
         city: 'Rio de Janeiro',
@@ -29,7 +29,7 @@ describe('approximate region', () => {
       { latitude: '48.85', longitude: '181', region: 'Île-de-France' },
       { latitude: '48.85', longitude: '2.35', city: '  ' },
     ])
-      expect(regionFromCf(cf), JSON.stringify(cf)).toBeNull();
+      expect(regionAnswer(cf), JSON.stringify(cf)).toBeNull();
   });
 
   it('turns an answer into a city-scale view and rejects malformed ones', () => {
@@ -73,5 +73,17 @@ describe('the site Worker', () => {
     expect(empty.headers.get('Cache-Control')).toBe('no-store');
     expect((await ask(REGION_PATH, {}, 'POST')).status).toBe(404);
     expect((await ask('/api/other')).status).toBe(404);
+  });
+
+  it('answers HEAD like GET, without a body', async () => {
+    const head = await ask(
+      REGION_PATH,
+      { latitude: '48.85', longitude: '2.35', city: 'Paris' },
+      'HEAD',
+    );
+    expect(head.status).toBe(200);
+    expect(head.headers.get('Cache-Control')).toBe('no-store');
+    expect(head.headers.get('Content-Type')).toContain('application/json');
+    expect(await head.text()).toBe('');
   });
 });

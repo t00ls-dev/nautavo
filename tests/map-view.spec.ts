@@ -107,6 +107,37 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
   expect(sent.join('\n')).not.toContain(String(position.latitude));
   expect(sent.join('\n')).not.toContain(String(position.longitude));
 });
+test('a location turned on by tap comes back with a page restored from the back/forward cache', async ({
+  page,
+  context,
+}) => {
+  // A browser that cannot tell the permission (iOS browsers other than Safari).
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'permissions', { value: undefined }),
+  );
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(position);
+  await page.goto(base);
+  await locate(page);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  const transition = (type: string, persisted: boolean) =>
+    page.evaluate(
+      ([type, persisted]) =>
+        window.dispatchEvent(
+          new PageTransitionEvent(type as string, {
+            persisted: persisted as boolean,
+          }),
+        ),
+      [type, persisted],
+    );
+  // Left for Help: location stops, as on every page hide.
+  await transition('pagehide', true);
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  // Back from the cache: the dot returns without another tap.
+  await transition('pageshow', true);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+});
+
 test('denial is actionable and points remain editable without automatic re-prompts', async ({
   page,
 }) => {

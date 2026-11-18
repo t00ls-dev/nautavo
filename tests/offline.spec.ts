@@ -80,9 +80,26 @@ test('after one online visit, the app, help and What’s new open offline', asyn
   await expect(page.locator('#help-pt')).toBeVisible();
   await page.goto(base + 'changelog?lang=en');
   await expect(page.locator('#changelog-en')).toBeVisible();
+  // An old .html address also opens its page offline.
+  await page.goto(base + 'help.html?lang=en');
+  await expect(page.locator('#help-en')).toBeVisible();
   await context.setOffline(false);
   await page.goto(base);
   await expect(page.locator('#offline-notice')).toBeHidden();
+});
+
+test('the preview redirects .html pages to their public URL, as Cloudflare does', async ({
+  request,
+}) => {
+  for (const [from, to] of [
+    ['index.html', base],
+    ['help.html?lang=pt', base + 'help?lang=pt'],
+    ['changelog.html', base + 'changelog'],
+  ]) {
+    const response = await request.get(base + from, { maxRedirects: 0 });
+    expect(response.status(), from).toBe(307);
+    expect(new URL(response.headers().location!, base).href, from).toBe(to);
+  }
 });
 
 test('a saved route opens offline, without routing requests, and downloads', async ({
@@ -176,7 +193,9 @@ test('the service worker caches only same-origin files and never answers cross-o
   });
   expect(urls.length).toBeGreaterThan(0);
   expect(urls.every((url) => url.startsWith(base))).toBe(true);
-  expect(urls).toContain(base + 'index.html');
+  // Pages are kept under their public URLs, as published (no .html).
+  expect(urls).toEqual(expect.arrayContaining([base, base + 'help']));
+  expect(urls.some((url) => url.endsWith('.html'))).toBe(false);
   expect(urls).not.toContain(base + 'sw.js');
 });
 

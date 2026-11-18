@@ -15,8 +15,11 @@ export interface RegionAnswer {
   region?: string;
 }
 
-/** The fields of Cloudflare's `request.cf` that describe the location. */
-export interface CfLocation {
+/**
+ * The fields that place a visitor: Cloudflare's `request.cf` in the Worker,
+ * the answer in the app (untrusted there, like any response).
+ */
+export interface RegionFields {
   latitude?: unknown;
   longitude?: unknown;
   city?: unknown;
@@ -36,15 +39,17 @@ const coordinate = (value: unknown, limit: number) => {
 };
 
 /**
- * The answer for a request's Cloudflare location, rounded to 0.1° (about
- * 11 km), or null when it names no city or region (a country-wide position
- * would place the map badly).
+ * The answer for some region fields, rounded to 0.1° (about 11 km), or null
+ * when they name no city or region (a country-wide position would place the
+ * map badly).
  */
-export function regionFromCf(cf: CfLocation | undefined): RegionAnswer | null {
-  const latitude = coordinate(cf?.latitude, 90);
-  const longitude = coordinate(cf?.longitude, 180);
-  const city = name(cf?.city);
-  const region = name(cf?.region);
+export function regionAnswer(
+  fields: RegionFields | undefined,
+): RegionAnswer | null {
+  const latitude = coordinate(fields?.latitude, 90);
+  const longitude = coordinate(fields?.longitude, 180);
+  const city = name(fields?.city);
+  const region = name(fields?.region);
   if (latitude === null || longitude === null || (!city && !region))
     return null;
   return {
@@ -58,7 +63,7 @@ export function regionFromCf(cf: CfLocation | undefined): RegionAnswer | null {
 /** The map view for an answer, which is untrusted like any response. */
 export function regionView(data: unknown): View | null {
   if (!data || typeof data !== 'object') return null;
-  const answer = regionFromCf(data as CfLocation);
+  const answer = regionAnswer(data as RegionFields);
   return answer
     ? {
         center: [answer.latitude, answer.longitude] as Coord,

@@ -217,9 +217,18 @@ export function setupUserLocation(
     follow();
     status?.addEventListener('change', follow);
   });
-  window.addEventListener('pagehide', stop);
+  // A page kept by the back/forward cache comes back with location as it
+  // was: on (also when a tap turned it on where the browser cannot tell the
+  // permission) unless the permission is now denied.
+  let resume = false;
+  window.addEventListener('pagehide', () => {
+    resume = active;
+    stop();
+  });
   window.addEventListener('pageshow', (event) => {
-    if (event.persisted) follow();
+    if (!event.persisted) return;
+    if (resume && permission?.state !== 'denied') start(false, true);
+    else follow();
   });
   render();
 }

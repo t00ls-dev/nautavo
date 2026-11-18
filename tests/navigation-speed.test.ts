@@ -4,6 +4,7 @@ import {
   arrivalSpeedKmh,
   createSpeedMeter,
 } from '../src/navigation-speed';
+import { speedToKmh } from '../src/travel-time';
 
 const start = Date.parse('2026-11-14T12:00:00Z');
 /** Feeds one fix a second: `kmh` while moving, stopped when 0. */
@@ -48,14 +49,14 @@ it('starts at the configured speed and follows the trip average, stops included'
   const meter = createSpeedMeter();
   // Waiting before moving does not count.
   let at = ride(meter, { time: start, progress: 0 }, 60, 0);
-  expect(arrivalSpeedKmh(meter, at.time, 20)).toBe(20);
+  expect(arrivalSpeedKmh(meter, at.time, 20, 'metric')).toBe(20);
   // 10 minutes at 30 km/h, then a 5-minute stop.
   at = ride(meter, at, 600, 30);
-  expect(arrivalSpeedKmh(meter, at.time, 20)).toBeCloseTo(30, 0);
+  expect(arrivalSpeedKmh(meter, at.time, 20, 'metric')).toBeCloseTo(30, 0);
   at = ride(meter, at, 300, 0);
   // 5 km in 15 minutes: 20 km/h.
   expect(meter.average(at.time)! * 3.6).toBeCloseTo(20, 0);
-  expect(arrivalSpeedKmh(meter, at.time, 20)).toBeCloseTo(20, 0);
+  expect(arrivalSpeedKmh(meter, at.time, 20, 'metric')).toBeCloseTo(20, 0);
 });
 
 it('blends the two over the first ten minutes', () => {
@@ -67,11 +68,16 @@ it('blends the two over the first ten minutes', () => {
     30,
   );
   // Halfway through the blend: midway between 20 and 30.
-  expect(arrivalSpeedKmh(meter, at.time, 20)).toBeCloseTo(25, 0);
+  expect(arrivalSpeedKmh(meter, at.time, 20, 'metric')).toBeCloseTo(25, 0);
 });
 
 it('stays within the slider range', () => {
   const meter = createSpeedMeter();
   const at = ride(meter, { time: start, progress: 0 }, 700, 200);
-  expect(arrivalSpeedKmh(meter, at.time, 20)).toBe(120);
+  expect(arrivalSpeedKmh(meter, at.time, 20, 'metric')).toBe(120);
+  // In miles the top is the slider's 75 mph, not 120 km/h (74.6 mph).
+  expect(arrivalSpeedKmh(meter, at.time, 20, 'imperial')).toBeCloseTo(
+    speedToKmh(75, 'imperial'),
+    6,
+  );
 });

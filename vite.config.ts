@@ -1,14 +1,16 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
-import type { Plugin } from 'vite';
+import type { Connect, Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import {
   BRAND_PATH,
   hashedBrandUrls,
   UNLINKED_BRAND_FILES,
 } from './src/brand-assets.ts';
-import { precacheList } from './src/precache.ts';
+import { precacheList, precacheUrl } from './src/precache.ts';
+import { REGION_PATH } from './src/region.ts';
+import worker from './src/worker.ts';
 
 const SW_ENTRY = 'sw';
 
@@ -20,7 +22,7 @@ async function listFiles(dir: string): Promise<string[]> {
 }
 
 /**
- * Writes this build's version and file list into `sw.js` (src/sw.ts), once
+ * Writes this build's version and URL list into `sw.js` (src/sw.ts), once
  * every file, public ones included, is in the output folder. The version
  * hashes the files' contents, so each deploy that changes them installs a new
  * service worker and cache.
@@ -41,6 +43,8 @@ function serviceWorkerManifest(): Plugin {
         hash.update(await readFile(join(outDir, file)));
       }
       const version = hash.digest('hex').slice(0, 16);
+      // Pages are cached and requested by their public URL (`/help`).
+      const urls = files.map(precacheUrl);
       const path = join(outDir, 'sw.js');
       const source = await readFile(path, 'utf8');
       const token = /(["'`])__ROUTE_GPX_BUILD__\1/;
@@ -50,7 +54,7 @@ function serviceWorkerManifest(): Plugin {
         path,
         source.replace(
           token,
-          JSON.stringify(JSON.stringify({ version, files })),
+          JSON.stringify(JSON.stringify({ version, urls })),
         ),
       );
     },
@@ -113,9 +117,49 @@ function brandAssets(): Plugin {
   };
 }
 
+/**
+ * Local servers behave like Cloudflare Workers (wrangler.jsonc) where the app
+ * depends on it: /api/region is answered by the Worker's own code (204
+ * without a Cloudflare location, as in production), and the preview, a
+ * production build, redirects `.html` page addresses to their public URL as
+ * `html_handling: auto-trailing-slash` does, so the offline tests see the
+ * same redirects as the published site.
+ */
+function workersParity(): Plugin {
+  const region: Connect.NextHandleFunction = (req, res, next) => {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    if (url.pathname !== REGION_PATH) return next();
+    void worker
+      .fetch(new Request(url, { method: req.method }))
+      .then(async (response) => {
+        res.statusCode = response.status;
+        response.headers.forEach((value, name) => res.setHeader(name, value));
+        res.end(Buffer.from(await response.arrayBuffer()));
+      }, next);
+  };
+  const cleanUrls: Connect.NextHandleFunction = (req, res, next) => {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const target = precacheUrl(url.pathname);
+    if (target === url.pathname) return next();
+    res.statusCode = 307;
+    res.setHeader('Location', target + url.search);
+    res.end();
+  };
+  return {
+    name: 'workers-parity',
+    configureServer(server) {
+      server.middlewares.use(region);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(region);
+      server.middlewares.use(cleanUrls);
+    },
+  };
+}
+
 export default defineConfig({
   base: '/',
-  plugins: [brandAssets(), serviceWorkerManifest()],
+  plugins: [brandAssets(), serviceWorkerManifest(), workersParity()],
   // The local preview (preview.nautavo.com) is never indexed; only prod is.
   preview: { headers: { 'X-Robots-Tag': 'noindex' } },
   build: {
