@@ -9,7 +9,7 @@ import { locationPermission } from './location';
 import type { View } from './default-view';
 import { setupUserLocation } from './user-location';
 import { compactLayout } from './panel';
-import { approximateRegion } from './services';
+import { approximateRegion } from './search';
 import { byId as $ } from './dom';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 

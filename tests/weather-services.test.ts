@@ -4,7 +4,7 @@ import {
   weatherForecast,
   weatherUrl,
   WEATHER_VARIABLES,
-} from '../src/services';
+} from '../src/open-meteo';
 import { HOUR } from '../src/weather';
 import { weatherResponse } from './weather-fixture';
 const start = Date.parse('2026-11-08T10:00:00Z'),

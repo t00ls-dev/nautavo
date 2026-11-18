@@ -1,16 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaults } from '../src/core';
 import { encodePolyline } from '../src/road-attributes';
+import { ServerError, RequestQueue } from '../src/http';
 import {
-  ServerError,
   calculate,
   decodePolyline,
   navigationRoute,
   osrmRoute,
   osrmUrl,
-  RequestQueue,
   valhallaRoute,
-} from '../src/services';
+} from '../src/routing';
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -462,7 +461,7 @@ describe('valhallaTrace', () => {
   // A fresh module, so its routing queue holds no task from other tests.
   const fresh = async () => {
     vi.resetModules();
-    return import('../src/services');
+    return import('../src/valhalla-trace');
   };
   const coords: [number, number][] = [
     [-22.9, -43.2],

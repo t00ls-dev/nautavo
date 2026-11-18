@@ -16,7 +16,7 @@ import {
   parseElevation,
   retryIn,
   countdown,
-} from '../src/services';
+} from '../src/open-meteo';
 
 const east = (n: number, offset = 0): Coord[] =>
   Array.from({ length: n + 1 }, (_, i) => [0, offset + i * 0.01]);

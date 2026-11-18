@@ -7,7 +7,7 @@ import {
   MAX_PIECE,
   parseTraceAttributes,
 } from '../src/road-attributes';
-import { decodePolyline } from '../src/services';
+import { decodePolyline } from '../src/routing';
 import { sectionsToCheck, surfaceRanges, surfaceTotals } from '../src/surface';
 
 /** Points every 0.01° of longitude on the equator (about 1.1 km apart). */

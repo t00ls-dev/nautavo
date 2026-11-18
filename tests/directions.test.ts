@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaults, type Coord, type Route } from '../src/core';
 import { missingDirections, sameRoad } from '../src/directions';
 import { withUpdatedSteps, type SavedRoute } from '../src/saved-routes';
-import { matchPlan, osrmMatch } from '../src/services';
+import { matchPlan, osrmMatch } from '../src/route-match';
 import { legDistances } from '../src/track-position';
 
 afterEach(() => {

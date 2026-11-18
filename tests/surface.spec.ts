@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { defaults, encodeState, meters } from '../src/core';
-import { decodePolyline } from '../src/services';
+import { decodePolyline } from '../src/routing';
 import { chooseUnits } from './unit-settings';
 import { coloringKinds, overlayCount } from './map-helpers';
 import { base } from './app-helpers';

@@ -4,7 +4,7 @@ import { byId as $ } from './dom';
 import { t } from './i18n';
 import { icon, type IconName } from './icons';
 import type { FavoriteKind } from './saved-routes';
-import type { SearchResult } from './services';
+import type { SearchResult } from './search';
 
 /** The icon of each kind of favorite place (#52). */
 export const FAVORITE_ICONS: Record<FavoriteKind, IconName> = {

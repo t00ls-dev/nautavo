@@ -1,4 +1,4 @@
-import { photonSearch, type SearchResult } from './services';
+import { photonSearch, type SearchResult } from './search';
 import { parseCoordinates, type Coord } from './core';
 import { icon, type IconName } from './icons';
 
