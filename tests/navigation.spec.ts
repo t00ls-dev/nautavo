@@ -1392,6 +1392,9 @@ test.describe('phone navigation', () => {
 
   /** Records what the page would speak instead of speaking it. */
   async function recordSpeech(page: Page) {
+    // Speech follows the clock: on a fixed morning a real sunset is never
+    // among what is said. The sunset test sets its own clock afterwards.
+    await page.clock.setFixedTime(new Date(t0));
     await page.addInitScript(() => {
       const said: string[][] = [];
       (window as unknown as { said: string[][] }).said = said;
