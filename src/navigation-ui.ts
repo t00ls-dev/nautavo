@@ -827,7 +827,7 @@ export function setupNavigation(deps: {
   function arrivalSpeed(): number {
     return replaying
       ? deps.speedKmh()
-      : arrivalSpeedKmh(meter, Date.now(), deps.speedKmh());
+      : arrivalSpeedKmh(meter, Date.now(), deps.speedKmh(), units());
   }
   /** The current speed badge (#136); a replay shows its own speed. */
   function renderSpeed() {

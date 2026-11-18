@@ -1,5 +1,4 @@
 import type { PlannerMap } from './planner-map';
-import { t } from './i18n';
 import {
   defaultView,
   initialView,
@@ -10,7 +9,7 @@ import { locationPermission } from './location';
 import type { View } from './default-view';
 import { setupUserLocation } from './user-location';
 import { compactLayout } from './panel';
-import { approximateRegion, defaultRegionUrl, regionUrl } from './services';
+import { approximateRegion } from './services';
 import { byId as $ } from './dom';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
@@ -30,34 +29,12 @@ export function setupMapView(
     map.on(type, (event: { originalEvent?: Event }) => {
       if (event.originalEvent) interact();
     });
-  let detectRegion = true;
-  let ipRegionUrl = defaultRegionUrl;
-  detectRegion = readPreference(PREFERENCE.detectRegion) !== 'false';
-  try {
-    ipRegionUrl = regionUrl(
-      readPreference(PREFERENCE.regionUrl) ?? defaultRegionUrl,
-    );
-  } catch {
-    /* An invalid stored URL falls back to the default. */
-  }
+  let detectRegion = readPreference(PREFERENCE.detectRegion) !== 'false';
   $<HTMLInputElement>('detect-region').checked = detectRegion;
-  $<HTMLInputElement>('region-url').value = ipRegionUrl;
   $<HTMLInputElement>('detect-region').onchange = () => {
     detectRegion = $<HTMLInputElement>('detect-region').checked;
     interact();
     writePreference(PREFERENCE.detectRegion, String(detectRegion));
-  };
-  $<HTMLInputElement>('region-url').onchange = () => {
-    try {
-      ipRegionUrl = regionUrl($<HTMLInputElement>('region-url').value.trim());
-      $<HTMLInputElement>('region-url').setCustomValidity('');
-      writePreference(PREFERENCE.regionUrl, ipRegionUrl);
-    } catch {
-      $<HTMLInputElement>('region-url').setCustomValidity(
-        t('Use an HTTPS service URL.'),
-      );
-      $<HTMLInputElement>('region-url').reportValidity();
-    }
   };
   const layout = () => {
     $('fullscreen').setAttribute(
@@ -129,7 +106,7 @@ export function setupMapView(
     lastView: () => (restored = parseView(readPreference(PREFERENCE.lastView))),
     approximateRegion: () =>
       !interacted && !route.hasRoute()
-        ? approximateRegion(detectRegion, ipRegionUrl)
+        ? approximateRegion(detectRegion)
         : Promise.resolve(null),
     local: () =>
       defaultView(

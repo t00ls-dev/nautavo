@@ -1,11 +1,11 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASEMAP_STYLE, mockBasemap, mapCanvas } from './map-helpers';
 import { readFile } from 'node:fs/promises';
-import { base, openAdvancedSettings } from './app-helpers';
+import { base, openAdvancedSettings, mockRegion } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await mockBasemap(page);
-  await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
+  await mockRegion(page);
 });
 /** Requests of the base map, by kind. */
 function watchBasemap(page: Page) {

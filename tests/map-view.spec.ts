@@ -1,19 +1,22 @@
 import { test, expect, type Page } from '@playwright/test';
 import { closePanel, mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, decodeState } from '../src/core';
-import { base, mockRouting, openAdvancedSettings } from './app-helpers';
+import {
+  base,
+  mockRouting,
+  openAdvancedSettings,
+  mockRegion,
+  parisRegion,
+  regionRoute,
+} from './app-helpers';
 import { weatherResponse } from './weather-fixture';
-const ipUrl = 'https://ipwho.is/**';
+import { REGION_PATH } from '../src/region';
 const position = { latitude: 48.1234567, longitude: 11.7654321, accuracy: 35 };
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
 
   await mockBasemap(page);
-  await page.route(ipUrl, (r) =>
-    r.fulfill({
-      json: { success: true, city: 'Paris', latitude: 48.85, longitude: 2.35 },
-    }),
-  );
+  await mockRegion(page, parisRegion);
 });
 async function locate(page: Page) {
   await page.locator('#locate').click();
@@ -65,7 +68,7 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
   const sent: string[] = [];
   page.on('request', (r) => {
     sent.push(r.url() + (r.postData() ?? ''));
-    if (r.url().includes('ipwho.is')) ipRequests++;
+    if (r.url().includes(REGION_PATH)) ipRequests++;
   });
   await page.goto(base);
   await locate(page);
@@ -104,6 +107,71 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
   expect(sent.join('\n')).not.toContain(String(position.latitude));
   expect(sent.join('\n')).not.toContain(String(position.longitude));
 });
+/** Fires a page transition, as the browser does around the back/forward cache. */
+const transition = (page: Page, type: string, persisted: boolean) =>
+  page.evaluate(
+    ([type, persisted]) =>
+      window.dispatchEvent(
+        new PageTransitionEvent(type as string, {
+          persisted: persisted as boolean,
+        }),
+      ),
+    [type, persisted],
+  );
+
+test('a location turned on by tap comes back with a page restored from the back/forward cache', async ({
+  page,
+  context,
+}) => {
+  // A browser that cannot tell the permission (iOS browsers other than Safari).
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'permissions', { value: undefined }),
+  );
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(position);
+  await page.goto(base);
+  await locate(page);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  // Left for Help: location stops, as on every page hide.
+  await transition(page, 'pagehide', true);
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  // Back from the cache: the dot returns without another tap.
+  await transition(page, 'pageshow', true);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+});
+
+test('a one-time grant gone back to prompt is not used again from the back/forward cache', async ({
+  page,
+  context,
+}) => {
+  // The browser reports 'prompt' again, as after Chrome's Allow this time.
+  await page.addInitScript(() => {
+    navigator.permissions.query = async () =>
+      ({
+        state: 'prompt',
+        addEventListener() {},
+      }) as unknown as PermissionStatus;
+  });
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(position);
+  await page.goto(base);
+  await locate(page);
+  await expect(page.locator('.location-dot')).toHaveCount(1);
+  await transition(page, 'pagehide', true);
+  await page.evaluate(() => {
+    navigator.geolocation.watchPosition = () => {
+      document.documentElement.dataset.gpsCalls = 'unexpected';
+      return 0;
+    };
+  });
+  await transition(page, 'pageshow', true);
+  await page.waitForTimeout(300);
+  await expect(page.locator('.location-dot')).toHaveCount(0);
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.gpsCalls),
+  ).toBeUndefined();
+});
+
 test('denial is actionable and points remain editable without automatic re-prompts', async ({
   page,
 }) => {
@@ -159,7 +227,7 @@ test('URL route is fitted and skips GPS permissions and IP', async ({
   });
   let ip = 0;
   page.on('request', (r) => {
-    if (r.url().includes('ipwho.is')) ip++;
+    if (r.url().includes(REGION_PATH)) ip++;
   });
   await page.route('**/route/v1/driving/**', (r) => r.abort());
   const state = defaults();
@@ -195,7 +263,7 @@ for (const mode of [
       await page.addInitScript(() =>
         localStorage.setItem('detect-region', 'false'),
       );
-    await page.route(ipUrl, async (r) => {
+    await page.route(regionRoute, async (r) => {
       requests++;
       if (mode === 'timeout') {
         await new Promise((resolve) => setTimeout(resolve, 3500));
@@ -205,13 +273,8 @@ for (const mode of [
         await r.fulfill({
           json:
             mode === 'invalid'
-              ? { success: true, city: 'X', latitude: 500, longitude: 2 }
-              : {
-                  success: true,
-                  city: 'Paris',
-                  latitude: 48.85,
-                  longitude: 2.35,
-                },
+              ? { city: 'X', latitude: 500, longitude: 2 }
+              : parisRegion,
         });
     });
     await page.goto(base);
@@ -345,10 +408,10 @@ test('late IP result cannot override a manually chosen map view', async ({
   const pending = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route(ipUrl, async (r) => {
+  await page.route(regionRoute, async (r) => {
     await pending;
     await r.fulfill({
-      json: { success: true, city: 'Paris', latitude: 48.85, longitude: 2.35 },
+      json: parisRegion,
     });
   });
   await page.goto(base);
@@ -380,7 +443,7 @@ test('IP detection can be disabled in Settings and stays disabled after reload',
   await page.evaluate(() => sessionStorage.removeItem('region-attempted'));
   let calls = 0;
   page.on('request', (r) => {
-    if (r.url().includes('ipwho.is')) calls++;
+    if (r.url().includes(REGION_PATH)) calls++;
   });
   await page.reload();
   await page.locator('#open-settings').click();
@@ -646,7 +709,7 @@ test('with location already allowed, the map opens on the device above the sheet
   await context.setGeolocation(position);
   let ip = 0;
   page.on('request', (r) => {
-    if (r.url().includes('ipwho.is')) ip++;
+    if (r.url().includes(REGION_PATH)) ip++;
   });
   await page.goto(base);
   await mapReady(page);
@@ -865,7 +928,7 @@ test('already allowed, a slow GPS still opens the map on the device at street zo
   await fakeLocation(page, 'granted');
   let ip = 0;
   page.on('request', (r) => {
-    if (r.url().includes('ipwho.is')) ip++;
+    if (r.url().includes(REGION_PATH)) ip++;
   });
   await page.goto(base);
   await mapReady(page);
@@ -918,7 +981,7 @@ for (const state of ['prompt', 'denied'] as const)
     }, state);
     let ip = 0;
     page.on('request', (r) => {
-      if (r.url().includes('ipwho.is')) ip++;
+      if (r.url().includes(REGION_PATH)) ip++;
     });
     await page.goto(base);
     await mapReady(page);

@@ -197,6 +197,23 @@ describe('map matching', () => {
     );
     await vi.runAllTimersAsync();
     await bigDone;
+    // An answer of another shape is untrusted: no directions, never a crash.
+    for (const body of [
+      { code: 'Ok', matchings: [{}] },
+      { code: 'Ok', matchings: [{ legs: [{ steps: 'x' }] }] },
+      { code: 'Ok', matchings: 'x' },
+    ]) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(JSON.stringify(body))),
+      );
+      const odd = osrmMatch(defaults().osrm, [east(600, 605)]);
+      const oddDone = expect(odd).rejects.toThrow(
+        'Directions unavailable for this track.',
+      );
+      await vi.runAllTimersAsync();
+      await oddDone;
+    }
   });
 });
 

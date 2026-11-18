@@ -1,4 +1,6 @@
 import { WEAK_ACCURACY } from './navigation';
+import { speedInputBounds, speedToKmh } from './travel-time';
+import type { DistanceUnits } from './units';
 
 /**
  * Speed while navigating (#32, #136): the current speed for the badge, and
@@ -26,9 +28,6 @@ const AVERAGE_AFTER_MS = 30_000;
 const AVERAGE_AFTER_M = 50;
 /** The arrival estimate follows the trip average fully after this long. */
 export const ARRIVAL_BLEND_MS = 10 * 60_000;
-/** The arrival speed stays within the average speed slider's range. */
-const MIN_KMH = 1;
-const MAX_KMH = 120;
 
 export function createSpeedMeter() {
   let current: number | null = null,
@@ -86,10 +85,15 @@ export function arrivalSpeedKmh(
   meter: ReturnType<typeof createSpeedMeter>,
   now: number,
   configuredKmh: number,
+  units: DistanceUnits,
 ): number {
   const average = meter.average(now);
   if (average === null) return configuredKmh;
   const weight = Math.min(1, meter.elapsed(now) / ARRIVAL_BLEND_MS);
   const blended = configuredKmh + (average * 3.6 - configuredKmh) * weight;
-  return Math.max(MIN_KMH, Math.min(MAX_KMH, blended));
+  const { min, max } = speedInputBounds(units);
+  return Math.max(
+    speedToKmh(min, units),
+    Math.min(speedToKmh(max, units), blended),
+  );
 }

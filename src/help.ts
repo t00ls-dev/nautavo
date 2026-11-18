@@ -6,7 +6,7 @@ import {
 } from './i18n';
 import { updateSeo } from './seo';
 import { markHomeScreenApp, registerServiceWorker } from './offline';
-import { byId as $ } from './dom';
+import { byId as $, optionalById } from './dom';
 import './style.css';
 // Shared by the separate pages: help and What's new.
 const page = document.body.classList.contains('changelog-page')
@@ -43,6 +43,6 @@ apply();
 markHomeScreenApp();
 registerServiceWorker();
 if (section && /^[a-z-]{1,40}$/.test(section))
-  document
-    .getElementById(`${section}-${select.value === 'pt' ? 'pt' : 'en'}`)
-    ?.scrollIntoView();
+  optionalById(
+    `${section}-${select.value === 'pt' ? 'pt' : 'en'}`,
+  )?.scrollIntoView();

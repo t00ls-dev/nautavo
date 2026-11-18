@@ -268,9 +268,8 @@ const pt: Record<string, string> = {
   '© OpenStreetMap contributors': '© colaboradores do OpenStreetMap',
   Close: 'Fechar',
   'Detect region by IP': 'Detectar região pelo IP',
-  'IP region service': 'Serviço de região por IP',
-  'The region service receives your IP address. Only an approximate city view is used.':
-    'O serviço de região recebe seu endereço IP. Apenas uma vista aproximada da cidade é usada.',
+  "The site's server estimates your region from your IP address, as any website can. Only an approximate city view is used.":
+    'O servidor do site estima sua região pelo seu endereço IP, como qualquer site pode. Apenas uma vista aproximada da cidade é usada.',
   'Use my location': 'Usar minha localização',
   'Full screen': 'Tela cheia',
   'Location requires HTTPS. Open the secure site or choose a point on the map.':
@@ -284,7 +283,6 @@ const pt: Record<string, string> = {
     'O tempo para localizar esgotou. Vá para uma área aberta e tente novamente, ou escolha um ponto no mapa.',
   'Location unavailable. Check your device location settings or choose a point on the map.':
     'Localização indisponível. Confira as configurações de localização do aparelho ou escolha um ponto no mapa.',
-  'Use an HTTPS service URL.': 'Use uma URL de serviço HTTPS.',
   Help: 'Ajuda',
   'Save route': 'Salvar rota',
   'Update saved route': 'Atualizar rota',
@@ -484,7 +482,6 @@ const pt: Record<string, string> = {
   'Valhalla could not find a route.': 'O Valhalla não encontrou uma rota.',
   'The search server returned an invalid response.':
     'O servidor de busca retornou uma resposta inválida.',
-  'Region service requires HTTPS.': 'O serviço de região exige HTTPS.',
   'Distance and average speed must be valid positive numbers.':
     'A distância e a velocidade média devem ser números positivos válidos.',
   'Imported route': 'Rota importada',

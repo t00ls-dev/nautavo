@@ -78,7 +78,7 @@ for (const page of pages) {
         `--output-path=${prefix}`,
         '--chrome-flags=--headless=new --no-sandbox',
         // No IP region lookup from the audit machine; tiles stay real.
-        '--blocked-url-patterns=https://ipwho.is/*',
+        '--blocked-url-patterns=*/api/region',
         ...(page.desktop ? ['--preset=desktop'] : []),
       ],
       {

@@ -31,6 +31,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 ### Changed
 
 - route-gpx is now nautavo, at nautavo.com, with a new compass logo and a sea-green interface; Help and What's new are at nautavo.com/help and nautavo.com/changelog.
+- The approximate region for the first map view now comes from the site's own server instead of ipwho.is, so no other service sees your IP address for it; the region service address is no longer a setting.
 - Weather cards are compact: the time and place, then the sky, temperature and rain, then the wind and UV, with other risks on one more line only when there are any; the date shows only when the day changes, and the tab on the card names the main risk (Heavy rain) instead of a level number.
 - Settings come in sections: Units, Map and points, Navigation and Backup apply at once, and Advanced, folded, holds the servers, satellite imagery, the IP region and the JSON editor, with Apply servers.
 - The automatic stops of an imported track are named by their place on the route (Stop · km 1.2) instead of coordinates cut short on phones.

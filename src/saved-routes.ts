@@ -88,15 +88,60 @@ async function operation<T>(
     tx.onerror = () => reject(tx.error ?? request.error);
   });
 }
+/**
+ * Runs `work` in one readwrite transaction: what it reads and what it writes
+ * cannot be split by another tab's write (#205). An error thrown by `work`
+ * aborts the transaction and is the one reported.
+ */
+async function readWrite<T>(
+  names: Store | Store[],
+  work: (tx: IDBTransaction, fail: (error: unknown) => void) => () => T,
+): Promise<T> {
+  const db = await database();
+  return new Promise<T>((resolve, reject) => {
+    const tx = db.transaction(names, 'readwrite');
+    let failure: unknown;
+    const fail = (error: unknown) => {
+      failure = error;
+      tx.abort();
+    };
+    const result = work(tx, fail);
+    tx.oncomplete = () => resolve(result());
+    tx.onabort = () => reject(failure ?? tx.error);
+    tx.onerror = () => reject(failure ?? tx.error);
+  });
+}
+/**
+ * Reads an entry and writes what `change` makes of it, in one transaction;
+ * `change` returns undefined to write nothing. Resolves with what was written.
+ */
+function update<T>(
+  name: Store,
+  id: string,
+  change: (old: T | undefined) => T | undefined,
+): Promise<T | undefined> {
+  return readWrite(name, (tx, fail) => {
+    const store = tx.objectStore(name);
+    let written: T | undefined;
+    const read = store.get(id);
+    read.onsuccess = () => {
+      try {
+        written = change(read.result as T | undefined);
+        if (written) store.put(written);
+      } catch (error) {
+        fail(error);
+      }
+    };
+    return () => written;
+  });
+}
 /** Saved routes and favorites are identified by their normalized names. */
 export function libraryKey(name: string): string {
   return name.trim().normalize('NFKC').toLocaleLowerCase('en');
 }
 /** Deletes an entry and returns it as it was, in one transaction. */
-async function take<T>(name: Store, id: string): Promise<T | undefined> {
-  const db = await database();
-  return new Promise<T | undefined>((resolve, reject) => {
-    const tx = db.transaction(name, 'readwrite');
+function take<T>(name: Store, id: string): Promise<T | undefined> {
+  return readWrite(name, (tx) => {
     const store = tx.objectStore(name);
     let taken: T | undefined;
     const read = store.get(id);
@@ -104,9 +149,7 @@ async function take<T>(name: Store, id: string): Promise<T | undefined> {
       taken = read.result as T | undefined;
       if (taken) store.delete(id);
     };
-    tx.oncomplete = () => resolve(taken);
-    tx.onabort = () => reject(tx.error);
-    tx.onerror = () => reject(tx.error);
+    return () => taken;
   });
 }
 /**
@@ -120,20 +163,12 @@ export const canRestore = (existing: unknown): boolean =>
  * taken meanwhile; says whether it did.
  */
 async function putBack(name: Store, record: { id: string }): Promise<boolean> {
-  const db = await database();
-  return new Promise<boolean>((resolve, reject) => {
-    const tx = db.transaction(name, 'readwrite');
-    const store = tx.objectStore(name);
-    let restored = false;
-    const read = store.get(record.id);
-    read.onsuccess = () => {
-      restored = canRestore(read.result);
-      if (restored) store.put(record);
-    };
-    tx.oncomplete = () => resolve(restored);
-    tx.onabort = () => reject(tx.error);
-    tx.onerror = () => reject(tx.error);
+  let restored = false;
+  await update(name, record.id, (existing) => {
+    restored = canRestore(existing);
+    return restored ? record : undefined;
   });
+  return restored;
 }
 export async function listSavedRoutes(): Promise<SavedRoute[]> {
   const rows = await operation<SavedRoute[]>('routes', 'readonly', (s) =>
@@ -148,22 +183,15 @@ export async function saveNamedRoute(
   const name = state.name.trim();
   if (!validName(name)) throw new Error('Name your route before saving.');
   const id = libraryKey(name);
-  const old = await operation<SavedRoute | undefined>(
-    'routes',
-    'readonly',
-    (s) => s.get(id),
-  );
   const now = new Date().toISOString();
-  const record: SavedRoute = {
+  return (await update<SavedRoute>('routes', id, (old) => ({
     id,
     name,
     state: structuredClone({ ...state, name }),
     route: structuredClone(route),
     createdAt: old?.createdAt ?? now,
     updatedAt: now,
-  };
-  await operation('routes', 'readwrite', (s) => s.put(record));
-  return record;
+  })))!;
 }
 /**
  * The saved record with `route`'s steps, or null when the stored geometry is
@@ -184,26 +212,18 @@ export async function updateSavedSteps(
   id: string,
   route: Route,
 ): Promise<void> {
-  const record = await operation<SavedRoute | undefined>(
+  await update<SavedRoute>(
     'routes',
-    'readonly',
-    (s) => s.get(id),
+    id,
+    (record) => (record && withUpdatedSteps(record, route)) ?? undefined,
   );
-  const updated = record && withUpdatedSteps(record, route);
-  if (updated) await operation('routes', 'readwrite', (s) => s.put(updated));
 }
 
 /** Remembers that directions could not be added, changing nothing else. */
 export async function markDirectionsChecked(id: string): Promise<void> {
-  const record = await operation<SavedRoute | undefined>(
-    'routes',
-    'readonly',
-    (s) => s.get(id),
+  await update<SavedRoute>('routes', id, (record) =>
+    record ? { ...record, directionsChecked: true } : undefined,
   );
-  if (record)
-    await operation('routes', 'readwrite', (s) =>
-      s.put({ ...record, directionsChecked: true }),
-    );
 }
 
 /** Deletes a saved route and returns it, so it can be restored. */
@@ -228,13 +248,8 @@ export async function saveFavorite(
   if (!validName(clean)) throw new Error('Name the favorite before saving.');
   if (!validCoord(coord)) throw new Error('Invalid favorite place.');
   const id = libraryKey(clean);
-  const old = await operation<Favorite | undefined>(
-    'favorites',
-    'readonly',
-    (s) => s.get(id),
-  );
   const now = new Date().toISOString();
-  const record: Favorite = {
+  return (await update<Favorite>('favorites', id, (old) => ({
     id,
     name: clean,
     coord: [coord[0], coord[1]],
@@ -242,9 +257,7 @@ export async function saveFavorite(
     ...placeOf(place),
     createdAt: old?.createdAt ?? now,
     updatedAt: now,
-  };
-  await operation('favorites', 'readwrite', (s) => s.put(record));
-  return record;
+  })))!;
 }
 /**
  * Changes a favorite's name, kind or place; refused when the name is taken
@@ -261,34 +274,31 @@ export async function editFavorite(
   if (!validName(clean)) throw new Error('Name the favorite before saving.');
   if (!validCoord(coord)) throw new Error('Invalid favorite place.');
   const next = libraryKey(clean);
-  const [old, taken] = await Promise.all(
-    [id, next].map((key) =>
-      operation<Favorite | undefined>('favorites', 'readonly', (s) =>
-        s.get(key),
-      ),
-    ),
-  );
-  if (!old) return;
-  if (taken && next !== id)
-    throw new Error('A favorite with this name already exists.');
-  const db = await database();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction('favorites', 'readwrite');
+  await readWrite('favorites', (tx, fail) => {
     const store = tx.objectStore('favorites');
-    store.delete(id);
-    const record: Favorite = {
-      id: next,
-      name: clean,
-      coord: [coord[0], coord[1]],
-      kind,
-      ...placeOf(place),
-      createdAt: old.createdAt,
-      updatedAt: new Date().toISOString(),
+    const read = store.get(id);
+    read.onsuccess = () => {
+      const old = read.result as Favorite | undefined;
+      if (!old) return;
+      const taken = store.getKey(next);
+      taken.onsuccess = () => {
+        if (taken.result !== undefined && next !== id) {
+          fail(new Error('A favorite with this name already exists.'));
+          return;
+        }
+        store.delete(id);
+        store.put({
+          id: next,
+          name: clean,
+          coord: [coord[0], coord[1]],
+          kind,
+          ...placeOf(place),
+          createdAt: old.createdAt,
+          updatedAt: new Date().toISOString(),
+        } satisfies Favorite);
+      };
     };
-    store.put(record);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    return () => undefined;
   });
 }
 /** Deletes a favorite and returns it, so it can be restored. */
@@ -396,28 +406,24 @@ export function parseLibraryBackup(text: string): Library {
 export async function importLibraryBackup(
   library: Library,
 ): Promise<{ routes: number; favorites: number }> {
-  const fresh = <T extends { id: string }>(rows: T[], have: string[]) => {
-    const seen = new Set(have);
-    return rows.filter((r) => !seen.has(r.id) && !!seen.add(r.id));
-  };
-  const routes = fresh(
-    library.routes,
-    (await listSavedRoutes()).map((r) => r.id),
-  );
-  const favorites = fresh(
-    library.favorites,
-    (await listFavorites()).map((f) => f.id),
-  );
-  if (routes.length || favorites.length) {
-    const db = await database();
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(['routes', 'favorites'], 'readwrite');
-      for (const record of routes) tx.objectStore('routes').put(record);
-      for (const record of favorites) tx.objectStore('favorites').put(record);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
-    });
-  }
-  return { routes: routes.length, favorites: favorites.length };
+  // Entries are added in one transaction: a name already taken, by this
+  // device's library or by another tab meanwhile, keeps its entry.
+  return readWrite(['routes', 'favorites'], (tx) => {
+    const added = { routes: 0, favorites: 0 };
+    for (const name of ['routes', 'favorites'] as const) {
+      const store = tx.objectStore(name);
+      for (const record of library[name]) {
+        const request = store.add(record);
+        request.onsuccess = () => added[name]++;
+        request.onerror = (event) => {
+          // The name exists: skip it and keep the transaction. Any other
+          // error aborts the whole import, so nothing is lost silently.
+          if (request.error?.name !== 'ConstraintError') return;
+          event.preventDefault();
+          event.stopPropagation();
+        };
+      }
+    }
+    return () => added;
+  });
 }

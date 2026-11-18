@@ -1,9 +1,10 @@
 // App-shell service worker (AGENTS.md, Guided navigation; #126). It keeps the
 // same-origin files of one build so the app, help and What's new open without
 // network, and saved routes (IndexedDB) can be followed offline. It never
-// answers cross-origin requests: tiles, routing, search, weather, elevation,
-// road attributes and the IP region always go to the network as usual.
-import { CACHE_PREFIX, pageKey } from './precache';
+// answers cross-origin requests (tiles, routing, search, weather, elevation,
+// road attributes), and same-origin requests outside its list, such as the
+// approximate region (/api/region, never to be cached), go to the network.
+import { CACHE_PREFIX, isPageUrl, pageKey } from './precache';
 
 // The worker scope's events, declared locally because the project's types are
 // the DOM ones.
@@ -25,11 +26,11 @@ declare const self: {
   addEventListener(type: 'fetch', listener: (event: FetchEvent) => void): void;
 };
 
-// Replaced at build time (vite.config.ts) by this build's version and files.
+// Replaced at build time (vite.config.ts) by this build's version and URLs.
 const BUILD = '__ROUTE_GPX_BUILD__';
-const { version, files } = JSON.parse(BUILD) as {
+const { version, urls } = JSON.parse(BUILD) as {
   version: string;
-  files: string[];
+  urls: string[];
 };
 const cacheName = CACHE_PREFIX + version;
 /** A slow network falls back to the cached page after this long. */
@@ -41,9 +42,7 @@ self.addEventListener('install', (event) => {
       .open(cacheName)
       // `reload` skips the HTTP cache, so the copy matches this build.
       .then((cache) =>
-        cache.addAll(
-          files.map((file) => new Request(file, { cache: 'reload' })),
-        ),
+        cache.addAll(urls.map((url) => new Request(url, { cache: 'reload' }))),
       )
       .then(() => self.skipWaiting()),
   );
@@ -115,10 +114,12 @@ self.addEventListener('fetch', (event) => {
   // Cross-origin requests are never touched: no respondWith, no cache.
   if (url.origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
-    const key = pageKey(url.pathname, files);
+    const key = pageKey(url.pathname, urls);
     if (key) event.respondWith(networkFirst(request, key));
     return;
   }
-  if (files.includes(url.pathname))
+  // A page fetched by script (not a navigation) goes to the network: its
+  // cached copy may belong to an older deploy.
+  if (urls.includes(url.pathname) && !isPageUrl(url.pathname))
     event.respondWith(cacheFirst(request, url.pathname));
 });
