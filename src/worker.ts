@@ -2,11 +2,13 @@
 // served without it: it runs for /api/* (assets.run_worker_first) and for
 // paths no file matches, which get its 404.
 import { REGION_PATH, regionAnswer, type RegionFields } from './region';
+import { SECURITY_HEADERS } from './security-headers';
 
 /** Answers carry a location or nothing; none may be kept by any cache. */
 const NO_STORE = { 'Cache-Control': 'no-store' };
-/** What the Worker serves is never a page to index (only prod pages are). */
-const HEADERS = { ...NO_STORE, 'X-Robots-Tag': 'noindex' };
+/** What the Worker serves is never a page to index (only prod pages are);
+ * _headers does not reach it, so it sends the security headers itself. */
+const HEADERS = { ...SECURITY_HEADERS, ...NO_STORE, 'X-Robots-Tag': 'noindex' };
 
 export default {
   async fetch(request: Request): Promise<Response> {

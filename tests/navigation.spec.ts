@@ -1939,7 +1939,9 @@ test('a playing replay greys the road right behind the arrow', async ({
       clip: { x: Math.round(x), y: Math.round(y), width: 1, height: 1 },
     });
     return page.evaluate(async (png) => {
-      const blob = await (await fetch(`data:image/png;base64,${png}`)).blob();
+      // Built from the bytes: the page's policy refuses fetching data: URLs.
+      const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'image/png' });
       const canvas = new OffscreenCanvas(1, 1);
       const context = canvas.getContext('2d')!;
       context.drawImage(await createImageBitmap(blob), 0, 0);
