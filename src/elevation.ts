@@ -234,7 +234,7 @@ export function elevationStats(
 }
 
 /** Route coloring by grade: class limits in percent, symmetric. */
-export const GRADE_CLASSES = { gentle: 3, steep: 8 } as const;
+const GRADE_CLASSES = { gentle: 3, steep: 8 } as const;
 export type GradeClass = 'steep-down' | 'down' | 'flat' | 'up' | 'steep-up';
 const gradeClass = (grade: number): GradeClass =>
   grade >= GRADE_CLASSES.steep

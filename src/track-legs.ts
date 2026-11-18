@@ -23,10 +23,6 @@ export type Leg = Coord[][];
 export const isImportedRoute = (route: Route): boolean =>
   importedProvider(route.provider) !== null;
 
-/** True for an imported track whose edited legs were rerouted. */
-export const isMixedRoute = (route: Route): boolean =>
-  isImportedRoute(route) && route.provider.includes(' + ');
-
 const known = new WeakMap<Route, Leg[]>();
 const coordKey = (c: Coord) => `${c[0]},${c[1]}`;
 
@@ -129,7 +125,7 @@ export function splitLegs(
 }
 
 /** Legs of a displayed route, from its record or by locating its points on the track. */
-export function legsOf(route: Route, points: Coord[]): Leg[] | null {
+function legsOf(route: Route, points: Coord[]): Leg[] | null {
   const legs = known.get(route);
   if (legs && legs.length === points.length - 1) return legs;
   const split = splitLegs(route.segments, points);

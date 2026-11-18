@@ -1,8 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { canonicalUrl } from '../src/seo';
 import { DEFAULT_SITE_URL, siteUrl, withSite } from '../src/site';
+import { readRepoFile, sourceFiles } from './repo-files';
 
 describe('site address', () => {
   it('defaults to the published site and normalizes another host root', () => {
@@ -51,12 +50,9 @@ describe('site address', () => {
   });
 
   it('names the site URL in code only in src/site.ts', () => {
-    const src = resolve(__dirname, '..', 'src');
-    const named = readdirSync(src, { recursive: true, encoding: 'utf8' })
-      .filter((file) => /\.ts$/.test(file) && file !== 'site.ts')
-      .filter((file) =>
-        readFileSync(join(src, file), 'utf8').includes(DEFAULT_SITE_URL),
-      );
+    const named = sourceFiles()
+      .filter((file) => file !== 'src/site.ts')
+      .filter((file) => readRepoFile(file).includes(DEFAULT_SITE_URL));
     expect(named).toEqual([]);
   });
 });

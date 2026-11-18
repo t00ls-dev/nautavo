@@ -1,11 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { canonicalUrl, updateSeo } from '../src/seo';
 import config from '../vite.config';
+import { readRepoFile as read } from './repo-files';
 
-const read = (path: string) =>
-  readFileSync(resolve(__dirname, '..', path), 'utf8');
 const pages = [
   ['app', 'index.html'],
   ['help', 'help.html'],

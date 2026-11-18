@@ -75,7 +75,7 @@ export function uvCategory(
  * How close two weather samples must be to share one card and one marker:
  * within these differences of the first sample of the run. SI units.
  */
-export const MERGE_THRESHOLDS = {
+const MERGE_THRESHOLDS = {
   temperature: 2,
   probability: 20,
   wind: 10,

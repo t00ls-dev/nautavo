@@ -281,9 +281,9 @@ export const legDistances = (segments: Coord[][], points: Coord[]): number[] =>
   legPositions(segments, points).filter((d): d is number => d !== null);
 
 /** Roads are about this much longer than the straight line (circuity). */
-export const ROAD_DETOUR = 1.4;
+const ROAD_DETOUR = 1.4;
 /** How far ahead of the progress a rejoin point is looked for, meters. */
-export const REJOIN_LOOKAHEAD = 10000;
+const REJOIN_LOOKAHEAD = 10000;
 
 export interface RejoinPoint {
   coord: Coord;

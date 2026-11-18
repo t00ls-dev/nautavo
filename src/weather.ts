@@ -104,7 +104,7 @@ export function sampleRoute(
  * across its 45° classes) between the 300 m before and after a point, checked
  * every 100 m, keeping one bend per kilometre.
  */
-export const BEND_THRESHOLDS = {
+const BEND_THRESHOLDS = {
   turn: 60,
   window: 300,
   step: 100,

@@ -11,7 +11,7 @@ export const OUTBOUND_ANCHOR: [number, number] = [2, 40];
 export const RETURN_ANCHOR: [number, number] = [66, 40];
 
 /** Weather icons from mildest to worst, for choosing a cluster's marker. */
-export const CONDITION_ORDER = [
+const CONDITION_ORDER = [
   'weather-sun',
   'weather-partly-cloudy',
   'weather-cloud',
@@ -33,7 +33,7 @@ export interface Box {
 }
 
 /** How far the "+N" count rises above the marker (see its CSS). */
-export const COUNT_RISE = 6;
+const COUNT_RISE = 6;
 /**
  * Pixels at the anchor side left out of the box: an outbound and a return
  * marker on the same point share them by design, side by side.

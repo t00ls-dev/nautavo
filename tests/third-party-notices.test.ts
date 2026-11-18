@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
+import { readRepoFile } from './repo-files';
 
 // Each entry: "<Name> <version>", "Source: <url naming the version>",
 // "License reproduced from the installed <package>/<file>." and the text.
-const notices = readFileSync('public/THIRD_PARTY_NOTICES.txt', 'utf8');
+const notices = readRepoFile('public/THIRD_PARTY_NOTICES.txt');
 const entries = [
   ...notices.matchAll(
     /^(.+) (\d+\.\d+\.\d+)\nSource: (\S+)\nLicense reproduced from the installed (.+)\/([^/\s]+)\.\n/gm,
@@ -17,7 +17,7 @@ const entries = [
 }));
 const installed = (pkg: string) =>
   (
-    JSON.parse(readFileSync(`node_modules/${pkg}/package.json`, 'utf8')) as {
+    JSON.parse(readRepoFile(`node_modules/${pkg}/package.json`)) as {
       version: string;
     }
   ).version;
@@ -39,10 +39,7 @@ it('lists every redistributed dependency at its installed version', () => {
 });
 it('reproduces each installed license text', () => {
   for (const entry of entries) {
-    const license = readFileSync(
-      `node_modules/${entry.pkg}/${entry.file}`,
-      'utf8',
-    );
+    const license = readRepoFile(`node_modules/${entry.pkg}/${entry.file}`);
     expect(words(notices), entry.name).toContain(words(license));
   }
 });
