@@ -1,10 +1,12 @@
 # Changelog
 
-All notable user-visible changes to [route-gpx](https://route-gpx.t00ls.dev/) are documented in this file, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/). Internal changes (CI, dependencies, tests and repository documentation) are not listed.
+All notable user-visible changes to [nautavo](https://nautavo.com/) are documented in this file, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/). Internal changes (CI, dependencies, tests and repository documentation) are not listed.
 
-The site is deployed from `main` after every merge, so entries under Unreleased are already live; a release gives them a version. The [What's new](https://route-gpx.t00ls.dev/changelog.html) page (`changelog.html`) shows the same entries in English and Portuguese and must stay in sync with this file.
+The site is deployed from `main` after every merge, so entries under Unreleased are already live; a release gives them a version. The [What's new](https://nautavo.com/changelog) page (`changelog.html`) shows the same entries in English and Portuguese and must stay in sync with this file.
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-11-18
 
 ### Added
 
@@ -125,5 +127,6 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 - A side panel on wide screens and a bottom sheet on phones, with one-finger zoom on touch screens. ([#82](https://github.com/t00ls-dev/nautavo/pull/82), [#63](https://github.com/t00ls-dev/nautavo/pull/63))
 - English and Portuguese interface, a help page and a What's new page. ([#83](https://github.com/t00ls-dev/nautavo/issues/83))
 
-[Unreleased]: https://github.com/t00ls-dev/nautavo/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/t00ls-dev/nautavo/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/t00ls-dev/nautavo/releases/tag/v2.0.0
 [1.0.0]: https://github.com/t00ls-dev/nautavo/releases/tag/v1.0.0
