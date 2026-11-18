@@ -4,7 +4,7 @@ contact_links:
     url: https://nautavo.com/help.html
     about: Instructions for every control, gesture and shortcut.
   - name: Security vulnerability
-    url: https://github.com/t00ls-dev/route-gpx/security/policy
+    url: https://github.com/t00ls-dev/nautavo/security/policy
     about: Report vulnerabilities privately, never in public issues.
   - name: Map data error
     url: https://www.openstreetmap.org/fixthemap

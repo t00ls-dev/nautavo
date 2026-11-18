@@ -6,7 +6,7 @@ body:
       value: |
         **Privacy:** share links and GPX files contain the locations of your route. Only share routes you are comfortable making public, or reproduce the problem with an example route.
 
-        For map data errors (wrong roads, names or places), use [OpenStreetMap's Fix the map](https://www.openstreetmap.org/fixthemap). For security vulnerabilities, follow the [security policy](https://github.com/t00ls-dev/route-gpx/security/policy) instead.
+        For map data errors (wrong roads, names or places), use [OpenStreetMap's Fix the map](https://www.openstreetmap.org/fixthemap). For security vulnerabilities, follow the [security policy](https://github.com/t00ls-dev/nautavo/security/policy) instead.
   - type: checkboxes
     id: searched
     attributes:
