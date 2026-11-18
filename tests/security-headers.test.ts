@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEV_SECURITY_HEADERS,
   headersFile,
+  HSTS,
   SECURITY_HEADERS,
 } from '../src/security-headers';
 import worker from '../src/worker';
@@ -27,6 +28,19 @@ describe('security headers', () => {
     expect(SECURITY_HEADERS['Referrer-Policy']).toBe(
       'strict-origin-when-cross-origin',
     );
+  });
+
+  it('require https as the Cloudflare zone does, preload-ready', () => {
+    // The zone's HSTS setting replaces this header at the edge; both stay
+    // the same value (AGENTS.md, Hosting and publication).
+    expect(SECURITY_HEADERS['Strict-Transport-Security']).toBe(HSTS);
+    expect(HSTS).toBe('max-age=31536000; includeSubDomains; preload');
+    // hstspreload.org's requirements: at least a year, subdomains, preload.
+    const [age, ...flags] = HSTS.split('; ');
+    expect(Number(age.replace('max-age=', ''))).toBeGreaterThanOrEqual(
+      31536000,
+    );
+    expect(flags).toEqual(['includeSubDomains', 'preload']);
   });
 
   it('connect the published site only to https services', () => {

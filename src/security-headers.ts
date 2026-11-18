@@ -28,10 +28,16 @@ const policy = (directives: Record<string, string[]>) =>
     .map(([name, sources]) => `${name} ${sources.join(' ')}`)
     .join('; ');
 
+/** HTTP Strict Transport Security, as the published site sends it. */
+export const HSTS = 'max-age=31536000; includeSubDomains; preload';
+
 const headers = (csp: string): Record<string, string> => ({
   'Content-Security-Policy': csp,
-  // Two years, subdomains included (all of them are https); no preload.
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+  // The value Cloudflare's HSTS setting sends for the zone, which overrides
+  // this header on every response there: change both together (AGENTS.md).
+  // One year, subdomains included (all of them are https) and preload, which
+  // allows a submission to the browsers' list (not made).
+  'Strict-Transport-Security': HSTS,
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   // The browser default, stated: the services' terms rely on the Referer.
