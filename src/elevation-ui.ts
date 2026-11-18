@@ -27,7 +27,7 @@ import {
   fetchElevations,
   retryIn,
   UsageLimitError,
-} from './services';
+} from './open-meteo';
 import {
   indexTrack,
   legDistances,

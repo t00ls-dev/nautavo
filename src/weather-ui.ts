@@ -19,7 +19,7 @@ import {
   retryIn,
   UsageLimitError,
   weatherForecast,
-} from './services';
+} from './open-meteo';
 import {
   DEFAULT_WEATHER_URL,
   HOUR,

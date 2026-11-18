@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { gpsPoint, locationPermission, positionView } from '../src/location';
-import { approximateRegion } from '../src/services';
+import { approximateRegion } from '../src/search';
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();

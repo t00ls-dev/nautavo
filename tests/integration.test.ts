@@ -4,7 +4,7 @@ import process from 'node:process';
 import { expect, it } from 'vitest';
 import { defaults, meters } from '../src/core';
 import { integrationPoints } from './route-fixture';
-import { osrmRoute } from '../src/services';
+import { osrmRoute } from '../src/routing';
 it.skipIf(process.env.RUN_OSRM !== '1')(
   'routes the current Uruguai–Alto da Boa Vista–Grumari example on the main roads',
   async () => {

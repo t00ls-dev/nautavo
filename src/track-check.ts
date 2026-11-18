@@ -1,7 +1,7 @@
 import { importedProvider, meters, type Coord, type Route } from './core';
 import { attributePlan, type AttributePiece as Piece } from './road-attributes';
 import { exactSlice, indexTrack } from './track-position';
-import { ValhallaLimitError, valhallaTrace } from './services';
+import { ValhallaLimitError, valhallaTrace } from './valhalla-trace';
 import {
   ALIGNED,
   alignedPiece,

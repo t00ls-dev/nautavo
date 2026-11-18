@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addressAutocomplete, splitPlace } from '../src/autocomplete';
-import { photonSearch } from '../src/services';
-vi.mock('../src/services', () => ({ photonSearch: vi.fn() }));
+import { photonSearch } from '../src/search';
+vi.mock('../src/search', () => ({ photonSearch: vi.fn() }));
 afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();

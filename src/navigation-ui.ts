@@ -10,7 +10,7 @@ import { byId as $, text } from './dom';
 import { t } from './i18n';
 import { icon, iconControl } from './icons';
 import { gpsPoint, locationError } from './location';
-import { navigationRoute } from './services';
+import { navigationRoute } from './routing';
 import { creditsDialog } from './map-credits';
 import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
 import { loadMapLibre } from './maplibre-loader';

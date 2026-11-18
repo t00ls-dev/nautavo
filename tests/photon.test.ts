@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { photonSearch, defaultPhotonUrl } from '../src/services';
+import { photonSearch, defaultPhotonUrl } from '../src/search';
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();

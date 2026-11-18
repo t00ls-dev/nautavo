@@ -4,7 +4,7 @@ import { meters, validCoord, type Coord } from './core';
  * Road attributes along the route from Valhalla `/trace_attributes`: the
  * request plan, the polyline encoder, validation of the untrusted response
  * and the mapping of matched road edges back to along-track distances. Pure;
- * no DOM or network (the request lives in `src/services.ts`).
+ * no DOM or network (the request lives in `src/valhalla-trace.ts`).
  */
 
 /** The public Valhalla server refuses traces longer than 200 km. */

@@ -12,7 +12,7 @@ import {
   MAX_PIECES,
   type EdgeRange,
 } from './road-attributes';
-import { ValhallaLimitError, valhallaAttributes } from './services';
+import { ValhallaLimitError, valhallaAttributes } from './valhalla-trace';
 import {
   sectionsToCheck,
   surfaceRanges,

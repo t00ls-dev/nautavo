@@ -80,13 +80,10 @@ import {
   type State,
 } from './core';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
-import {
-  calculate,
-  defaultPhotonUrl,
-  osrmMatch,
-  ROAD_DATA_LIMIT,
-  searchAddress,
-} from './services';
+import { calculate } from './routing';
+import { osrmMatch } from './route-match';
+import { defaultPhotonUrl, searchAddress } from './search';
+import { ROAD_DATA_LIMIT } from './valhalla-trace';
 import {
   isImportedRoute,
   legsAt,
