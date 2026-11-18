@@ -67,6 +67,18 @@ describe('security headers', () => {
       expect(block).toContain(`\n  ${name}: ${value}\n`);
   });
 
+  it('keep Cloudflare from rewriting every page in the sitemap', () => {
+    const rules = readRepoFile('public/_headers').split('\n');
+    const paths = [
+      ...readRepoFile('public/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g),
+    ].map(([, loc]) => new URL(loc).pathname);
+    expect(paths.length).toBeGreaterThan(0);
+    for (const path of new Set(paths))
+      expect(rules[rules.indexOf(path) + 1], path).toBe(
+        '  Cache-Control: public, max-age=0, must-revalidate, no-transform',
+      );
+  });
+
   it("are sent with the Worker's own answers", async () => {
     for (const path of ['/api/region', '/missing']) {
       const response = await worker.fetch(
