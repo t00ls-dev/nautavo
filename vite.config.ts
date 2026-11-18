@@ -10,6 +10,11 @@ import {
 } from './src/brand-assets.ts';
 import { precacheList, precacheUrl } from './src/precache.ts';
 import { REGION_PATH } from './src/region.ts';
+import {
+  DEV_SECURITY_HEADERS,
+  headersFile,
+  SECURITY_HEADERS,
+} from './src/security-headers.ts';
 import { siteUrl, withSite } from './src/site.ts';
 import worker from './src/worker.ts';
 
@@ -120,30 +125,43 @@ function brandAssets(): Plugin {
   };
 }
 
-/** Files in public/ that name the site's address. */
-const SITE_FILES = ['sitemap.xml', 'robots.txt'];
-
 /**
  * Puts the site address (SITE_URL, src/site.ts) in the pages, served or
- * built, and in the built sitemap and robots.txt, whose sources in public/
- * are replaced in the output by these copies, as the manifest's are.
+ * built; `PUBLIC_REWRITES` puts it in the sitemap and robots.txt.
  */
 function siteAddress(site: string): Plugin {
-  let root = '';
   return {
     name: 'site-address',
+    transformIndexHtml: (html) => withSite(html, site),
+  };
+}
+
+/** Files in public/ that the build rewrites: the site address and the security headers. */
+const PUBLIC_REWRITES: Record<string, (text: string) => string> = {
+  'sitemap.xml': (text) => withSite(text, SITE),
+  'robots.txt': (text) => withSite(text, SITE),
+  _headers: headersFile,
+};
+
+/**
+ * Emits the rewritten copies of `PUBLIC_REWRITES`, which replace their
+ * sources from public/ in the output, as the manifest's copy does.
+ */
+function publicRewrites(): Plugin {
+  let root = '';
+  return {
+    name: 'public-rewrites',
+    apply: 'build',
     configResolved(config) {
       root = config.root;
     },
-    transformIndexHtml: (html) => withSite(html, site),
     async generateBundle() {
-      for (const file of SITE_FILES)
+      for (const [file, rewrite] of Object.entries(PUBLIC_REWRITES))
         this.emitFile({
           type: 'asset',
           fileName: file,
-          source: withSite(
+          source: rewrite(
             await readFile(resolve(root, 'public', file), 'utf8'),
-            site,
           ),
         });
     },
@@ -195,13 +213,18 @@ export default defineConfig({
   base: '/',
   plugins: [
     siteAddress(SITE),
+    publicRewrites(),
     brandAssets(),
     serviceWorkerManifest(),
     workersParity(),
   ],
   define: { 'import.meta.env.SITE_URL': JSON.stringify(SITE) },
-  // The local preview (preview.nautavo.com) is never indexed; only prod is.
-  preview: { headers: { 'X-Robots-Tag': 'noindex' } },
+  // The local servers send the published security headers (the development
+  // one allowing the <style> elements it injects), so the browser tests run
+  // under the same policy. The preview (preview.nautavo.com) is never
+  // indexed; only prod is.
+  server: { headers: DEV_SECURITY_HEADERS },
+  preview: { headers: { ...SECURITY_HEADERS, 'X-Robots-Tag': 'noindex' } },
   build: {
     // Brand files keep their own hashed URLs instead of being inlined.
     assetsInlineLimit: (file) =>
