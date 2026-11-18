@@ -111,9 +111,7 @@ describe('translation coverage', () => {
     readFileSync(resolve(__dirname, '..', path), 'utf8');
   // Product names, units, language codes and licenses stay the same in Portuguese.
   const sameInBothLanguages = new Set([
-    'route',
-    '-gpx',
-    'route-gpx',
+    'nautavo',
     // The format's name, the Settings › Advanced row of the JSON editor.
     'JSON',
     // Required map attribution, kept as written.

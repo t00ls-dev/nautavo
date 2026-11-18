@@ -615,9 +615,8 @@ new ResizeObserver(refitSoon).observe($('sheet'));
 map.onFramedChange(() => refit(true));
 /** Help and What's new open in the chosen language and keep the route for Back to map. */
 function pageLinks(lang: Language, hash: string) {
-  $<HTMLAnchorElement>('help').href = `./help.html?lang=${lang}${hash}`;
-  $<HTMLAnchorElement>('changelog').href =
-    `./changelog.html?lang=${lang}${hash}`;
+  $<HTMLAnchorElement>('help').href = `./help?lang=${lang}${hash}`;
+  $<HTMLAnchorElement>('changelog').href = `./changelog?lang=${lang}${hash}`;
 }
 function syncUrl() {
   updateSaveButton();
@@ -2495,7 +2494,7 @@ $('backup-routes').onclick = () => {
   if (!savedEntries.length && !favoriteEntries.length) return;
   void exportFile(
     exportLibraryBackup({ routes: savedEntries, favorites: favoriteEntries }),
-    `route-gpx-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    `nautavo-backup-${new Date().toISOString().slice(0, 10)}.json`,
     {
       share: shareExports,
       types: JSON_TYPES,

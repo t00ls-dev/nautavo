@@ -243,7 +243,7 @@ test('saved routes stay when the library upgrades to hold favorites', async ({
   page,
 }) => {
   // The library as an earlier version left it: version 1, routes only.
-  await page.goto(base + 'help.html');
+  await page.goto(base + 'help');
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {

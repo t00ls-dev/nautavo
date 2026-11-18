@@ -456,7 +456,7 @@ test.describe('add to home screen', () => {
       // Help opens at its section, in the same language.
       await expect(page.locator('#home-help')).toHaveAttribute(
         'href',
-        new RegExp(`help\\.html\\?lang=${lang}&section=home-screen`),
+        new RegExp(`help\\?lang=${lang}&section=home-screen`),
       );
       expect(
         await dialog.evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
@@ -479,7 +479,7 @@ test.describe('add to home screen', () => {
     expect(
       await page.locator('meta[name="viewport"]').getAttribute('content'),
     ).not.toMatch(/user-scalable|maximum-scale/);
-    await page.goto(`${base}help.html`);
+    await page.goto(`${base}help`);
     expect(await touch('html')).toBe('manipulation');
     expect(await touch('body')).toBe('auto');
   });
@@ -491,7 +491,7 @@ test('Add to home screen is a phone action only', async ({ page }) => {
   await expect(page.locator('#add-home')).toBeHidden();
 });
 
-for (const path of ['', 'help.html'])
+for (const path of ['', 'help'])
   test(`a home-screen web app keeps its controls below a white status strip (${path || 'app'})`, async ({
     page,
     context,
@@ -779,7 +779,7 @@ test.describe('touch accessibility at 320 px', () => {
   test('editable text is 16 px on every page, so iOS does not zoom on focus', async ({
     page,
   }) => {
-    for (const path of ['', 'help.html', 'changelog.html']) {
+    for (const path of ['', 'help', 'changelog']) {
       await page.goto(base + path);
       await expect(page.locator('#language')).toHaveCSS('font-size', '16px');
     }

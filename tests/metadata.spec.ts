@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
-import { base } from './app-helpers';
+import { base, previewBase } from './app-helpers';
 test('SEO metadata stays localized and excludes private route state', async ({
   page,
 }) => {
   await mockBasemap(page);
   await page.goto(base);
-  const canonical = 'https://route-gpx.t00ls.dev/';
+  const canonical = 'https://nautavo.com/';
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
     'href',
     canonical,
@@ -45,7 +45,7 @@ test('SEO metadata stays localized and excludes private route state', async ({
   const schema = JSON.parse(
     await page.locator('script[type="application/ld+json"]').innerText(),
   );
-  expect(schema.name).toBe('route-gpx');
+  expect(schema.name).toBe('nautavo');
   expect(schema.url).toBe(canonical);
 });
 test('?lang=pt opens the app in Portuguese over the saved preference and keeps the route', async ({
@@ -59,7 +59,7 @@ test('?lang=pt opens the app in Portuguese over the saved preference and keeps t
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
     'href',
-    'https://route-gpx.t00ls.dev/?lang=pt',
+    'https://nautavo.com/?lang=pt',
   );
   expect(new URL(page.url()).search).toBe('?lang=pt');
   expect(new URL(page.url()).hash).toMatch(/^#v2=/);
@@ -99,6 +99,46 @@ test('manifest and icon files resolve at the custom-domain root', async ({
   ).toBeTruthy();
 });
 
+test('the production build names brand files by their contents', async ({
+  request,
+}) => {
+  // Icons, wordmark and social card get a new URL whenever they change, so
+  // no browser or home-screen icon cache keeps an old one.
+  const hashed =
+    /^\/assets\/(icon|icon-\d+|maskable-512|wordmark|social-card)-[\w-]{8}\.(png|svg)$/;
+  const urls = new Set<string>();
+  for (const path of ['', 'help', 'changelog']) {
+    const html = await (await request.get(previewBase + path)).text();
+    expect(html, path).not.toContain('/src/brand/');
+    for (const [, url] of html.matchAll(
+      /(?:href|src|content)="(?:https:\/\/nautavo\.com)?(\/assets\/(?:icon|maskable|wordmark|social-card)[^"]*)"/g,
+    ))
+      urls.add(url);
+  }
+  const manifest = (await (
+    await request.get(`${previewBase}manifest.webmanifest`)
+  ).json()) as { icons: { src: string }[] };
+  for (const icon of manifest.icons) urls.add(icon.src);
+  expect(
+    [...urls].map((url) => url.replace(/-[\w-]{8}\./, '.')).sort(),
+  ).toEqual([
+    '/assets/icon-180.png',
+    '/assets/icon-192.png',
+    '/assets/icon-32.png',
+    '/assets/icon-512.png',
+    '/assets/icon.svg',
+    '/assets/maskable-512.png',
+    '/assets/social-card.png',
+    '/assets/wordmark.svg',
+  ]);
+  for (const url of urls) {
+    expect(url).toMatch(hashed);
+    expect((await request.get(previewBase + url.slice(1))).ok(), url).toBe(
+      true,
+    );
+  }
+});
+
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
 
@@ -113,24 +153,18 @@ test('help switches language and metadata while preserving the route in its retu
     ...defaults(),
     departure: '2026-11-09T10:00:00.000Z',
   });
-  await page.goto(base + 'help.html?lang=pt' + hash);
+  await page.goto(base + 'help?lang=pt' + hash);
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
   await expect(page.locator('#help-pt')).toBeVisible();
   await expect(page.locator('#help-en')).toBeHidden();
   await expect(page).toHaveTitle(/Ajuda/);
-  await expect(page.locator('#back')).toHaveAttribute(
-    'href',
-    './index.html' + hash,
-  );
+  await expect(page.locator('#back')).toHaveAttribute('href', './' + hash);
   await page.locator('#language').selectOption('en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#help-en')).toBeVisible();
   await expect(page.locator('#help-pt')).toBeHidden();
   await expect(page).toHaveTitle(/Route Planning/);
-  await expect(page.locator('#back')).toHaveAttribute(
-    'href',
-    './index.html' + hash,
-  );
+  await expect(page.locator('#back')).toHaveAttribute('href', './' + hash);
   expect(new URL(page.url()).hash).toBe(hash);
   expect(new URL(page.url()).searchParams.get('lang')).toBe('en');
   await page.locator('#language').selectOption('pt');
@@ -142,34 +176,28 @@ test('help opens at a linked section and keeps the route hash for Back to map', 
   page,
 }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
-  await page.goto(`${base}help.html?lang=pt&section=elevation#v2=abc`);
+  await page.goto(`${base}help?lang=pt&section=elevation#v2=abc`);
   await expect(page.locator('#elevation-pt')).toBeInViewport();
-  await expect(page.locator('#back')).toHaveAttribute(
-    'href',
-    './index.html#v2=abc',
-  );
+  await expect(page.locator('#back')).toHaveAttribute('href', './#v2=abc');
 });
 
 test("What's new switches language and metadata and keeps the route for Back to map", async ({
   page,
 }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
-  await page.goto(base + 'changelog.html?lang=pt#v2=abc');
+  await page.goto(base + 'changelog?lang=pt#v2=abc');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
   await expect(page.locator('#changelog-pt')).toBeVisible();
   await expect(page.locator('#changelog-en')).toBeHidden();
-  await expect(page).toHaveTitle('route-gpx — Novidades');
+  await expect(page).toHaveTitle('nautavo — Novidades');
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
     'href',
-    'https://route-gpx.t00ls.dev/changelog.html?lang=pt',
+    'https://nautavo.com/changelog?lang=pt',
   );
-  await expect(page.locator('#back')).toHaveAttribute(
-    'href',
-    './index.html#v2=abc',
-  );
+  await expect(page.locator('#back')).toHaveAttribute('href', './#v2=abc');
   await page.locator('#language').selectOption('en');
   await expect(page.locator('#changelog-en')).toBeVisible();
-  await expect(page).toHaveTitle("route-gpx — What's New");
+  await expect(page).toHaveTitle("nautavo — What's New");
   await expect(page.locator('meta[name=description]')).toHaveAttribute(
     'content',
     /See what changed/,
@@ -177,16 +205,16 @@ test("What's new switches language and metadata and keeps the route for Back to 
   // Each language has its own canonical URL, never with the route hash.
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
     'href',
-    'https://route-gpx.t00ls.dev/changelog.html',
+    'https://nautavo.com/changelog',
   );
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
     'content',
-    'https://route-gpx.t00ls.dev/changelog.html',
+    'https://nautavo.com/changelog',
   );
   // The help link keeps the language and the route.
   await expect(page.locator('#changelog-en a[data-page-link]')).toHaveAttribute(
     'href',
-    './help.html?lang=en#v2=abc',
+    './help?lang=en#v2=abc',
   );
 });
 
@@ -198,11 +226,11 @@ test("the panel footer and the help page link to What's new in the chosen langua
   await page.locator('#language').selectOption('pt');
   const link = page.locator('#changelog');
   await expect(link).toHaveText('Novidades');
-  await expect(link).toHaveAttribute('href', /^\.\/changelog\.html\?lang=pt#/);
-  await page.goto(base + 'help.html?lang=pt#v2=abc');
+  await expect(link).toHaveAttribute('href', /^\.\/changelog\?lang=pt#/);
+  await page.goto(base + 'help?lang=pt#v2=abc');
   await expect(page.locator('#help-pt a[data-page-link]')).toHaveAttribute(
     'href',
-    './changelog.html?lang=pt#v2=abc',
+    './changelog?lang=pt#v2=abc',
   );
 });
 
@@ -211,9 +239,10 @@ test('the Help and What’s new headers fit on one line from 320 px', async ({
 }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   const problems: string[] = [];
-  for (const path of ['help.html', 'changelog.html'])
+  for (const path of ['help', 'changelog'])
     for (const lang of ['en', 'pt'])
-      for (const width of [320, 360, 390, 430]) {
+      // 380 px is where the wordmark shows again, beside Voltar ao mapa.
+      for (const width of [320, 360, 380, 390, 430]) {
         await page.setViewportSize({ width, height: 700 });
         await page.goto(`${base}${path}?lang=${lang}`);
         await expect(page.locator('#back')).toBeVisible();

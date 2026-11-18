@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The site: the Vite build served as static assets (AGENTS.md, Hosting and
+  // publication). No Worker script: every request is a file. Deploys always
+  // name an environment through CLOUDFLARE_ENV, the GitHub environment of the
+  // Deploy workflow; this top level only serves `wrangler dev` and is never
+  // published under a domain.
+  "name": "nautavo-local",
+  "compatibility_date": "2026-11-01",
+  // One public address per environment: no *.workers.dev copy, no preview URLs.
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    // Pages are published without their extension: /help serves help.html,
+    // and /help.html redirects there (canonicals, sitemap and links use /help).
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+  },
+  // No request logs or traces: the site keeps no visitor data.
+  "observability": {
+    "enabled": false,
+    "logs": { "enabled": false, "invocation_logs": false },
+    "traces": { "enabled": false },
+  },
+  "dev": { "ip": "127.0.0.1", "port": 8787 },
+  "env": {
+    // nautavo.com: published when a release is published.
+    "prod": {
+      "name": "nautavo-prod",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "nautavo.com", "custom_domain": true }],
+    },
+    // dev.nautavo.com: every commit to main after CI; never indexed.
+    "dev": {
+      "name": "nautavo-dev",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "dev.nautavo.com", "custom_domain": true }],
+    },
+  },
+}

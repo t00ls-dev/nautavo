@@ -1,44 +1,66 @@
 name: Deploy
+# dev.nautavo.com after every green CI run of a push to main; nautavo.com when
+# a release is published (CONTRIBUTING.md, Releases). Each target is a GitHub
+# environment (dev: branch main; prod: tags v*) holding its Cloudflare secrets,
+# and the Wrangler environment of the same name (wrangler.jsonc).
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  release:
+    types: [published]
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
-  group: pages
+  group: deploy-${{ github.event_name == 'release' && 'prod' || 'dev' }}
   cancel-in-progress: false
 jobs:
   deploy:
-    name: Deploy to GitHub Pages
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    name: Deploy to Cloudflare Workers (${{ github.event_name == 'release' && 'prod' || 'dev' }})
+    if: >-
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push') ||
+      (github.event_name == 'release' && !github.event.release.prerelease)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      name: ${{ github.event_name == 'release' && 'prod' || 'dev' }}
+      url: ${{ github.event_name == 'release' && 'https://nautavo.com/' || 'https://dev.nautavo.com/' }}
+    env:
+      TARGET: ${{ github.event_name == 'release' && 'prod' || 'dev' }}
+      SHA: ${{ github.event_name == 'release' && github.sha || github.event.workflow_run.head_sha }}
     steps:
-      - name: Check current main commit
+      # dev publishes only the current main commit, so an older run cannot
+      # publish over a newer one; prod publishes a release only when CI
+      # passed on its commit as a push to main.
+      - name: Check the commit to publish
         id: current
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          latest_sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')
-          if [ "$HEAD_SHA" = "$latest_sha" ]; then
-            echo "publish=true" >> "$GITHUB_OUTPUT"
+          if [ "$TARGET" = dev ]; then
+            latest_sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')
+            if [ "$SHA" != "$latest_sha" ]; then
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              echo "Skipping deployment: $SHA is no longer the current main commit ($latest_sha)."
+              exit 0
+            fi
           else
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping deployment: $HEAD_SHA is no longer the current main commit ($latest_sha)."
+            passed=$(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&event=push&status=success" --jq '.total_count')
+            if [ "$passed" = 0 ]; then
+              echo "::error::No successful CI run of a push to main for $SHA; the release is not published to prod."
+              exit 1
+            fi
           fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
         if: steps.current.outputs.publish == 'true'
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ env.SHA }}
+          persist-credentials: false
       - uses: actions/setup-node@v7
         if: steps.current.outputs.publish == 'true'
         with:
@@ -48,12 +70,15 @@ jobs:
         if: steps.current.outputs.publish == 'true'
       - run: npm run build
         if: steps.current.outputs.publish == 'true'
-      - uses: actions/configure-pages@v6
+      # Only prod is indexed: dev answers every request with noindex.
+      - name: Keep dev out of search engines
+        if: steps.current.outputs.publish == 'true' && env.TARGET == 'dev'
+        run: |
+          printf '\n/*\n  X-Robots-Tag: noindex\n' >> dist/_headers
+      # Publishes dist/ as Workers static assets; the token reaches only this step.
+      - run: npm run deploy
         if: steps.current.outputs.publish == 'true'
-      - uses: actions/upload-pages-artifact@v5
-        if: steps.current.outputs.publish == 'true'
-        with:
-          path: dist
-      - uses: actions/deploy-pages@v5
-        if: steps.current.outputs.publish == 'true'
-        id: deployment
+        env:
+          CLOUDFLARE_ENV: ${{ env.TARGET }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

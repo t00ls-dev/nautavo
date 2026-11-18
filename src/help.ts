@@ -20,7 +20,7 @@ function apply() {
   $(`${page}-pt`).hidden = lang !== 'pt';
   $('back').textContent = translate('Back to map', lang);
   updateSeo(lang, page);
-  $<HTMLAnchorElement>('back').href = './index.html' + location.hash;
+  $<HTMLAnchorElement>('back').href = './' + location.hash;
   // Links between the pages keep the language and the route for Back to map.
   document
     .querySelectorAll<HTMLAnchorElement>('a[data-page-link]')

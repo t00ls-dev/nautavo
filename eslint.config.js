@@ -11,6 +11,7 @@ export default ts.config(
       'blob-report/**',
       'all-blob-reports/**',
       'coverage/**',
+      '.wrangler/**',
     ],
   },
   js.configs.recommended,

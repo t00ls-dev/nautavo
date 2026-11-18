@@ -1,37 +1,37 @@
 const texts = {
   app: {
     en: [
-      'route-gpx — Route Planner & GPX Export',
+      'nautavo — Route Planner & GPX Export',
       'Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account.',
     ],
     pt: [
-      'route-gpx — Planejador de rotas e exportação GPX',
+      'nautavo — Planejador de rotas e exportação GPX',
       'Crie rotas pelas ruas, importe GPX, FIT ou TCX, veja clima, elevação e pavimento, navegue pelo celular e baixe o traçado completo em GPX. Sem cadastro.',
     ],
   },
   help: {
     en: [
-      'route-gpx — Route Planning & GPX Help',
+      'nautavo — Route Planning & GPX Help',
       'Learn to plan and edit routes, import GPX, FIT and TCX, read the itinerary, weather, elevation and surface, navigate, set units, and save or share routes.',
     ],
     pt: [
-      'route-gpx — Ajuda para criar e exportar rotas',
+      'nautavo — Ajuda para criar e exportar rotas',
       'Aprenda a criar e editar rotas, importar GPX, FIT e TCX, ver itinerário, clima, elevação e pavimento, navegar, ajustar unidades e salvar ou compartilhar.',
     ],
   },
   changelog: {
     en: [
-      "route-gpx — What's New",
-      'See what changed in route-gpx: new features, changes and fixes in the route planner and GPX export, newest first.',
+      "nautavo — What's New",
+      'See what changed in nautavo: new features, changes and fixes in the route planner and GPX export, newest first.',
     ],
     pt: [
-      'route-gpx — Novidades',
-      'Veja o que mudou no route-gpx: novos recursos, mudanças e correções no planejador de rotas e na exportação GPX, das mais recentes às mais antigas.',
+      'nautavo — Novidades',
+      'Veja o que mudou no nautavo: novos recursos, mudanças e correções no planejador de rotas e na exportação GPX, das mais recentes às mais antigas.',
     ],
   },
 } as const;
 
-const SITE = 'https://route-gpx.t00ls.dev/';
+const SITE = 'https://nautavo.com/';
 /**
  * Every page has one indexable URL per language: English at the bare path
  * (also x-default) and Portuguese with `?lang=pt`, matching the hreflang
@@ -40,8 +40,8 @@ const SITE = 'https://route-gpx.t00ls.dev/';
  */
 const PATHS = {
   app: '',
-  help: 'help.html',
-  changelog: 'changelog.html',
+  help: 'help',
+  changelog: 'changelog',
 } as const;
 
 /** `?lang=pt` for Portuguese, nothing for English (the bare URL). */

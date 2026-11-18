@@ -23,5 +23,5 @@ body:
     attributes:
       label: Project boundaries
       options:
-        - label: I understand route-gpx is a static site with no backend, accounts or API keys, and this request fits within those limits.
+        - label: I understand nautavo is a static site with no backend, accounts or API keys, and this request fits within those limits.
           required: true

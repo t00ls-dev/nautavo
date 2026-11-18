@@ -1,0 +1,6 @@
+# Cloudflare Workers static assets (AGENTS.md, Hosting and publication).
+# Pages, sw.js, the manifest and other fixed-URL files keep Cloudflare's
+# default, revalidated on every request (max-age=0, must-revalidate).
+# Every file in /assets/ is named by a hash of its contents, so it never changes.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

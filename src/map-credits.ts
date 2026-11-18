@@ -123,6 +123,6 @@ export function setupMapCredits(map: PlannerMap) {
           url: 'https://creativecommons.org/licenses/by/4.0/',
         },
       ],
-      ['Passage times and risk summaries calculated by route-gpx.'],
+      ['Passage times and risk summaries calculated by nautavo.'],
     );
 }

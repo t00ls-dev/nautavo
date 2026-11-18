@@ -76,9 +76,9 @@ test('after one online visit, the app, help and What’s new open offline', asyn
   );
   // `?lang=pt` and the route hash are kept: the cached page answers any query.
   expect(new URL(page.url()).search).toBe('?lang=pt');
-  await page.goto(base + 'help.html?lang=pt');
+  await page.goto(base + 'help?lang=pt');
   await expect(page.locator('#help-pt')).toBeVisible();
-  await page.goto(base + 'changelog.html?lang=en');
+  await page.goto(base + 'changelog?lang=en');
   await expect(page.locator('#changelog-en')).toBeVisible();
   await context.setOffline(false);
   await page.goto(base);

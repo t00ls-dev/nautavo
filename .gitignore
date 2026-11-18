@@ -7,4 +7,5 @@ blob-report/
 all-blob-reports/
 coverage/
 CLAUDE.local.md
+.wrangler/
 .claude/

@@ -151,7 +151,7 @@ export function setupSurface(
     note.className = 'hint';
     const language = deps.state().language === 'pt' ? 'pt' : 'en';
     const link = document.createElement('a');
-    link.href = `./help.html?lang=${language}&section=surface${location.hash}`;
+    link.href = `./help?lang=${language}&section=surface${location.hash}`;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.textContent = 'See the help.';

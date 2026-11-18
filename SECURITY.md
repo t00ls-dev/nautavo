@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Only the current `main` branch, published at <https://route-gpx.t00ls.dev/>, is supported.
+Only the current `main` branch, published at <https://nautavo.com/>, is supported.
 
 ## Reporting a vulnerability
 
@@ -12,7 +12,7 @@ Include the affected page or file, steps to reproduce and the impact you expect.
 
 ## Scope
 
-In scope: the code in this repository, its build and the GitHub Pages configuration. Examples:
+In scope: the code in this repository, its build and its Cloudflare Workers configuration (`wrangler.jsonc`, `public/_headers`). Examples:
 
 - cross-site scripting through imported GPX files, route names or share links;
 - unsafe handling of configurable service URLs;

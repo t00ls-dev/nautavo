@@ -1,6 +1,6 @@
-# Contributing to route-gpx
+# Contributing to nautavo
 
-Thanks for your interest in improving route-gpx, a static route planner with GPX export.
+Thanks for your interest in improving nautavo, a static route planner with GPX export.
 
 ## Project boundaries
 
@@ -45,6 +45,7 @@ Releases are made by hand by the maintainer, without release tooling. Versions f
 
 1. In a pull request, rename `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) to `## [x.y.z] - YYYY-MM-DD` (the merge date, UTC), add an empty `## [Unreleased]` above it and update the link references at the end. Make the same change in both languages of [`changelog.html`](changelog.html), and set the version with `npm version x.y.z --no-git-tag-version`.
 2. After the squash merge, tag the merge commit and publish the notes: `gh release create vx.y.z --target <merge commit> --title vx.y.z --notes-file <notes>`, with that version's changelog section as notes.
+3. Publishing the release deploys it to https://nautavo.com/ (the Deploy workflow's prod environment). Every merge to `main` already runs on https://dev.nautavo.com/ before that.
 
 ## AI-assisted contributions
 
