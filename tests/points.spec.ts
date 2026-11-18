@@ -1065,6 +1065,26 @@ test('the route name is visible and names the downloaded file, metadata and trac
   expect(fallback.suggestedFilename()).toBe('start-to-destination.gpx');
 });
 
+test('the edit lock disables and enables opening saved routes, however the list was drawn', async ({
+  page,
+}) => {
+  await setup(page);
+  await fillPair(page);
+  await page.locator('#route-name').fill('Locked route');
+  await page.locator('#save-route').click();
+  await expect(page.locator('#saved-count')).toHaveText('(1)');
+  await page.locator('.saved-routes > summary').click();
+  const open = page.locator('#saved-list .library-open');
+  await expect(open).toBeEnabled();
+  await page.locator('#lock').click();
+  await expect(open).toBeDisabled();
+  // A language change while locked draws the list again, still disabled.
+  await page.locator('#language').selectOption('pt');
+  await expect(page.locator('#saved-list .library-open')).toBeDisabled();
+  await page.locator('#unlock').click();
+  await expect(page.locator('#saved-list .library-open')).toBeEnabled();
+});
+
 const saveTexts = {
   en: {
     saved: 'Route saved on this device.',
