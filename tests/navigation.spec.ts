@@ -1451,6 +1451,8 @@ test.describe('phone navigation', () => {
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-voice').check();
     await page.locator('#nav-notice-start').click();
+    // Moving only once navigation has started, as the English test does.
+    await expect.poll(said).toEqual([['Navegação iniciada.', 'pt-BR']]);
     await context.setGeolocation({ latitude: lat, longitude: lon(9) });
     await expect
       .poll(async () => (await said()).at(-1))

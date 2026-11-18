@@ -2,9 +2,10 @@
 // (vite.config.ts), the Worker's own answers (src/worker.ts) and the local
 // servers, so the browser tests run under the same policy.
 
-/** What the app loads, by kind; every service URL is configurable, so any
- * https host (and http on the local machine, as `src/core.ts` allows on an
- * https page) may be a server. */
+/** What the app loads, by kind. Services must be https on the published
+ * site, even on the user's own machine (an http source costs the policy its
+ * grade); `src/core.ts` still accepts local http addresses, which work when
+ * the app itself runs locally. */
 const CSP: Record<string, string[]> = {
   'default-src': ["'none'"],
   'script-src': ["'self'"],
@@ -15,15 +16,8 @@ const CSP: Record<string, string[]> = {
   'manifest-src': ["'self'"],
   // MapLibre's worker is a same-origin file; maplibre-contour's is a blob:.
   'worker-src': ["'self'", 'blob:'],
-  // `src/core.ts` also accepts http://[::1], but browsers reject IPv6
-  // sources in a policy: on the https site a local server is reached as
-  // localhost or 127.0.0.1.
-  'connect-src': [
-    "'self'",
-    'https:',
-    'http://localhost:*',
-    'http://127.0.0.1:*',
-  ],
+  // Any https service: every service URL is configurable.
+  'connect-src': ["'self'", 'https:'],
   'frame-ancestors': ["'none'"],
   'base-uri': ["'none'"],
   'form-action': ["'self'"],
@@ -47,9 +41,21 @@ const headers = (csp: string): Record<string, string> => ({
 
 export const SECURITY_HEADERS = headers(policy(CSP));
 
-/** The development server injects each stylesheet as a <style> element. */
+/**
+ * The development server injects each stylesheet as a <style> element, and
+ * running the app locally is how a service on this machine is used over http
+ * (browsers reject IPv6 sources, so `[::1]` is not listed).
+ */
 export const DEV_SECURITY_HEADERS = headers(
-  policy({ ...CSP, 'style-src': [...CSP['style-src']!, "'unsafe-inline'"] }),
+  policy({
+    ...CSP,
+    'style-src': [...CSP['style-src']!, "'unsafe-inline'"],
+    'connect-src': [
+      ...CSP['connect-src']!,
+      'http://localhost:*',
+      'http://127.0.0.1:*',
+    ],
+  }),
 );
 
 /** public/_headers with every security header added for all paths. */

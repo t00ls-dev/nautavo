@@ -29,14 +29,29 @@ describe('security headers', () => {
     );
   });
 
-  it('differ on the development server only by its injected styles', () => {
+  it('connect the published site only to https services', () => {
+    const policy = directives(SECURITY_HEADERS[CSP]!);
+    expect(policy['connect-src']).toEqual(["'self'", 'https:']);
+    expect(SECURITY_HEADERS[CSP]).not.toMatch(/\bhttp:/);
+  });
+
+  it('differ on the development server only by its styles and local servers', () => {
     const published = directives(SECURITY_HEADERS[CSP]!);
     const dev = directives(DEV_SECURITY_HEADERS[CSP]!);
     expect(dev['style-src']).toEqual([
       ...published['style-src'],
       "'unsafe-inline'",
     ]);
-    expect({ ...dev, 'style-src': published['style-src'] }).toEqual(published);
+    expect(dev['connect-src']).toEqual([
+      ...published['connect-src'],
+      'http://localhost:*',
+      'http://127.0.0.1:*',
+    ]);
+    expect({
+      ...dev,
+      'style-src': published['style-src'],
+      'connect-src': published['connect-src'],
+    }).toEqual(published);
     expect({ ...DEV_SECURITY_HEADERS, [CSP]: '' }).toEqual({
       ...SECURITY_HEADERS,
       [CSP]: '',
