@@ -10,9 +10,12 @@ import {
 } from './src/brand-assets.ts';
 import { precacheList, precacheUrl } from './src/precache.ts';
 import { REGION_PATH } from './src/region.ts';
+import { siteUrl, withSite } from './src/site.ts';
 import worker from './src/worker.ts';
 
 const SW_ENTRY = 'sw';
+// The published address (src/site.ts); SITE_URL sets it for another host.
+const SITE = siteUrl(process.env.SITE_URL);
 
 async function listFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true, recursive: true });
@@ -117,6 +120,36 @@ function brandAssets(): Plugin {
   };
 }
 
+/** Files in public/ that name the site's address. */
+const SITE_FILES = ['sitemap.xml', 'robots.txt'];
+
+/**
+ * Puts the site address (SITE_URL, src/site.ts) in the pages, served or
+ * built, and in the built sitemap and robots.txt, whose sources in public/
+ * are replaced in the output by these copies, as the manifest's are.
+ */
+function siteAddress(site: string): Plugin {
+  let root = '';
+  return {
+    name: 'site-address',
+    configResolved(config) {
+      root = config.root;
+    },
+    transformIndexHtml: (html) => withSite(html, site),
+    async generateBundle() {
+      for (const file of SITE_FILES)
+        this.emitFile({
+          type: 'asset',
+          fileName: file,
+          source: withSite(
+            await readFile(resolve(root, 'public', file), 'utf8'),
+            site,
+          ),
+        });
+    },
+  };
+}
+
 /**
  * Local servers behave like Cloudflare Workers (wrangler.jsonc) where the app
  * depends on it: /api/region is answered by the Worker's own code (204
@@ -160,7 +193,13 @@ function workersParity(): Plugin {
 
 export default defineConfig({
   base: '/',
-  plugins: [brandAssets(), serviceWorkerManifest(), workersParity()],
+  plugins: [
+    siteAddress(SITE),
+    brandAssets(),
+    serviceWorkerManifest(),
+    workersParity(),
+  ],
+  define: { 'import.meta.env.SITE_URL': JSON.stringify(SITE) },
   // The local preview (preview.nautavo.com) is never indexed; only prod is.
   preview: { headers: { 'X-Robots-Tag': 'noindex' } },
   build: {
