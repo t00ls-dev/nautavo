@@ -36,7 +36,7 @@ const KIND: Record<Surface, SurfaceKind> = {
 };
 
 /** Stretches shorter than this are left out of the list to check, meters. */
-export const MIN_SECTION = 200;
+const MIN_SECTION = 200;
 
 export interface SurfaceRange {
   from: number;

@@ -50,7 +50,7 @@ export function sharesFirst(): boolean {
   return matchMedia('(pointer: coarse)').matches && canShareFiles();
 }
 
-export function downloadFile(content: string, name: string, type: string) {
+function downloadFile(content: string, name: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement('a');
   a.href = url;

@@ -1,5 +1,3 @@
-import { readFileSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   detectLanguage,
@@ -11,6 +9,7 @@ import {
   translate,
   translateDocument,
 } from '../src/i18n';
+import { readRepoFile as read, sourceFiles } from './repo-files';
 afterEach(() => {
   setLanguage('en');
   document.body.replaceChildren();
@@ -107,8 +106,6 @@ describe('language preference', () => {
 });
 
 describe('translation coverage', () => {
-  const read = (path: string) =>
-    readFileSync(resolve(__dirname, '..', path), 'utf8');
   // Product names, units, language codes and licenses stay the same in Portuguese.
   const sameInBothLanguages = new Set([
     'nautavo',
@@ -178,12 +175,10 @@ describe('translation coverage', () => {
   });
 
   it('translates literal status and error messages shown to users', () => {
-    const files = readdirSync(resolve(__dirname, '../src')).filter(
-      (file) => file.endsWith('.ts') && file !== 'i18n.ts',
-    );
+    const files = sourceFiles().filter((file) => file !== 'src/i18n.ts');
     const messages = files.flatMap((file) =>
       Array.from(
-        read(`src/${file}`).matchAll(
+        read(file).matchAll(
           /\b(?:new Error|status|libraryMessage|message)\(\s*'((?:[^'\\]|\\.)+)'/g,
         ),
         (match) => match[1].replace(/\\'/g, "'"),

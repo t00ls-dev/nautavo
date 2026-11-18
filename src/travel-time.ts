@@ -34,7 +34,7 @@ export function snapSpeed(
     Math.abs(notch - value) < Math.abs(best - value) ? notch : best,
   );
 }
-export function defaultSpeedKmh(units: DistanceUnits = 'metric'): number {
+function defaultSpeedKmh(units: DistanceUnits = 'metric'): number {
   return units === 'imperial'
     ? speedToKmh(DEFAULT_SPEED_MPH, 'imperial')
     : DEFAULT_SPEED_KMH;

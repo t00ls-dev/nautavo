@@ -38,11 +38,11 @@ const HEADING_AHEAD = 40;
  * between both keeps a fix near the edge from flipping the state). Fixes
  * worse than `OFF_ROUTE_MAX_ACCURACY` leave the state as it is.
  */
-export const OFF_ROUTE_MIN = 50;
-export const OFF_ROUTE_ACCURACY = 1.5;
+const OFF_ROUTE_MIN = 50;
+const OFF_ROUTE_ACCURACY = 1.5;
 export const OFF_ROUTE_DELAY = 5000;
-export const ON_ROUTE_MIN = 25;
-export const OFF_ROUTE_MAX_ACCURACY = 100;
+const ON_ROUTE_MIN = 25;
+const OFF_ROUTE_MAX_ACCURACY = 100;
 /**
  * Recalculation (#31, rules in AGENTS.md): automatic once off the route for
  * `REROUTE_AFTER` and online, then at most once every `REROUTE_INTERVAL`
@@ -53,7 +53,7 @@ export const OFF_ROUTE_MAX_ACCURACY = 100;
 export const REROUTE_AFTER = 15000;
 export const REROUTE_INTERVAL = 60000;
 export const REROUTE_SESSION_CAP = 20;
-export const REROUTE_AHEAD = 300;
+const REROUTE_AHEAD = 300;
 /** A route point closer than this ahead of the progress counts as reached. */
 const STOP_REACHED = 30;
 /** Largest gap between an arrive maneuver and the stop it reaches, meters. */
@@ -378,9 +378,9 @@ export function navigationDurationLabel(seconds: number): string {
 }
 
 /** Faster than this (m/s, about 7 km/h) the traveler is moving. */
-export const MOVING_SPEED = 2;
+const MOVING_SPEED = 2;
 /** Slower than this (m/s) a moving traveler has stopped (hysteresis). */
-export const STOPPED_SPEED = 1;
+const STOPPED_SPEED = 1;
 
 /**
  * Moving or stopped, with hysteresis so GPS speed noise near the threshold

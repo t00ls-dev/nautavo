@@ -29,7 +29,7 @@ export const EDGE_ATTRIBUTES = [
 ] as const;
 
 /** Valhalla's surface vocabulary, best to worst. */
-export const SURFACES = [
+const SURFACES = [
   'paved_smooth',
   'paved',
   'paved_rough',
@@ -46,7 +46,7 @@ export interface AttributePiece {
   coords: Coord[];
   at: number[];
 }
-export interface EdgeAttributes {
+interface EdgeAttributes {
   /** Meters. */
   length: number;
   surface?: Surface;
