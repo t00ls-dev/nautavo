@@ -5,7 +5,6 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl';
 import { meters, type Coord, type Route, type State, type Step } from './core';
-import { decimalYear, magneticDeclination } from './declination';
 import { byId as $, text } from './dom';
 import { t } from './i18n';
 import { icon, iconControl } from './icons';
@@ -14,18 +13,11 @@ import { navigationRoute } from './routing';
 import { creditsDialog } from './map-credits';
 import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
 import { loadMapLibre } from './maplibre-loader';
-import {
-  maneuverIcon,
-  maneuverText,
-  shortRoadName,
-  stepRoad,
-} from './maneuvers';
+import { maneuverText, stepRoad } from './maneuvers';
 import { navigationStyle } from './navigation-style';
 import {
-  compassHeading,
   createNavigationTracker,
   createRerouteSchedule,
-  upcomingItems,
   spliceRoute,
   stopAt,
   isMoving,
@@ -35,6 +27,19 @@ import {
   type NavigationManeuver,
   type NavigationReadout,
 } from './navigation';
+import { navigationCompass } from './navigation-compass';
+import {
+  addNavigationLayers,
+  circleAround,
+  lines,
+  rejoinLine,
+} from './navigation-layers';
+import { maneuverGlyph, upcomingList } from './navigation-list';
+import {
+  navigationSwitches,
+  noticeWanted,
+  rememberNotice,
+} from './navigation-settings';
 import { travelTimeSeconds } from './travel-time';
 import { departureOf } from './departure';
 import {
@@ -59,7 +64,6 @@ import {
 } from './navigation-replay';
 import { distanceLabel } from './units';
 import { distanceUnits } from './unit-preferences';
-import { PREFERENCE, readPreference, writePreference } from './preferences';
 
 /**
  * Guided navigation screen (#31, first delivery): follows the route on screen
@@ -71,8 +75,6 @@ import { PREFERENCE, readPreference, writePreference } from './preferences';
  * them the route and position still draw over a neutral background.
  */
 
-/** How long the "Automatic recalculation on" chip stays at start, ms. */
-const AUTO_REROUTE_NOTICE = 10000;
 /**
  * Following zoom, live and in a replay: far enough out to show a good stretch
  * of the road ahead (vector tiles are 512 px, so 15 is raster zoom 16).
@@ -91,30 +93,6 @@ const SUN_NOTICE_MINUTES = 60;
 const REJOIN_MARGIN = 40;
 /** Off the route, the map never zooms out farther than this. */
 const MIN_REJOIN_ZOOM = 12;
-type Line = Coord[][];
-const lines = (segments: Line) => ({
-  type: 'Feature' as const,
-  properties: {},
-  geometry: {
-    type: 'MultiLineString' as const,
-    coordinates: segments.map((part) => part.map(([lat, lon]) => [lon, lat])),
-  },
-});
-/** A circle of `radius` meters around `center`, for the accuracy ring. */
-function circleAround(center: Coord, radius: number) {
-  const [lat, lon] = center,
-    dLat = radius / 111320,
-    dLon = radius / (111320 * Math.cos((lat * Math.PI) / 180) || 1);
-  const ring = Array.from({ length: 49 }, (_, i) => {
-    const a = (i / 48) * 2 * Math.PI;
-    return [lon + dLon * Math.cos(a), lat + dLat * Math.sin(a)];
-  });
-  return {
-    type: 'Feature' as const,
-    properties: {},
-    geometry: { type: 'Polygon' as const, coordinates: [ring] },
-  };
-}
 async function loadStyle(): Promise<StyleSpecification | null> {
   const style = await fetchStyle(STYLE_URL);
   return style && navigationStyle(style);
@@ -127,48 +105,14 @@ const PIVOT = 0.7;
  * zoomed it there. Anything but following at the default zoom offers Resume.
  */
 type MapView = 'follow' | 'overview' | 'free';
-/** A drag on the upcoming list's handle longer than this (px) opens or closes it. */
-const LIST_DRAG = 30;
 /** Off the route by more than this (meters), the device heading is used. */
 const OFF_ROUTE_HEADING = 50;
-/** A compass reading older than this (ms) is not used. */
-const COMPASS_FRESH = 2000;
-/** Share of each compass reading taken in, to smooth its jitter. */
-const COMPASS_SMOOTHING = 0.25;
-/** iOS reports compass accuracy in degrees; worse than this asks to calibrate. */
-const COMPASS_ACCURACY = 20;
-
-/** iOS asks before giving orientation; elsewhere this is undefined. */
-type OrientationPermission = {
-  requestPermission?: () => Promise<'granted' | 'denied'>;
-};
-
-// Device preferences, 'off' after "Don't show this notice again" or when the
-// traveler turns automatic recalculation off; absent means on.
-const noticeWanted = () =>
-  readPreference(PREFERENCE.navigationNotice) !== 'off';
-const voiceWanted = () => readPreference(PREFERENCE.navigationVoice) === 'on';
-const rememberVoice = (on: boolean) =>
-  writePreference(PREFERENCE.navigationVoice, on ? 'on' : null);
-const autoRerouteWanted = () =>
-  readPreference(PREFERENCE.autoReroute) !== 'off';
-const rememberAutoReroute = (on: boolean) =>
-  writePreference(PREFERENCE.autoReroute, on ? null : 'off');
-const rememberNotice = (show: boolean) =>
-  writePreference(PREFERENCE.navigationNotice, show ? null : 'off');
-
 /** Road text shown for a maneuver: its name, its reference or the instruction. */
 function roadText(step: Step): string {
   const road = stepRoad(step);
   const roundabout = step.exit ? maneuverText(step) : null;
   if (roundabout && road) return `${t(roundabout)} · ${road}`;
   return road || t(maneuverText(step) ?? 'Continue');
-}
-function maneuverGlyph(step: Step | null): SVGSVGElement {
-  const arrow = step ? maneuverIcon(step) : null;
-  const svg = icon(arrow?.name ?? (step ? 'maneuver-straight' : 'pin'));
-  if (arrow?.mirror) svg.classList.add('mirror');
-  return svg;
 }
 
 export function setupNavigation(deps: {
@@ -221,74 +165,9 @@ export function setupNavigation(deps: {
   credits.setCredits(vectorCredits);
   setting.checked = noticeWanted();
   setting.onchange = () => rememberNotice(setting.checked);
-  // Automatic recalculation, on unless the traveler turns it off: in the
-  // start notice, in Settings or from the chip shown at start when the notice
-  // is hidden, so travelers on a fixed course can follow it exactly.
-  const autoNotice = $<HTMLInputElement>('nav-notice-reroute'),
-    autoSetting = $<HTMLInputElement>('auto-reroute-setting'),
-    autoChip = $('nav-auto-reroute');
-  let autoReroute = autoRerouteWanted(),
-    autoChipTimer = 0;
-  const setAutoReroute = (on: boolean) => {
-    autoReroute = on;
-    rememberAutoReroute(on);
-    autoNotice.checked = autoSetting.checked = on;
-    if (!on) hideAutoChip();
-  };
-  function hideAutoChip() {
-    clearTimeout(autoChipTimer);
-    autoChip.hidden = true;
-  }
-  autoNotice.checked = autoSetting.checked = autoReroute;
-  autoNotice.onchange = () => setAutoReroute(autoNotice.checked);
-  autoSetting.onchange = () => setAutoReroute(autoSetting.checked);
-  /** Speaks English source text in the interface language, if voice is on. */
-  function say(text: string | null) {
-    if (!text || !voiceOn || !('speechSynthesis' in window)) return;
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(t(text));
-    utterance.lang = deps.locale();
-    speechSynthesis.speak(utterance);
-  }
-  function silence() {
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
-  }
-  // Spoken directions (#190), off by default: the start notice, Settings and
-  // a button on the navigation screen turn them on or off.
-  const voiceNotice = $<HTMLInputElement>('nav-notice-voice'),
-    voiceSetting = $<HTMLInputElement>('voice-setting'),
-    voiceButton = $<HTMLButtonElement>('nav-voice');
-  let voiceOn = voiceWanted(),
-    voice = createVoiceSchedule();
-  const showVoice = () => {
-    voiceNotice.checked = voiceSetting.checked = voiceOn;
-    iconControl(
-      voiceButton,
-      voiceOn ? 'volume' : 'volume-off',
-      voiceOn ? 'Voice on' : 'Voice off',
-      true,
-    );
-    voiceButton.setAttribute('aria-pressed', String(voiceOn));
-  };
-  const setVoice = (on: boolean) => {
-    voiceOn = on;
-    rememberVoice(on);
-    if (!on) silence();
-    showVoice();
-  };
-  showVoice();
-  voiceNotice.onchange = () => setVoice(voiceNotice.checked);
-  voiceSetting.onchange = () => setVoice(voiceSetting.checked);
-  voiceButton.onclick = () => {
-    setVoice(!voiceOn);
-    // A tap lets iOS speak; it also says the switch worked.
-    if (voiceOn) say('Voice on');
-  };
-  $('nav-auto-reroute-off').onclick = () => {
-    setAutoReroute(false);
-    screen.focus({ preventScroll: true });
-  };
-  autoChip.prepend(icon('route'));
+  const switches = navigationSwitches({ locale: deps.locale, screen });
+  const { say, silence } = switches;
+  let voice = createVoiceSchedule();
 
   let route: Route | null = null,
     tracker: ReturnType<typeof createNavigationTracker> | null = null,
@@ -315,15 +194,8 @@ export function setupNavigation(deps: {
     heading = 0,
     /** Direction of travel: the route ahead, or the GPS course off the route. */
     travelHeading = 0,
-    /** Smoothed compass heading and when it was last read. */
-    compass: number | null = null,
-    compassAt = 0,
-    /** Degrees from magnetic to true north here (east positive). */
-    declination = 0,
-    compassPoor = false,
     moving = false,
     previous: { coord: Coord; time: number } | null = null,
-    frame = 0,
     last: { coord: Coord; accuracy: number } | null = null,
     readout: NavigationReadout | null = null,
     announced: NavigationManeuver | 'off' | null | undefined,
@@ -440,8 +312,8 @@ export function setupNavigation(deps: {
    * while moving: mounts and car metal often make it wrong.
    */
   function chooseHeading() {
-    const fresh = compass !== null && Date.now() - compassAt < COMPASS_FRESH;
-    const target = !moving && fresh ? compass! : travelHeading;
+    const reading = deviceCompass.heading();
+    const target = !moving && reading !== null ? reading : travelHeading;
     // A playing replay crosses many small bends a second; turning part of the
     // way for each meter travelled keeps the map from shaking. Live fixes,
     // paused or dragged replays turn at once.
@@ -457,8 +329,7 @@ export function setupNavigation(deps: {
   }
   /** Asks to calibrate only while the compass is what turns the map. */
   function calibrationNotice() {
-    const fresh = compass !== null && Date.now() - compassAt < COMPASS_FRESH;
-    $('nav-compass').hidden = !(compassPoor && fresh && !moving);
+    $('nav-compass').hidden = !(deviceCompass.poor() && !moving);
   }
   /** Turns the map (while following) and the position arrow. */
   function applyHeading() {
@@ -467,71 +338,15 @@ export function setupNavigation(deps: {
     if (view === 'follow') setRotor(northUp ? 0 : -angle);
     else turnArrow();
   }
-  /** Magnetic declination at a place now, from the local WMM2025 model. */
-  function declinationAt(coord: Coord | undefined) {
-    if (coord)
-      declination = magneticDeclination(
-        coord[0],
-        coord[1],
-        decimalYear(new Date()),
-      );
-  }
-  function onOrientation(event: DeviceOrientationEvent) {
-    const ios = event as DeviceOrientationEvent & {
-      webkitCompassHeading?: number;
-      webkitCompassAccuracy?: number;
-    };
-    const magnetic = compassHeading(
-      {
-        alpha: event.alpha,
-        absolute: event.absolute || event.type === 'deviceorientationabsolute',
-        webkitCompassHeading: ios.webkitCompassHeading,
-      },
-      window.screen.orientation?.angle ?? 0,
-    );
-    if (magnetic === null) return;
-    // Compasses point to magnetic north; the map's north is true north.
-    const reading = (magnetic + declination + 360) % 360;
-    const accuracy = ios.webkitCompassAccuracy;
-    compassPoor =
-      typeof accuracy === 'number' &&
-      (accuracy < 0 || accuracy > COMPASS_ACCURACY);
-    compass =
-      compass === null
-        ? reading
-        : turnToward(compass, reading, COMPASS_SMOOTHING);
-    compassAt = Date.now();
-    if (moving || frame) return;
-    frame = requestAnimationFrame(() => {
-      frame = 0;
+  const deviceCompass = navigationCompass({
+    onReading() {
       chooseHeading();
       applyHeading();
       calibrationNotice();
-    });
-  }
-  /**
-   * Android Chrome gives a north-referenced reading only as
-   * `deviceorientationabsolute`; iOS adds its compass heading to
-   * `deviceorientation`. Both are heard; readings without north are ignored.
-   */
-  const orientationEvents = ['deviceorientationabsolute', 'deviceorientation'];
-  /** Called from the start tap: iOS only asks for orientation on a gesture. */
-  function watchCompass() {
-    const listen = () =>
-      orientationEvents.forEach((name) =>
-        window.addEventListener(name, onOrientation as EventListener),
-      );
-    const ask = (
-      window.DeviceOrientationEvent as unknown as OrientationPermission
-    )?.requestPermission;
-    if (typeof ask === 'function')
-      ask()
-        .then((answer) => {
-          if (answer === 'granted' && screen.open) listen();
-        })
-        .catch(() => undefined);
-    else listen();
-  }
+    },
+    idle: () => !moving,
+    active: () => screen.open,
+  });
 
   /** The traveler sits at `pivotRatio` of the height through the map's padding. */
   function layout() {
@@ -606,87 +421,13 @@ export function setupNavigation(deps: {
       if (m.isStyleLoaded()) resolve();
       else m.once('load', () => resolve());
     });
-    m.addSource('travelled', { type: 'geojson', data: lines([]) });
-    m.addSource('route', { type: 'geojson', data: lines([]) });
-    m.addSource('accuracy', { type: 'geojson', data: lines([]) });
-    m.addSource('rejoin', { type: 'geojson', data: lines([]) });
-    const line = { 'line-cap': 'round', 'line-join': 'round' } as const;
-    m.addLayer({
-      id: 'nav-accuracy',
-      type: 'fill',
-      source: 'accuracy',
-      paint: {
-        'fill-color': '#0b72c6',
-        'fill-opacity': 0.18,
-        'fill-outline-color': '#0b72c6',
-      },
-    });
-    m.addLayer({
-      id: 'nav-route',
-      type: 'line',
-      source: 'route',
-      layout: line,
-      paint: { 'line-color': '#12796e', 'line-width': 8 },
-    });
-    m.addLayer({
-      id: 'nav-travelled',
-      type: 'line',
-      source: 'travelled',
-      layout: line,
-      paint: { 'line-color': '#8795a1', 'line-width': 8 },
-    });
-    // Off the route: a dashed straight line to the rejoin point, and a ring
-    // there. Dashes say it is not a road.
-    m.addLayer({
-      id: 'nav-rejoin',
-      type: 'line',
-      source: 'rejoin',
-      filter: ['==', ['geometry-type'], 'LineString'],
-      layout: { 'line-cap': 'round' },
-      paint: {
-        'line-color': '#74420b',
-        'line-width': 4,
-        'line-dasharray': [0.5, 2],
-      },
-    });
-    m.addLayer({
-      id: 'nav-rejoin-point',
-      type: 'circle',
-      source: 'rejoin',
-      filter: ['==', ['geometry-type'], 'Point'],
-      paint: {
-        'circle-radius': 9,
-        'circle-color': '#ffffff',
-        'circle-stroke-color': '#74420b',
-        'circle-stroke-width': 4,
-      },
-    });
+    addNavigationLayers(m);
   }
   /** The dashed way back from the position to the rejoin point, or nothing. */
   function drawRejoin() {
     const rejoin = readout?.rejoin;
-    const lonLat = (c: Coord) => [c[1], c[0]];
     void source('rejoin')?.setData(
-      rejoin && last
-        ? {
-            type: 'FeatureCollection',
-            features: [
-              {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: [lonLat(last.coord), lonLat(rejoin.coord)],
-                },
-              },
-              {
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'Point', coordinates: lonLat(rejoin.coord) },
-              },
-            ],
-          }
-        : lines([]),
+      rejoin && last ? rejoinLine(last.coord, rejoin.coord) : lines([]),
     );
   }
   /** Without tiles the route still draws over the neutral background. */
@@ -814,7 +555,7 @@ export function setupNavigation(deps: {
         voice.sunset(sunsetIn),
     );
     renderBar(r);
-    renderList();
+    upcoming.render();
     renderSpeed();
     renderReplayClock();
   }
@@ -1031,7 +772,7 @@ export function setupNavigation(deps: {
       coord: [latitude, longitude],
       accuracy: Math.max(0, accuracy || 0),
     };
-    declinationAt(last.coord);
+    deviceCompass.placeAt(last.coord);
     // A replay knows its distance along the route; live fixes are located.
     readout = tracker.update(last, replaying ? replayDistance : undefined);
     // The device's speed, or one measured between fixes when it gives none.
@@ -1088,15 +829,7 @@ export function setupNavigation(deps: {
     place();
     reroute(false);
   }
-  /**
-   * The upcoming list (#137): the bottom bar's handle opens a panel over the
-   * map with the turns and route points ahead, from the route and progress
-   * already in memory. Opening it changes nothing in navigation.
-   */
-  const listToggle = $<HTMLButtonElement>('nav-list-toggle'),
-    list = $<HTMLOListElement>('nav-list');
-  let listOpen = false,
-    stopPlaces: { at: number | null; name: string }[] = [];
+  let stopPlaces: { at: number | null; name: string }[] = [];
   /** The intermediate stop the next maneuver arrives at, by name. */
   function nextStop(r: NavigationReadout | null): string | null {
     const next = r?.next;
@@ -1118,94 +851,19 @@ export function setupNavigation(deps: {
         p.name || (i === points.length - 1 ? 'Destination' : `Stop ${i + 1}`),
     }));
   }
-  function setList(open: boolean) {
-    listOpen = open;
-    list.hidden = !open;
-    listToggle.setAttribute('aria-expanded', String(open));
-    if (open) {
-      renderList();
-      list.scrollTop = 0;
-    }
-  }
-  function renderList() {
-    if (!listOpen || !tracker) return;
-    const progress = readout?.progress ?? plannedProgress;
-    const locale = deps.locale();
-    const rows = upcomingItems(tracker.maneuvers, stopPlaces, progress).map(
-      (item) => {
-        const li = document.createElement('li');
-        const ahead = navigationDistanceLabel(
-          item.at - progress,
-          units(),
-          locale,
-        );
-        let label: string, full: string, glyph: SVGSVGElement;
-        if (item.kind === 'maneuver') {
-          const instruction = t(maneuverText(item.step) ?? 'Continue');
-          const road = stepRoad(item.step);
-          label = road
-            ? `${instruction} · ${shortRoadName(road)}`
-            : instruction;
-          full = road ? `${instruction} · ${road}` : instruction;
-          glyph = maneuverGlyph(item.step);
-        } else {
-          const seconds = travelTimeSeconds(item.at - progress, arrivalSpeed());
-          const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
-            locale,
-            { hour: '2-digit', minute: '2-digit' },
-          );
-          label = full = `${t(item.name)} · ${clock}`;
-          glyph = icon('pin');
-          li.classList.add('nav-list-stop');
-        }
-        glyph.classList.add('nav-list-icon');
-        li.title = `${full} · ${ahead}`;
-        li.append(
-          glyph,
-          text('span', label, 'nav-list-text'),
-          text('span', ahead, 'nav-list-distance'),
-        );
-        return li;
+  const upcoming = upcomingList({
+    screen,
+    toggle: $<HTMLButtonElement>('nav-list-toggle'),
+    list: $<HTMLOListElement>('nav-list'),
+    ahead: () =>
+      tracker && {
+        maneuvers: tracker.maneuvers,
+        stops: stopPlaces,
+        progress: readout?.progress ?? plannedProgress,
       },
-    );
-    list.replaceChildren(...rows);
-  }
-  // The bottom bar is a sheet: its handle, and the whole bar around it, open
-  // the list; End, the replay controls and the list itself keep their own
-  // taps. A tap toggles; a drag up opens and a drag down closes.
-  const bar = listToggle.closest<HTMLElement>('.nav-bar')!;
-  const ownTap = (target: EventTarget | null) =>
-    target instanceof Element &&
-    !!target.closest(
-      'button:not(#nav-list-toggle), input, select, a, #nav-list',
-    );
-  let dragFrom: number | null = null,
-    dragged = false;
-  bar.addEventListener('pointerdown', (e) => {
-    if (ownTap(e.target)) return;
-    dragFrom = e.clientY;
-    dragged = false;
-    // The release counts even when the finger has left the bar.
-    bar.setPointerCapture(e.pointerId);
-  });
-  bar.addEventListener('pointerup', (e) => {
-    if (dragFrom === null) return;
-    const dy = e.clientY - dragFrom;
-    dragFrom = null;
-    if (Math.abs(dy) < LIST_DRAG) return;
-    dragged = true;
-    setList(dy < 0);
-  });
-  bar.addEventListener('click', (e) => {
-    if (ownTap(e.target)) return;
-    if (dragged) dragged = false;
-    else setList(!listOpen);
-  });
-  // Escape closes the list first, and only then navigation.
-  screen.addEventListener('cancel', (e) => {
-    if (!listOpen) return;
-    e.preventDefault();
-    setList(false);
+    arrivalSpeed,
+    now,
+    locale: deps.locale,
   });
   /** Route points after the start, so neither hint nor reroute skips one. */
   function stops(): Coord[] {
@@ -1229,7 +887,7 @@ export function setupNavigation(deps: {
     if (
       manual
         ? !schedule.manual(now, online)
-        : !autoReroute || !schedule.auto(now, r.offSince, online)
+        : !switches.autoReroute() || !schedule.auto(now, r.offSince, online)
     )
       return;
     const target = tracker.rerouteTarget(r.rejoin);
@@ -1356,7 +1014,7 @@ export function setupNavigation(deps: {
     sunShown = '';
     sunsetIn = null;
     session++;
-    hideAutoChip();
+    switches.hideAutoChip();
     voice = createVoiceSchedule();
     // Start and Continue are taps: iOS lets speech begin only from one.
     say('Navigation started.');
@@ -1366,17 +1024,14 @@ export function setupNavigation(deps: {
     screen.classList.toggle('replaying', replay);
     $('nav-replay').hidden = !replay;
     $('nav-replay-chip').hidden = !replay;
-    if (remind && autoReroute && !replay) {
-      autoChip.hidden = false;
-      autoChipTimer = window.setTimeout(hideAutoChip, AUTO_REROUTE_NOTICE);
-    }
+    if (remind && !replay) switches.remindAutoReroute();
     schedule = createRerouteSchedule();
     rerouting = 'idle';
     course = null;
     tracker = createNavigationTracker(route, stops(), progress);
     placeStops();
-    setList(false);
-    declinationAt(route.segments[0]?.[0]);
+    upcoming.set(false);
+    deviceCompass.placeAt(route.segments[0]?.[0]);
     last = null;
     readout = null;
     announced = undefined;
@@ -1387,8 +1042,7 @@ export function setupNavigation(deps: {
     setRotor(0);
     heading = 0;
     travelHeading = 0;
-    compass = null;
-    compassPoor = false;
+    deviceCompass.forget();
     moving = false;
     previous = null;
     tileErrors = 0;
@@ -1425,7 +1079,7 @@ export function setupNavigation(deps: {
     if (replay) replayAt(replayDistance);
     else {
       startWatching();
-      watchCompass();
+      deviceCompass.watch();
       void keepScreenOn();
     }
     document.addEventListener('visibilitychange', onVisibility);
@@ -1452,19 +1106,13 @@ export function setupNavigation(deps: {
     }
     clearTimeout(reroutedTimer);
     $('nav-rerouted').hidden = true;
-    hideAutoChip();
+    switches.hideAutoChip();
     $('nav-sun').hidden = true;
     document.documentElement.classList.remove('navigating');
     stopWatching();
     // The planner's location watch resumes only after this one has stopped.
     document.dispatchEvent(new Event('navigationchange'));
-    orientationEvents.forEach((name) =>
-      window.removeEventListener(name, onOrientation as EventListener),
-    );
-    cancelAnimationFrame(frame);
-    frame = 0;
-    compass = null;
-    compassPoor = false;
+    deviceCompass.stop();
     const sentinel = lock;
     lock = null;
     void sentinel?.release().catch(() => undefined);
@@ -1507,7 +1155,7 @@ export function setupNavigation(deps: {
     }
     if (noticeWanted()) {
       hide.checked = false;
-      autoNotice.checked = autoReroute;
+      switches.syncNotice();
       notice.showModal();
     } else start(true);
   };

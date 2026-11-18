@@ -1,0 +1,146 @@
+import type { Step } from './core';
+import { text } from './dom';
+import { t } from './i18n';
+import { icon } from './icons';
+import {
+  maneuverIcon,
+  maneuverText,
+  shortRoadName,
+  stepRoad,
+} from './maneuvers';
+import {
+  navigationDistanceLabel,
+  upcomingItems,
+  type NavigationManeuver,
+} from './navigation';
+import { travelTimeSeconds } from './travel-time';
+import { distanceUnits } from './unit-preferences';
+
+/**
+ * The upcoming list (#137): the bottom bar's handle opens a panel over the
+ * map with the turns and route points ahead, from the route and progress
+ * already in memory. Opening it changes nothing in navigation.
+ */
+
+/** A drag on the upcoming list's handle longer than this (px) opens or closes it. */
+const LIST_DRAG = 30;
+
+/** A maneuver's arrow, or a pin for the destination. */
+export function maneuverGlyph(step: Step | null): SVGSVGElement {
+  const arrow = step ? maneuverIcon(step) : null;
+  const svg = icon(arrow?.name ?? (step ? 'maneuver-straight' : 'pin'));
+  if (arrow?.mirror) svg.classList.add('mirror');
+  return svg;
+}
+
+export function upcomingList(deps: {
+  screen: HTMLDialogElement;
+  toggle: HTMLButtonElement;
+  list: HTMLOListElement;
+  /** What lies ahead, or null when nothing is being followed. */
+  ahead: () => {
+    maneuvers: NavigationManeuver[];
+    stops: { at: number | null; name: string }[];
+    progress: number;
+  } | null;
+  arrivalSpeed: () => number;
+  /** The traveler's clock, simulated while replaying. */
+  now: () => number;
+  locale: () => string;
+}) {
+  const { screen, toggle, list } = deps;
+  let open = false;
+  function set(next: boolean) {
+    open = next;
+    list.hidden = !next;
+    toggle.setAttribute('aria-expanded', String(next));
+    if (next) {
+      render();
+      list.scrollTop = 0;
+    }
+  }
+  function render() {
+    const ahead = open ? deps.ahead() : null;
+    if (!ahead) return;
+    const { progress } = ahead;
+    const locale = deps.locale();
+    const rows = upcomingItems(ahead.maneuvers, ahead.stops, progress).map(
+      (item) => {
+        const li = document.createElement('li');
+        const distance = navigationDistanceLabel(
+          item.at - progress,
+          distanceUnits(),
+          locale,
+        );
+        let label: string, full: string, glyph: SVGSVGElement;
+        if (item.kind === 'maneuver') {
+          const instruction = t(maneuverText(item.step) ?? 'Continue');
+          const road = stepRoad(item.step);
+          label = road
+            ? `${instruction} · ${shortRoadName(road)}`
+            : instruction;
+          full = road ? `${instruction} · ${road}` : instruction;
+          glyph = maneuverGlyph(item.step);
+        } else {
+          const seconds = travelTimeSeconds(
+            item.at - progress,
+            deps.arrivalSpeed(),
+          );
+          const clock = new Date(
+            deps.now() + seconds * 1000,
+          ).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+          label = full = `${t(item.name)} · ${clock}`;
+          glyph = icon('pin');
+          li.classList.add('nav-list-stop');
+        }
+        glyph.classList.add('nav-list-icon');
+        li.title = `${full} · ${distance}`;
+        li.append(
+          glyph,
+          text('span', label, 'nav-list-text'),
+          text('span', distance, 'nav-list-distance'),
+        );
+        return li;
+      },
+    );
+    list.replaceChildren(...rows);
+  }
+  // The bottom bar is a sheet: its handle, and the whole bar around it, open
+  // the list; End, the replay controls and the list itself keep their own
+  // taps. A tap toggles; a drag up opens and a drag down closes.
+  const bar = toggle.closest<HTMLElement>('.nav-bar')!;
+  const ownTap = (target: EventTarget | null) =>
+    target instanceof Element &&
+    !!target.closest(
+      'button:not(#nav-list-toggle), input, select, a, #nav-list',
+    );
+  let dragFrom: number | null = null,
+    dragged = false;
+  bar.addEventListener('pointerdown', (e) => {
+    if (ownTap(e.target)) return;
+    dragFrom = e.clientY;
+    dragged = false;
+    // The release counts even when the finger has left the bar.
+    bar.setPointerCapture(e.pointerId);
+  });
+  bar.addEventListener('pointerup', (e) => {
+    if (dragFrom === null) return;
+    const dy = e.clientY - dragFrom;
+    dragFrom = null;
+    if (Math.abs(dy) < LIST_DRAG) return;
+    dragged = true;
+    set(dy < 0);
+  });
+  bar.addEventListener('click', (e) => {
+    if (ownTap(e.target)) return;
+    if (dragged) dragged = false;
+    else set(!open);
+  });
+  // Escape closes the list first, and only then navigation.
+  screen.addEventListener('cancel', (e) => {
+    if (!open) return;
+    e.preventDefault();
+    set(false);
+  });
+  return { set, render };
+}
