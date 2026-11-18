@@ -59,6 +59,7 @@ npm run preview   # preview the production build
 npx playwright install chromium   # once, for browser tests
 npm run lint                      # ESLint
 npm run format:check              # Prettier
+npm run knip                      # unused files, exports and dependencies
 npm test                          # Vitest unit tests (public services mocked)
 npm run test:browser              # Playwright browser workflows
 npm run build                     # TypeScript check and production build
