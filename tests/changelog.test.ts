@@ -75,7 +75,7 @@ describe("changelog and What's new page", () => {
       expect(release.name).toMatch(/^\d+\.\d+\.\d+$/);
       expect(release.date, release.name).toBeDefined();
       expect(markdown).toContain(
-        `[${release.name}]: https://github.com/t00ls-dev/route-gpx/releases/tag/v${release.name}`,
+        `[${release.name}]: https://github.com/t00ls-dev/nautavo/releases/tag/v${release.name}`,
       );
     }
     const order = (r: Release) =>

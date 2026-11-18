@@ -10,7 +10,7 @@ These limits are fixed. Proposals that break them will not be accepted:
 - It relies on public services (OSRM, Valhalla, Nominatim, Photon, Open-Meteo and the map tile providers). Changes must respect their usage policies and the existing request spacing, debouncing and caching. Do not add bulk downloads, prefetching or retry loops.
 - Routing currently uses a car profile only.
 
-For large or architectural changes, [open an issue](https://github.com/t00ls-dev/route-gpx/issues/new/choose) first so the approach can be discussed before you invest time in it.
+For large or architectural changes, [open an issue](https://github.com/t00ls-dev/nautavo/issues/new/choose) first so the approach can be discussed before you invest time in it.
 
 ## Setup and validation
 

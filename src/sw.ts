@@ -27,7 +27,7 @@ declare const self: {
 };
 
 // Replaced at build time (vite.config.ts) by this build's version and URLs.
-const BUILD = '__ROUTE_GPX_BUILD__';
+const BUILD = '__NAUTAVO_BUILD__';
 const { version, urls } = JSON.parse(BUILD) as {
   version: string;
   urls: string[];

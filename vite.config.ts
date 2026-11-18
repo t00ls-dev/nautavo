@@ -30,7 +30,7 @@ async function listFiles(dir: string): Promise<string[]> {
 function serviceWorkerManifest(): Plugin {
   let outDir = 'dist';
   return {
-    name: 'route-gpx-service-worker-manifest',
+    name: 'service-worker-manifest',
     apply: 'build',
     configResolved(config) {
       outDir = resolve(config.root, config.build.outDir);
@@ -47,7 +47,7 @@ function serviceWorkerManifest(): Plugin {
       const urls = files.map(precacheUrl);
       const path = join(outDir, 'sw.js');
       const source = await readFile(path, 'utf8');
-      const token = /(["'`])__ROUTE_GPX_BUILD__\1/;
+      const token = /(["'`])__NAUTAVO_BUILD__\1/;
       if (!token.test(source))
         throw new Error('sw.js has no build manifest placeholder');
       await writeFile(

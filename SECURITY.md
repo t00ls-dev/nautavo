@@ -6,7 +6,7 @@ Only the current `main` branch, published at <https://nautavo.com/>, is supporte
 
 ## Reporting a vulnerability
 
-Report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/t00ls-dev/route-gpx/security/advisories/new). Do not open public issues for security problems.
+Report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/t00ls-dev/nautavo/security/advisories/new). Do not open public issues for security problems.
 
 Include the affected page or file, steps to reproduce and the impact you expect. Avoid sharing real personal locations; use example routes where possible.
 

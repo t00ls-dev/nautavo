@@ -108,22 +108,22 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 ### Added
 
 - Route planning with start, destination and stops from addresses, coordinates, a map click or long press, or your location, with place suggestions while typing and search with Enter.
-- Route editing: move and reorder points, reverse the route, add a return trip, undo changes and lock the route against accidental edits. ([#57](https://github.com/t00ls-dev/route-gpx/pull/57))
+- Route editing: move and reorder points, reverse the route, add a return trip, undo changes and lock the route against accidental edits. ([#57](https://github.com/t00ls-dev/nautavo/pull/57))
 - Routing along real roads with OSRM and a Valhalla fallback, with a Prefer main roads option.
-- A route summary with distance, time and arrival from your own average speed, kept on this device, in kilometers or miles. ([#60](https://github.com/t00ls-dev/route-gpx/pull/60), [#67](https://github.com/t00ls-dev/route-gpx/pull/67))
-- An automatic departure at the next half hour, or a departure you choose. ([#78](https://github.com/t00ls-dev/route-gpx/pull/78))
-- An itinerary with turn directions, also for imported tracks and earlier saved routes, requested only when it is opened. ([#77](https://github.com/t00ls-dev/route-gpx/pull/77), [#81](https://github.com/t00ls-dev/route-gpx/pull/81))
-- Weather along the route for the departure: conditions, wind relative to the route, UV index and risk alerts, on routes with any number of points. ([#68](https://github.com/t00ls-dev/route-gpx/pull/68), [#76](https://github.com/t00ls-dev/route-gpx/pull/76))
-- An elevation profile with gain, loss and the climbs along the route. ([#72](https://github.com/t00ls-dev/route-gpx/pull/72), [#79](https://github.com/t00ls-dev/route-gpx/pull/79))
-- Daylight along the route: sunrise, sunset and the distance travelled in the dark, also shown as a route coloring. ([#59](https://github.com/t00ls-dev/route-gpx/pull/59), [#70](https://github.com/t00ls-dev/route-gpx/pull/70))
-- Travel the route: a cursor that plays along the track with distance and passage time. ([#69](https://github.com/t00ls-dev/route-gpx/pull/69))
-- Map layers: standard, topographic and satellite maps, with direction arrows, out-and-back lines and the halfway point on the route. ([#71](https://github.com/t00ls-dev/route-gpx/pull/71))
-- GPX, FIT and TCX import; editing a point of an imported track recalculates only the changed legs. ([#17](https://github.com/t00ls-dev/route-gpx/pull/17), [#75](https://github.com/t00ls-dev/route-gpx/pull/75))
+- A route summary with distance, time and arrival from your own average speed, kept on this device, in kilometers or miles. ([#60](https://github.com/t00ls-dev/nautavo/pull/60), [#67](https://github.com/t00ls-dev/nautavo/pull/67))
+- An automatic departure at the next half hour, or a departure you choose. ([#78](https://github.com/t00ls-dev/nautavo/pull/78))
+- An itinerary with turn directions, also for imported tracks and earlier saved routes, requested only when it is opened. ([#77](https://github.com/t00ls-dev/nautavo/pull/77), [#81](https://github.com/t00ls-dev/nautavo/pull/81))
+- Weather along the route for the departure: conditions, wind relative to the route, UV index and risk alerts, on routes with any number of points. ([#68](https://github.com/t00ls-dev/nautavo/pull/68), [#76](https://github.com/t00ls-dev/nautavo/pull/76))
+- An elevation profile with gain, loss and the climbs along the route. ([#72](https://github.com/t00ls-dev/nautavo/pull/72), [#79](https://github.com/t00ls-dev/nautavo/pull/79))
+- Daylight along the route: sunrise, sunset and the distance travelled in the dark, also shown as a route coloring. ([#59](https://github.com/t00ls-dev/nautavo/pull/59), [#70](https://github.com/t00ls-dev/nautavo/pull/70))
+- Travel the route: a cursor that plays along the track with distance and passage time. ([#69](https://github.com/t00ls-dev/nautavo/pull/69))
+- Map layers: standard, topographic and satellite maps, with direction arrows, out-and-back lines and the halfway point on the route. ([#71](https://github.com/t00ls-dev/nautavo/pull/71))
+- GPX, FIT and TCX import; editing a point of an imported track recalculates only the changed legs. ([#17](https://github.com/t00ls-dev/nautavo/pull/17), [#75](https://github.com/t00ls-dev/nautavo/pull/75))
 - GPX 1.1 export with the complete track and named waypoints.
-- Short share links; a link that suggests other routing or search servers opens with the default servers until you choose to use them. ([#10](https://github.com/t00ls-dev/route-gpx/pull/10), [#13](https://github.com/t00ls-dev/route-gpx/pull/13))
+- Short share links; a link that suggests other routing or search servers opens with the default servers until you choose to use them. ([#10](https://github.com/t00ls-dev/nautavo/pull/10), [#13](https://github.com/t00ls-dev/nautavo/pull/13))
 - Named routes saved in this browser, with backup export and import.
-- A side panel on wide screens and a bottom sheet on phones, with one-finger zoom on touch screens. ([#82](https://github.com/t00ls-dev/route-gpx/pull/82), [#63](https://github.com/t00ls-dev/route-gpx/pull/63))
-- English and Portuguese interface, a help page and a What's new page. ([#83](https://github.com/t00ls-dev/route-gpx/issues/83))
+- A side panel on wide screens and a bottom sheet on phones, with one-finger zoom on touch screens. ([#82](https://github.com/t00ls-dev/nautavo/pull/82), [#63](https://github.com/t00ls-dev/nautavo/pull/63))
+- English and Portuguese interface, a help page and a What's new page. ([#83](https://github.com/t00ls-dev/nautavo/issues/83))
 
-[Unreleased]: https://github.com/t00ls-dev/route-gpx/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/t00ls-dev/route-gpx/releases/tag/v1.0.0
+[Unreleased]: https://github.com/t00ls-dev/nautavo/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/t00ls-dev/nautavo/releases/tag/v1.0.0

@@ -90,4 +90,4 @@ The bundled MapLibre GL JS and maplibre-contour libraries use the BSD 3-Clause l
 
 Application code is licensed under [MIT](LICENSE). Data and dependencies retain their own licenses. No affiliation with the public service operators.
 
-[Report a bug or contact the maintainer](https://github.com/t00ls-dev/route-gpx/issues/new/choose) · [Report a security vulnerability privately](https://github.com/t00ls-dev/route-gpx/security/advisories/new) · [Report a map issue](https://www.openstreetmap.org/fixthemap)
+[Report a bug or contact the maintainer](https://github.com/t00ls-dev/nautavo/issues/new/choose) · [Report a security vulnerability privately](https://github.com/t00ls-dev/nautavo/security/advisories/new) · [Report a map issue](https://www.openstreetmap.org/fixthemap)
