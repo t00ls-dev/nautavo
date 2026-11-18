@@ -11,59 +11,64 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <title>route-gpx — Route Planning &amp; GPX Help</title>
+    <title>nautavo — Route Planning &amp; GPX Help</title>
     <meta
       name="description"
       content="Learn to plan and edit routes, import GPX, FIT and TCX, read the itinerary, weather, elevation and surface, navigate, set units, and save or share routes."
     />
     <meta name="robots" content="index, follow, max-image-preview:large" />
-    <meta name="application-name" content="route-gpx" />
+    <meta name="application-name" content="nautavo" />
     <!-- The canonical is set per language by src/seo.ts. -->
-    <link
-      rel="alternate"
-      hreflang="en"
-      href="https://route-gpx.t00ls.dev/help.html"
-    />
+    <link rel="alternate" hreflang="en" href="https://nautavo.com/help" />
     <link
       rel="alternate"
       hreflang="pt-BR"
-      href="https://route-gpx.t00ls.dev/help.html?lang=pt"
+      href="https://nautavo.com/help?lang=pt"
     />
     <link
       rel="alternate"
       hreflang="x-default"
-      href="https://route-gpx.t00ls.dev/help.html"
+      href="https://nautavo.com/help"
     />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+    <link rel="icon" type="image/svg+xml" href="/src/brand/icon.svg" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/src/brand/icon-32.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/src/brand/icon-180.png"
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="route-gpx" />
+    <meta property="og:site_name" content="nautavo" />
     <meta
       property="og:title"
-      content="route-gpx — Route Planning &amp; GPX Help"
+      content="nautavo — Route Planning &amp; GPX Help"
     />
     <meta
       property="og:description"
       content="Learn to plan and edit routes, import GPX, FIT and TCX, read the itinerary, weather, elevation and surface, navigate, set units, and save or share routes."
     />
-    <meta property="og:url" content="https://route-gpx.t00ls.dev/help.html" />
+    <meta property="og:url" content="https://nautavo.com/help" />
     <meta property="og:locale" content="en_US" />
     <meta
       property="og:image"
-      content="https://route-gpx.t00ls.dev/social-card.png"
+      content="https://nautavo.com/src/brand/social-card.png"
     />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="route-gpx — Choose your roads. Download every turn."
+      content="nautavo — Choose your roads. Download every turn."
     />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="route-gpx — Route Planning &amp; GPX Help"
+      content="nautavo — Route Planning &amp; GPX Help"
     />
     <meta
       name="twitter:description"
@@ -71,39 +76,44 @@
     />
     <meta
       name="twitter:image"
-      content="https://route-gpx.t00ls.dev/social-card.png"
+      content="https://nautavo.com/src/brand/social-card.png"
     />
     <meta
       name="twitter:image:alt"
-      content="route-gpx — Choose your roads. Download every turn."
+      content="nautavo — Choose your roads. Download every turn."
     />
   </head>
   <body class="help-page">
     <div class="top-edge" aria-hidden="true"></div>
     <header>
-      <a aria-label="route-gpx" class="brand" href="./index.html"
+      <a aria-label="nautavo" class="brand" href="./"
         ><img
           class="brand-icon"
-          src="/icons/icon.svg"
+          src="/src/brand/icon.svg"
           width="28"
           height="28"
           alt=""
-          aria-hidden="true"
-        />route<span>-gpx</span></a
+          aria-hidden="true" /><img
+          class="brand-name"
+          src="/src/brand/wordmark.svg"
+          width="109"
+          height="20"
+          alt=""
+          aria-hidden="true" /></a
       ><label class="language-control"
         ><span class="sr-only">Language / Idioma</span
         ><select id="language" aria-label="Language / Idioma">
           <option value="en">EN</option>
           <option value="pt">PT</option>
         </select></label
-      ><a id="back" href="./index.html">Back to map</a>
+      ><a id="back" href="./">Back to map</a>
     </header>
     <main>
       <article lang="en" id="help-en">
         <h1>Help</h1>
         <p>
-          See <a href="./changelog.html" data-page-link>What's new</a> for
-          recent changes.
+          See <a href="./changelog" data-page-link>What's new</a> for recent
+          changes.
         </p>
         <h2>Create a route</h2>
         <p>
@@ -335,14 +345,14 @@
           backup keep your existing saved route.
         </p>
         <p>
-          After one visit with a connection, route-gpx also opens without one,
-          in the same browser: a saved route opens with its geometry, summary
-          and directions and downloads as GPX, and a notice says you are
-          offline. Map tiles, routing, search, weather, elevation and surface
-          still need a connection, so the map background may be empty. Offline,
-          Calculate route keeps the route on screen, and a route changed offline
-          is calculated once the connection returns. A new version is used on
-          the next visit with a connection.
+          After one visit with a connection, nautavo also opens without one, in
+          the same browser: a saved route opens with its geometry, summary and
+          directions and downloads as GPX, and a notice says you are offline.
+          Map tiles, routing, search, weather, elevation and surface still need
+          a connection, so the map background may be empty. Offline, Calculate
+          route keeps the route on screen, and a route changed offline is
+          calculated once the connection returns. A new version is used on the
+          next visit with a connection.
         </p>
         <h2>GPX, import and sharing</h2>
         <p>
@@ -449,7 +459,7 @@
           <a href="https://open-meteo.com/">Open-Meteo</a>, under
           <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
           Weather data by Open-Meteo; passage times and risk summaries
-          calculated by route-gpx. The free API is non-commercial only, no key,
+          calculated by nautavo. The free API is non-commercial only, no key,
           HTTPS/CORS; its base URL is configurable in Settings. Limits: 600
           calls/minute, 5,000/hour, 10,000/day and 300,000/month. Every location
           counts even in one grouped request; over 10 variables or two weeks
@@ -791,11 +801,11 @@
         </p>
         <h2 id="home-screen-en">Add to home screen</h2>
         <p>
-          Add route-gpx to your home screen to open it from an icon, like an
-          app. On a phone, More actions has Add to home screen, which shows
-          these steps for your device. The icon opens the site in your browser,
-          with its address bar; there is nothing to install, and saved routes
-          open even without a connection.
+          Add nautavo to your home screen to open it from an icon, like an app.
+          On a phone, More actions has Add to home screen, which shows these
+          steps for your device. The icon opens the site in your browser, with
+          its address bar; there is nothing to install, and saved routes open
+          even without a connection.
         </p>
         <ul>
           <li>
@@ -829,9 +839,9 @@
           locations. The browser stores a search timestamp to coordinate tabs,
           and the named routes and favorite places you explicitly save in local
           IndexedDB. It also remembers language, region preferences and panel
-          state without location data. A service worker keeps only route-gpx's
-          own files so it opens offline; it stores no locations and never caches
-          map tiles or answers from other services. Do not enter confidential
+          state without location data. A service worker keeps only nautavo's own
+          files so it opens offline; it stores no locations and never caches map
+          tiles or answers from other services. Do not enter confidential
           addresses.
         </p>
         <p>
@@ -868,7 +878,7 @@
           shown from https://tiles.openfreemap.org; Topographic adds terrain
           images from https://s3.amazonaws.com/elevation-tiles-prod and
           Satellite imagery from https://tiles.maps.eox.at. Only the active
-          layer requests images. GitHub Pages receives requests for the site
+          layer requests images. Cloudflare receives requests for the site
           files. External providers receive the request IP and normal browser
           metadata and may keep their own logs. URL fragments are not sent in
           HTTP requests. Browser HTTP caching of ordinary map tiles follows
@@ -901,8 +911,8 @@
       <article lang="pt-BR" id="help-pt" hidden>
         <h1>Ajuda</h1>
         <p>
-          Veja as <a href="./changelog.html" data-page-link>Novidades</a> para
-          as mudanças recentes.
+          Veja as <a href="./changelog" data-page-link>Novidades</a> para as
+          mudanças recentes.
         </p>
         <h2>Criar uma rota</h2>
         <p>
@@ -1145,7 +1155,7 @@
           salva.
         </p>
         <p>
-          Depois de uma visita com conexão, o route-gpx também abre sem ela, no
+          Depois de uma visita com conexão, o nautavo também abre sem ela, no
           mesmo navegador: uma rota salva abre com geometria, resumo e
           instruções e pode ser baixada em GPX, e um aviso diz que você está sem
           conexão. Os blocos do mapa, o roteamento, a busca, o clima, a elevação
@@ -1264,7 +1274,7 @@
           <a href="https://open-meteo.com/">Open-Meteo</a>, sob
           <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
           Dados de clima por Open-Meteo; horários de passagem e resumos de risco
-          calculados pelo route-gpx. A API gratuita é só para uso não comercial,
+          calculados pelo nautavo. A API gratuita é só para uso não comercial,
           sem chave, com HTTPS/CORS; a URL base é configurável em Configurações.
           Limites: 600 chamadas/minuto, 5.000/hora, 10.000/dia e 300.000/mês.
           Cada localização conta mesmo numa requisição agrupada; mais de 10
@@ -1622,7 +1632,7 @@
         </p>
         <h2 id="home-screen-pt">Adicionar à tela inicial</h2>
         <p>
-          Adicione o route-gpx à tela inicial para abri-lo por um ícone, como um
+          Adicione o nautavo à tela inicial para abri-lo por um ícone, como um
           app. No celular, Mais ações tem Adicionar à tela inicial, que mostra
           estes passos para o seu aparelho. O ícone abre o site no navegador,
           com a barra de endereço; não há nada a instalar, e as rotas salvas
@@ -1661,7 +1671,7 @@
           as rotas nomeadas e os lugares favoritos que você salvar
           explicitamente no IndexedDB local. Também lembra idioma, preferências
           de região e estado do painel, sem dados de localização. Um service
-          worker guarda só os arquivos do próprio route-gpx para ele abrir sem
+          worker guarda só os arquivos do próprio nautavo para ele abrir sem
           conexão; não guarda locais e nunca guarda blocos do mapa nem respostas
           de outros serviços. Não informe endereços confidenciais.
         </p>
@@ -1701,7 +1711,7 @@
           exibida a https://tiles.openfreemap.org; o Topográfico acrescenta
           imagens de relevo de https://s3.amazonaws.com/elevation-tiles-prod e o
           Satélite, imagens de https://tiles.maps.eox.at. Só a camada ativa
-          solicita imagens. O GitHub Pages recebe pedidos dos arquivos do site.
+          solicita imagens. A Cloudflare recebe pedidos dos arquivos do site.
           Provedores externos recebem o IP da requisição e metadados normais do
           navegador e podem manter logs próprios. Fragmentos de URL não são
           enviados nas requisições HTTP. O cache HTTP comum dos tiles segue os

@@ -1650,6 +1650,6 @@ test('the chosen language survives the logo link, undo, reloads and shared links
   await expect(page.locator('#language')).toHaveValue('en');
   await page.goto(base);
   await expect(page.locator('#language')).toHaveValue('pt');
-  await page.goto(base + 'help.html');
+  await page.goto(base + 'help');
   await expect(page.locator('#language')).toHaveValue('pt');
 });

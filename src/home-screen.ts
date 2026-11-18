@@ -38,7 +38,7 @@ export function setupHomeScreen(): void {
           platform !== 'other' && section.dataset.platform !== platform;
       });
     $<HTMLAnchorElement>('home-help').href =
-      `./help.html?lang=${getLanguage()}&section=home-screen${location.hash}`;
+      `./help?lang=${getLanguage()}&section=home-screen${location.hash}`;
     dialog.showModal();
   };
   $('close-home').onclick = () => dialog.close();

@@ -346,7 +346,7 @@ export function generateGpx(
   )
     throw new Error('No valid route geometry to export.');
   const tag = (s: string) => escapeXml(s);
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="route-gpx"><metadata><name>${tag(name)}</name><time>${date.toISOString()}</time><keywords>driving,route-gpx</keywords></metadata>${points
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="nautavo"><metadata><name>${tag(name)}</name><time>${date.toISOString()}</time><keywords>driving,nautavo</keywords></metadata>${points
     .filter((p) => p.coord)
     .map(
       (p) =>

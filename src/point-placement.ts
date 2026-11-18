@@ -102,9 +102,13 @@ export function createLoupe(map: PlannerMap) {
       }
     }
     // The exact spot: a crosshair with a white halo and a center dot.
+    // The stylesheet's primary color, so the loupe follows the brand.
+    const primary = getComputedStyle(el)
+      .getPropertyValue('--color-primary')
+      .trim();
     cross(w / 2, '#fff', 5);
-    cross(w / 2, '#126447', 2.5);
-    ctx.fillStyle = '#126447';
+    cross(w / 2, primary, 2.5);
+    ctx.fillStyle = primary;
     ctx.beginPath();
     ctx.arc(w / 2, w / 2, 2.5 * ratio, 0, Math.PI * 2);
     ctx.fill();

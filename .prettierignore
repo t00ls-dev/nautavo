@@ -7,3 +7,4 @@ playwright-report/
 blob-report/
 all-blob-reports/
 coverage/
+.wrangler/

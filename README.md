@@ -1,4 +1,4 @@
-# <img src="public/icons/icon.svg" width="48" height="48" alt="" align="absmiddle" /> route-gpx
+# <img src="src/brand/icon.svg" width="48" height="48" alt="" align="absmiddle" /> nautavo
 
 Plan routes and export the complete track as GPX.
 
@@ -19,12 +19,12 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 
 ## Quick start
 
-1. Open [route-gpx.t00ls.dev](https://route-gpx.t00ls.dev/).
+1. Open [nautavo.com](https://nautavo.com/).
 2. Enter addresses or `latitude, longitude` in **Start** and **Destination**, or pick points on the map.
 3. Add stops, adjust the points and review the calculated route.
 4. Optionally enter a **route name**, then press **Download GPX** (**Share GPX** on a phone or tablet that can share files, which keeps the file name in browsers such as Firefox on iPhone).
 
-Gestures, shortcuts and every control are explained on the [Help page](https://route-gpx.t00ls.dev/help.html). Recent changes are listed on [What's new](https://route-gpx.t00ls.dev/changelog.html) and in the [changelog](CHANGELOG.md).
+Gestures, shortcuts and every control are explained on the [Help page](https://nautavo.com/help). Recent changes are listed on [What's new](https://nautavo.com/changelog) and in the [changelog](CHANGELOG.md).
 
 ## Good to know
 
@@ -76,7 +76,7 @@ The opt-in `npm run test:integration` calls real OSRM, `npm run test:tracks` che
 
 ## Deployment
 
-GitHub Actions runs checks on pull requests and pushes to `main`, and successful builds of the current `main` commit deploy to GitHub Pages at `https://route-gpx.t00ls.dev/`. A weekly Lighthouse workflow, also run on demand, audits the live site. Changes reach `main` only through pull requests that pass CI. Vite uses `/` as its base path; see the [brand and hosting notes](docs/BRAND.md) before changing the hosting path.
+GitHub Actions runs checks on pull requests and pushes to `main`, and successful builds of the current `main` commit deploy to Cloudflare Workers, as static assets, at `https://dev.nautavo.com/`; each published release deploys to `https://nautavo.com/`. A weekly Lighthouse workflow, also run on demand, audits the live site. Changes reach `main` only through pull requests that pass CI. Vite uses `/` as its base path; see the [brand and hosting notes](docs/BRAND.md) before changing the hosting path.
 
 ## Contributing
 
@@ -84,7 +84,7 @@ See the [contributing guide](CONTRIBUTING.md) before opening a pull request. Par
 
 ## Credits and license
 
-Built with [MapLibre GL JS](https://maplibre.org/), [maplibre-contour](https://github.com/onthegomap/maplibre-contour), [OSRM](https://project-osrm.org/), [Valhalla](https://valhalla.github.io/valhalla/), [Nominatim](https://nominatim.org/), [Photon](https://github.com/komoot/photon), [Vite](https://vite.dev/) and [Vitest](https://vitest.dev/). IP region by [ipwho.is](https://ipwhois.io/). The map by [OpenFreeMap](https://openfreemap.org/), © [OpenMapTiles](https://www.openmaptiles.org/); relief from [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen, AWS Open Data); satellite imagery by [EOxCloudless](https://cloudless.eox.at/). Weather data by [Open-Meteo](https://open-meteo.com/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with passage times and risk summaries calculated here; elevation from the [Copernicus DEM GLO-90](https://doi.org/10.5270/ESA-c5d3d65) via Open-Meteo. Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Compass headings are corrected to true north with the [World Magnetic Model](https://www.ncei.noaa.gov/products/world-magnetic-model) (NOAA NCEI and BGS, public domain).
+Built with [MapLibre GL JS](https://maplibre.org/), [maplibre-contour](https://github.com/onthegomap/maplibre-contour), [OSRM](https://project-osrm.org/), [Valhalla](https://valhalla.github.io/valhalla/), [Nominatim](https://nominatim.org/), [Photon](https://github.com/komoot/photon), [Vite](https://vite.dev/) and [Vitest](https://vitest.dev/). IP region by [ipwho.is](https://ipwhois.io/). The map by [OpenFreeMap](https://openfreemap.org/), © [OpenMapTiles](https://www.openmaptiles.org/); relief from [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen, AWS Open Data); satellite imagery by [EOxCloudless](https://cloudless.eox.at/). Weather data by [Open-Meteo](https://open-meteo.com/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with passage times and risk summaries calculated here; elevation from the [Copernicus DEM GLO-90](https://doi.org/10.5270/ESA-c5d3d65) via Open-Meteo. Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). The nautavo wordmark is drawn from the [Sora](https://github.com/sora-xor/sora-font) typeface ([SIL Open Font License 1.1](https://openfontlicense.org/)). Compass headings are corrected to true north with the [World Magnetic Model](https://www.ncei.noaa.gov/products/world-magnetic-model) (NOAA NCEI and BGS, public domain).
 
 The bundled MapLibre GL JS and maplibre-contour libraries use the BSD 3-Clause license and [fflate](https://github.com/101arrowz/fflate) (route-link compression) the MIT license; their complete notices are included in [third-party notices](public/THIRD_PARTY_NOTICES.txt) and copied into the production build.
 

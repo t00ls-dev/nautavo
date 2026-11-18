@@ -345,7 +345,7 @@ test('long press on the map cannot start a native text selection, but the panel 
   await expect(page.locator('html')).not.toHaveClass(/map-touching/);
   await session.detach();
   await page.waitForTimeout(400);
-  // The route-gpx point menu still opens on hold.
+  // The nautavo point menu still opens on hold.
   await holdMap(page);
   await expect(page.locator('#point-menu')).toBeVisible();
   await context.close();
@@ -504,7 +504,7 @@ for (const language of ['en', 'pt'] as const)
       .toEqual([
         'shared-ride.gpx application/gpx+xml',
         expect.stringMatching(
-          /^route-gpx-backup-\d{4}-\d\d-\d\d\.json application\/json$/,
+          /^nautavo-backup-\d{4}-\d\d-\d\d\.json application\/json$/,
         ),
       ]);
     expect(downloads).toBe(0);

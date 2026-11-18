@@ -354,7 +354,7 @@ export function setupElevation(
       const language = deps.state().language === 'pt' ? 'pt' : 'en';
       const link = document.createElement('a');
       // The hash stays the route state, as in the header Help link, so Back to map returns to it.
-      link.href = `./help.html?lang=${language}&section=elevation${location.hash}`;
+      link.href = `./help?lang=${language}&section=elevation${location.hash}`;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.textContent = 'See the help.';

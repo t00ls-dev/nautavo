@@ -24,25 +24,36 @@ try {
     );
     await fs.writeFile(target, Buffer.from(png, 'base64'));
   };
-  for (const size of [32, 180, 192, 512])
+  // The simplified mark (icon.svg) stays legible at 32 px and below; larger
+  // icons use the detailed one with the east, south and west ticks.
+  await render('src/brand/icon.svg', 32, 32, 'src/brand/icon-32.png');
+  for (const size of [180, 192, 512])
     await render(
-      'public/icons/icon.svg',
+      'src/brand/icon-detail.svg',
       size,
       size,
-      `public/icons/icon-${size}.png`,
+      `src/brand/icon-${size}.png`,
     );
-  const maskable = (await fs.readFile('public/icons/icon.svg', 'utf8')).replace(
-    'rx="112"',
-    'rx="0"',
-  );
-  await fs.writeFile('public/icons/maskable.svg', maskable);
+  // Maskable: square corners, the mark scaled into the 80% safe circle.
+  const maskable = (await fs.readFile('src/brand/icon-detail.svg', 'utf8'))
+    .replace('rx="112"', 'rx="0"')
+    .replace(
+      'translate(71.68 71.68) scale(5.76)',
+      'translate(76.8 76.8) scale(5.6)',
+    );
+  await fs.writeFile('src/brand/maskable.svg', maskable);
   await render(
-    'public/icons/maskable.svg',
+    'src/brand/maskable.svg',
     512,
     512,
-    'public/icons/maskable-512.png',
+    'src/brand/maskable-512.png',
   );
-  await render('public/social-card.svg', 1200, 630, 'public/social-card.png');
+  await render(
+    'src/brand/social-card.svg',
+    1200,
+    630,
+    'src/brand/social-card.png',
+  );
   console.log('Exported PNG icons and social sharing image.');
 } finally {
   await browser.close();

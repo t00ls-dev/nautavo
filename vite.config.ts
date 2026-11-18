@@ -3,6 +3,11 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import {
+  BRAND_PATH,
+  hashedBrandUrls,
+  UNLINKED_BRAND_FILES,
+} from './src/brand-assets.ts';
 import { precacheList } from './src/precache.ts';
 
 const SW_ENTRY = 'sw';
@@ -52,10 +57,71 @@ function serviceWorkerManifest(): Plugin {
   };
 }
 
+/**
+ * Gives the brand files (src/brand/) hashed URLs everywhere: Vite rewrites the
+ * pages' links and images itself; this emits the files only the manifest and
+ * the sharing metadata name, then points the pages' absolute social image
+ * URLs and the manifest's icons at the built files. The manifest keeps its
+ * fixed URL: its source in public/ is replaced in the output by this copy.
+ */
+function brandAssets(): Plugin {
+  let root = '';
+  const source = (file: string) => resolve(root, BRAND_PATH.slice(1), file);
+  return {
+    name: 'brand-assets',
+    apply: 'build',
+    configResolved(config) {
+      root = config.root;
+    },
+    async buildStart() {
+      for (const file of UNLINKED_BRAND_FILES)
+        this.emitFile({
+          type: 'asset',
+          name: file,
+          originalFileName: `${BRAND_PATH.slice(1)}${file}`,
+          source: await readFile(source(file)),
+        });
+    },
+    generateBundle: {
+      order: 'post',
+      async handler(_, bundle) {
+        const built = new Map<string, string>();
+        for (const output of Object.values(bundle))
+          if (output.type === 'asset')
+            for (const name of output.originalFileNames)
+              if (name.startsWith(BRAND_PATH.slice(1)))
+                built.set(
+                  name.slice(BRAND_PATH.length - 1),
+                  `/${output.fileName}`,
+                );
+        for (const output of Object.values(bundle))
+          if (output.type === 'asset' && output.fileName.endsWith('.html'))
+            output.source = hashedBrandUrls(String(output.source), built);
+        this.emitFile({
+          type: 'asset',
+          fileName: 'manifest.webmanifest',
+          source: hashedBrandUrls(
+            await readFile(
+              resolve(root, 'public/manifest.webmanifest'),
+              'utf8',
+            ),
+            built,
+          ),
+        });
+      },
+    },
+  };
+}
+
 export default defineConfig({
   base: '/',
-  plugins: [serviceWorkerManifest()],
+  plugins: [brandAssets(), serviceWorkerManifest()],
+  // The local preview (preview.nautavo.com) is never indexed; only prod is.
+  preview: { headers: { 'X-Robots-Tag': 'noindex' } },
   build: {
+    // Brand files keep their own hashed URLs instead of being inlined.
+    assetsInlineLimit: (file) =>
+      file.includes(BRAND_PATH) ? false : undefined,
     // MapLibre GL JS (about 1,090 kB minified, 296 kB gzipped) is one
     // lazy chunk loaded only when navigation starts; the default 500 kB
     // limit warned about it on every build. The app's own entry stays far

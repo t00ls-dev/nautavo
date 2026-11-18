@@ -204,7 +204,7 @@ test('credit and help links preserve a route in the app; modal translates and fo
     page.locator('#help').click(),
   ]);
   await help.waitForLoadState();
-  await expect(help).toHaveURL(/help.html/);
+  await expect(help).toHaveURL(/\/help\?/);
   await help.close();
   expect(page.url()).toBe(appUrl);
   await expect(page.locator('#download')).toBeEnabled();

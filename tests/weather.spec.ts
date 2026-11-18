@@ -330,7 +330,7 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
   );
   await expect(page.locator('#elevation-stats a')).toHaveAttribute(
     'href',
-    /^\.\/help\.html\?lang=en&section=elevation#v2=/,
+    /^\.\/help\?lang=en&section=elevation#v2=/,
   );
   // About 300 samples in chunks of 100, plus the failed first attempt.
   expect(requests.length).toBeLessThanOrEqual(5);

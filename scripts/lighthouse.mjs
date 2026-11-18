@@ -25,7 +25,7 @@ const paths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => {
   return url.pathname.slice(1) + url.search;
 });
 if (!paths.includes('')) throw new Error('The sitemap must list the app root.');
-// `help.html?lang=pt` becomes `help-pt`; the root is `app`.
+// `help?lang=pt` becomes `help-pt`; the root is `app`.
 const pageName = (path) => {
   const url = new URL(path, 'https://site.invalid/');
   const name = url.pathname.slice(1).replace(/\.html$/, '') || 'app';
