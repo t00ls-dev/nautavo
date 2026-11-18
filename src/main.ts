@@ -3,20 +3,6 @@ import { RoutingCache } from './routing-cache';
 import { setupWeather } from './weather-ui';
 import { renderDaylight } from './daylight-ui';
 import {
-  listSavedRoutes,
-  saveNamedRoute,
-  deleteSavedRoute,
-  restoreSavedRoute,
-  exportLibraryBackup,
-  parseLibraryBackup,
-  importLibraryBackup,
-  libraryKey,
-  listFavorites,
-  saveFavorite,
-  editFavorite,
-  deleteFavorite,
-  restoreFavorite,
-  type Favorite,
   markDirectionsChecked,
   updateSavedSteps,
   type SavedRoute,
@@ -26,7 +12,6 @@ import { legDistances, legPositions } from './track-position';
 import {
   speedToKmh,
   speedFromKmh,
-  travelTimeSeconds,
   speedInputBounds,
   snapSpeed,
   speedNotches,
@@ -34,12 +19,7 @@ import {
   storedSpeedKmh,
   rememberSpeedKmh,
 } from './travel-time';
-import {
-  distanceLabel,
-  milepostLabel,
-  shortDistanceLabel,
-  stepDistanceLabel,
-} from './units';
+import { milepostLabel, shortDistanceLabel, stepDistanceLabel } from './units';
 import { UndoHistory } from './history';
 import {
   getLanguage,
@@ -90,13 +70,7 @@ import {
   rememberLegs,
   routeKeepingLegs,
 } from './track-legs';
-import {
-  canShareFiles,
-  exportFile,
-  GPX_TYPES,
-  JSON_TYPES,
-  sharesFirst,
-} from './share-file';
+import { exportFile, GPX_DOWNLOAD, GPX_TYPES, sharesFirst } from './share-file';
 import { setupPointMenu } from './point-menu';
 import { setupNavigation } from './navigation-ui';
 import { resumableNavigation } from './navigation-resume';
@@ -113,20 +87,19 @@ import {
   splitByRepeat,
 } from './route-marks';
 import {
-  clearInsets,
   highlightLayers,
   lineFeature,
   PlannerMap,
   RANK,
-  sameInsets,
-  widestInsets,
-  type Insets,
   type MapMarker,
 } from './planner-map';
+import { createRouteFit } from './route-fit';
+import { setupLibrary } from './library-ui';
+import { itineraryList, summaryStats } from './summary-ui';
 import { checkTrack, type TrackCheck } from './track-check';
 import { PASS_OFFSET } from './route-overlays';
 import { routeDaylight } from './daylight';
-import { addressAutocomplete, placeOption, splitPlace } from './autocomplete';
+import { addressAutocomplete, placeOption } from './autocomplete';
 import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
 import { setupMapLayers } from './map-layers';
@@ -141,14 +114,8 @@ import {
 } from './point-placement';
 import { setupMapControls } from './map-controls';
 import { compactLayout, placeLibrary, setupPanel } from './panel';
-import { icon, iconControl, type IconName } from './icons';
-import { coordText, FAVORITE_ICONS, favoriteDialog } from './favorite-dialog';
-import {
-  maneuverIcon,
-  maneuverPositions,
-  maneuverText,
-  shortRoadName,
-} from './maneuvers';
+import { icon, iconControl } from './icons';
+import { coordText, FAVORITE_ICONS } from './favorite-dialog';
 import { byId as $, optionalById, text } from './dom';
 import {
   chosenDistanceUnits,
@@ -242,9 +209,6 @@ const lookupVersions = new WeakMap<Point, number>();
 const routingCache = new RoutingCache();
 /** The last displayed imported track and the points it was shown for. */
 let trackBase: { route: Route; points: Coord[] } | null = null;
-let savedEntries: SavedRoute[] = [];
-let libraryRevision = 0;
-let savingRoute = false;
 let photonUrl = defaultPhotonUrl;
 try {
   photonUrl = serverUrl(
@@ -262,6 +226,29 @@ const localView = defaultView(
 const map = new PlannerMap($('map'), localView.center, localView.zoom);
 if (import.meta.env.DEV)
   (window as unknown as { plannerMap: PlannerMap }).plannerMap = map;
+// Touch devices that can share files export through the share sheet, with a
+// named file (see src/share-file.ts): the main export action and the saved
+// routes share, and Share GPX in More actions merges into it. Elsewhere they
+// download, and Share GPX stays in More actions where files can be shared.
+const shareExports = sharesFirst();
+const library = setupLibrary({
+  state: () => state,
+  route: () => current,
+  pending: () => dirty.size > 0,
+  locked: () => locked,
+  editBlocked,
+  status,
+  open: openSavedRoute,
+  pointValue: (point) => pointValue(point),
+  generatedName: (point) => generatedName(point),
+  pointNamed: () => {
+    syncUrl();
+    renderPoints();
+  },
+  map,
+  photonUrl: () => photonUrl,
+  shareExports,
+});
 /** Route point markers on the map. */
 let markers: MapMarker[] = [];
 /**
@@ -515,112 +502,20 @@ $('departure').addEventListener('change', () => {
   if (current) renderSummary(current);
   else renderDaylight(state, null, speedKmh);
 });
-/** Pixels kept between the route's markers and whatever covers the map. */
-const FIT_GAP = 12;
-/** Fewer pixels than this left for the route: the covers are left out. */
-const FIT_MIN_SPACE = 48;
-/**
- * Padding that frames the route clear of the interface drawn over the map
- * (the bottom sheet and header on phones, the map note, the map tools and
- * legend corners and the credits) with its markers whole; passing notices
- * are left out. An axis left with less than `FIT_MIN_SPACE` (the full-height
- * sheet) keeps only the markers' reach.
- */
-function fitPadding(): Insets {
-  const element = $('map'),
-    box = element.getBoundingClientRect();
-  const over = [
-    $('sheet'),
-    $('sheet').querySelector('header'),
-    $('map-note'),
-    ...element.querySelectorAll(':scope > .map-corner, :scope > .map-credits'),
-  ].filter((e): e is Element => !!e && e.getClientRects().length > 0);
-  const covers = clearInsets(
-      box,
-      over.map((e) => e.getBoundingClientRect()),
-    ),
-    reach = map.markerReach();
-  const padding = (edge: keyof Insets, withCovers: boolean) =>
-    (withCovers ? covers[edge] : 0) + reach[edge] + FIT_GAP;
-  const room = (size: number, a: keyof Insets, b: keyof Insets) =>
-    size - padding(a, true) - padding(b, true) >= FIT_MIN_SPACE;
-  const vertical = room(box.bottom - box.top, 'top', 'bottom'),
-    horizontal = room(box.right - box.left, 'left', 'right');
-  return {
-    top: padding('top', vertical),
-    bottom: padding('bottom', vertical),
-    left: padding('left', horizontal),
-    right: padding('right', horizontal),
-  };
-}
-/** The map's camera, or 'pending' before the map exists. */
-function viewKey(): string {
-  const gl = map.gl();
-  return gl
-    ? `${gl.getCenter().toArray().join()} ${gl.getZoom()} ${gl.getBearing()}`
-    : 'pending';
-}
-/**
- * The last route fit: its coordinates, padding and the camera it left, until
- * something else moves the map.
- */
-let fitted: { pts: Coord[]; padding: Insets; view: string } | null = null;
-function fitTo(pts: Coord[], padding: Insets) {
-  map.fit(pts, { padding, maxZoom: 14 });
-  const done = { pts, padding, view: viewKey() };
-  fitted = done;
-  // Before the map exists, the fit is done when it does: remember that view.
-  if (done.view === 'pending')
-    map.ready(() => {
-      if (fitted === done) done.view = viewKey();
-    });
-}
-function fit() {
-  const pts =
+const routeFit = createRouteFit(
+  map,
+  () =>
     current?.segments.flat() ??
-    state.points.flatMap((p) => (p.coord ? [p.coord] : []));
-  if (pts.length) fitTo(pts, fitPadding());
-}
-/**
- * Fits the same coordinates again once the sheet, the map's size or the
- * route's markers change, as long as the map still shows the last fit: a
- * pan, zoom or any other move since then keeps the view, and an edited point
- * never moves it. Marker changes only widen the padding, since the markers
- * themselves change with the zoom (weather clusters), so the view settles
- * instead of swinging.
- */
-function refit(widenOnly: boolean) {
-  if (!fitted) return;
-  if (fitted.view !== viewKey()) {
-    fitted = null;
-    return;
-  }
-  const last = fitted.padding,
-    next = fitPadding();
-  const padding = widenOnly ? widestInsets(last, next) : next;
-  if (sameInsets(padding, last)) return;
-  fitTo(fitted.pts, padding);
-}
-let refitTimer = 0;
-/** Once a sheet drag or transition, or a resize, has settled. */
-function refitSoon() {
-  clearTimeout(refitTimer);
-  refitTimer = window.setTimeout(() => refit(false), 150);
-}
-new ResizeObserver(() => {
-  map.resize();
-  refitSoon();
-}).observe($('map'));
-new ResizeObserver(refitSoon).observe($('sheet'));
-// At once, in the batch that drew the markers, so they never show covered.
-map.onFramedChange(() => refit(true));
+    state.points.flatMap((p) => (p.coord ? [p.coord] : [])),
+);
+const fit = () => routeFit.fit();
 /** Help and What's new open in the chosen language and keep the route for Back to map. */
 function pageLinks(lang: Language, hash: string) {
   $<HTMLAnchorElement>('help').href = `./help?lang=${lang}${hash}`;
   $<HTMLAnchorElement>('changelog').href = `./changelog?lang=${lang}${hash}`;
 }
 function syncUrl() {
-  updateSaveButton();
+  library.updateSaveButton();
   undoHistory.record(routeSnapshot(state));
   const hash = encodeState(state);
   $<HTMLButtonElement>('undo').disabled =
@@ -851,22 +746,22 @@ function renderPoints() {
         },
         // Favorites (#52): save this point's place, unless it already is
         // one, then each favorite with its icon and distance.
-        ...(point.coord && !editBlocked() && !favoriteAt(point.coord)
+        ...(point.coord && !editBlocked() && !library.favoriteAt(point.coord)
           ? [
               {
                 label: 'Save as favorite',
                 icon: 'star' as const,
-                run: () => saveAsFavorite(point),
+                run: () => library.saveAsFavorite(point),
               },
             ]
           : []),
-        ...favoritesFor(input.value, point).map((favorite, n) => ({
+        ...library.favoritesFor(input.value, point).map((favorite, n) => ({
           heading: n ? undefined : t('Favorite places'),
           label: favorite.name,
           note: favorite.place ?? coordText(favorite.coord),
           icon: FAVORITE_ICONS[favorite.kind ?? 'place'],
           detail:
-            point.coord && favoriteAt(point.coord) === favorite
+            point.coord && library.favoriteAt(point.coord) === favorite
               ? t('This point')
               : (suggestionDistance(point, favorite.coord) ?? undefined),
           run: () => {
@@ -905,7 +800,7 @@ function renderPoints() {
       clearTimeout(timer);
       current = null;
       weather.invalidate();
-      updateSaveButton();
+      library.updateSaveButton();
       line.clearLayers();
       clearSummary();
       $<HTMLButtonElement>('download').disabled = true;
@@ -1181,7 +1076,7 @@ async function addDirections(route: Route) {
       directionsStatus.delete(route);
       if (savedOrigin?.route === route)
         void updateSavedSteps(savedOrigin.id, route)
-          .then(() => refreshSavedRoutes())
+          .then(() => library.refreshSavedRoutes())
           .catch(() => {
             /* Directions still show; the saved entry keeps its old steps. */
           });
@@ -1190,7 +1085,7 @@ async function addDirections(route: Route) {
       // Remembered in the saved entry: reopening does not ask again.
       if (savedOrigin?.route === route)
         void markDirectionsChecked(savedOrigin.id)
-          .then(() => refreshSavedRoutes())
+          .then(() => library.refreshSavedRoutes())
           .catch(() => {
             /* Only means it may be asked again next time. */
           });
@@ -1210,9 +1105,6 @@ async function addDirections(route: Route) {
 /** Route summary card; departure, units, speed and language changes only re-render this. */
 function renderSummary(route: Route) {
   const locale = state.language === 'pt' ? 'pt-BR' : 'en';
-  // Our own estimate from the traveler's speed, never the router's duration.
-  const duration = travelTimeSeconds(route.distance, speedKmh);
-  const minutes = Math.round(duration / 60);
   const summary = $('summary-content'),
     notes = $('summary-notes'),
     itinerary = $('itinerary');
@@ -1223,54 +1115,17 @@ function renderSummary(route: Route) {
   itinerary.replaceChildren();
   const leaving = departureOf(state);
   const departure = leaving ? Date.parse(leaving) : NaN;
-  const stats = document.createElement('dl');
-  stats.className = 'stats';
-  const stat = (label: string, value: string, note?: string) => {
-    const item = document.createElement('div');
-    const term = text('dt', label);
-    const data = document.createElement('dd');
-    data.append(text('strong', value));
-    // A smaller second line, so the value stays on one line on phones.
-    if (note) data.append(text('span', note));
-    item.append(term, data);
-    stats.append(item);
-  };
-  const distance = distanceLabel(route.distance, distanceUnits(), locale);
-  const time =
-    minutes === null
-      ? '—'
-      : minutes < 60
-        ? `${minutes} min`
-        : `${Math.floor(minutes / 60)}h ${minutes % 60} min`;
-  stat('Distance', distance);
-  stat('Time', time);
+  const { stats, basis, peek } = summaryStats(
+    route,
+    speedKmh,
+    departure,
+    locale,
+  );
   // Shown on the handle of the closed bottom sheet.
-  $('peek-main').textContent = `${distance} · ${time}`;
-  if (duration !== null && Number.isFinite(departure)) {
-    const arrival = new Date(departure + duration * 1000);
-    // The date is added only when the arrival is on another day.
-    stat(
-      'Arrival',
-      arrival.toLocaleTimeString(locale, {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      arrival.toDateString() === new Date(departure).toDateString()
-        ? undefined
-        : arrival.toLocaleDateString(locale, {
-            month: 'short',
-            day: 'numeric',
-          }),
-    );
-  }
-  // The basis of the time estimate, next to the numbers it explains.
-  const speed = speedFromKmh(speedKmh, distanceUnits()).toLocaleString(locale, {
-    maximumFractionDigits: 1,
-  });
-  const basis = `At ${speed} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'} · no stops`;
+  $('peek-main').textContent = peek;
   const daylight = document.createElement('div');
   daylight.id = 'daylight-summary';
-  summary.append(stats, text('p', basis, 'hint stats-basis'), daylight);
+  summary.append(stats, basis, daylight);
   renderDaylight(state, route, speedKmh);
   elevation.setRoute(route);
   surface.setRoute(route);
@@ -1325,80 +1180,8 @@ function renderSummary(route: Route) {
     };
     notes.append(review);
   }
-  const ul = document.createElement('ul');
-  const positions = maneuverPositions(route, !isImportedRoute(route));
-  // Without any position (an imported track's rerouted parts saved before
-  // locations existed), the km column is left out rather than kept empty.
-  const withPositions = positions.some((at) => at !== null);
   maneuverLayer.clearLayers();
-  route.steps.forEach((s, n) => {
-    if (s.distance <= 0) return;
-    const li = document.createElement('li');
-    // A step with a maneuver location is a button that shows it on the map.
-    // The grid (position, arrow, instruction and road) is an inner element:
-    // older Safari does not lay out a <button> itself as a grid and falls
-    // back to the centered button layout.
-    const holder: HTMLElement = document.createElement(s.at ? 'button' : 'div');
-    holder.className = 'step-item';
-    const row = document.createElement('span');
-    row.className = 'step-row';
-    holder.append(row);
-    // Turn direction from the router; the instruction stays an English key
-    // that the DOM translation handles.
-    const arrow = maneuverIcon(s);
-    const instruction = maneuverText(s);
-    const at = positions[n];
-    if (withPositions)
-      row.append(
-        text(
-          'span',
-          // Trailing space keeps the text readable when copied or read aloud.
-          at === null ? '' : `${milepostLabel(at, distanceUnits(), locale)} `,
-          'milepost',
-        ),
-      );
-    else row.classList.add('no-position');
-    if (arrow) {
-      const svg = icon(arrow.name);
-      svg.classList.add('maneuver-icon');
-      if (arrow.mirror) svg.classList.add('mirror');
-      row.append(svg);
-    } else row.append(text('span', '', 'maneuver-icon'));
-    // One line: shortened road names and compact lengths; the full text stays
-    // in the tooltip and accessible label.
-    const road = t(s.name);
-    const length = stepDistanceLabel(s.distance, distanceUnits(), locale);
-    // Highway references are in the chips above the list; on the line they
-    // stand in only for a road without a name.
-    const shortRoad =
-      s.ref && s.name === 'Unnamed road' ? s.ref : shortRoadName(road);
-    const full = `${instruction ? `${t(instruction)} · ` : ''}${s.ref ? `${s.ref} · ` : ''}${road} · ${length}`;
-    const body = document.createElement('span');
-    body.className = 'step-text';
-    if (instruction)
-      body.append(
-        text('span', instruction, 'maneuver'),
-        document.createTextNode(' · '),
-      );
-    body.append(document.createTextNode(`${shortRoad} · ${length}`));
-    row.append(body);
-    holder.title = full;
-    if (s.at) {
-      const button = holder as HTMLButtonElement;
-      button.type = 'button';
-      button.classList.add('maneuver-link');
-      button.setAttribute('aria-controls', 'map');
-      button.setAttribute(
-        'aria-label',
-        `${t('Show on map')}: ${at === null ? '' : `${milepostLabel(at, distanceUnits(), locale)} · `}${full}`,
-      );
-      const coord = s.at;
-      button.onclick = () => showManeuver(coord);
-    }
-    li.append(holder);
-    if (local.includes(s)) li.className = 'local-road';
-    ul.append(li);
-  });
+  const ul = itineraryList(route, local, locale, showManeuver);
   roads.append(chips, ul);
   itinerary.append(roads);
   if (route.snapped) {
@@ -1456,7 +1239,7 @@ function trackNotes(route: Route) {
         if (!$('route-panel').hidden && compactLayout())
           $('panel-toggle').click();
         map.fit(stretch.coords.flat(), {
-          padding: fitPadding(),
+          padding: routeFit.padding(),
           maxZoom: 16,
         });
       };
@@ -1630,7 +1413,7 @@ function renderRoute(route: Route) {
   renderSummary(route);
   trackNotes(route);
   $<HTMLButtonElement>('download').disabled = false;
-  updateSaveButton();
+  library.updateSaveButton();
   weather.render();
 }
 /**
@@ -1880,7 +1663,7 @@ $<HTMLSelectElement>('distance-units').onchange = () => {
   rememberSpeedKmh(speedKmh);
   settings();
   if (current) renderRoute(current);
-  void refreshSavedRoutes();
+  void library.refreshSavedRoutes();
 };
 $<HTMLSelectElement>('temperature-units').onchange = () => {
   rememberTemperatureUnits(
@@ -1930,7 +1713,7 @@ $('save-settings').onclick = () => {
 };
 $<HTMLInputElement>('route-name').oninput = () => {
   state.name = $<HTMLInputElement>('route-name').value.trim();
-  updateSaveButton();
+  library.updateSaveButton();
 };
 $<HTMLInputElement>('route-name').onchange = () => {
   state.name = $<HTMLInputElement>('route-name').value.trim();
@@ -1944,12 +1727,6 @@ function gpxContent(): string {
     state.name || `${state.points[0].name} to ${state.points.at(-1)!.name}`,
   );
 }
-// Touch devices that can share files export through the share sheet, with a
-// named file (see src/share-file.ts): the main export action and the saved
-// routes share, and Share GPX in More actions merges into it. Elsewhere they
-// download, and Share GPX stays in More actions where files can be shared.
-const shareExports = sharesFirst();
-const GPX_DOWNLOAD = 'application/gpx+xml;charset=utf-8';
 function exportGpx(share: boolean) {
   if (!current) return;
   const name = filename(state.points, state.name);
@@ -2098,7 +1875,7 @@ $<HTMLSelectElement>('language').onchange = () => {
   renderPoints();
   if (current) renderRoute(current);
   syncUrl();
-  void refreshSavedRoutes();
+  void library.refreshSavedRoutes();
 };
 
 function updateSpeedEstimate() {
@@ -2126,408 +1903,39 @@ $<HTMLInputElement>('average-speed').oninput = () => {
   showSpeed(value);
   updateSpeedEstimate();
 };
-function updateSaveButton() {
-  $('share-gpx').hidden = shareExports || !canShareFiles();
-  $<HTMLButtonElement>('share-gpx').disabled = !current || dirty.size > 0;
-  const button = $<HTMLButtonElement>('save-route');
-  button.disabled =
-    savingRoute || !current || !state.name.trim() || dirty.size > 0;
-  button.textContent = savedEntries.some((r) => r.id === libraryKey(state.name))
-    ? 'Update saved route'
-    : 'Save route';
-}
-/** Favorite places (#52), kept on this device next to the saved routes. */
-let favoriteEntries: Favorite[] = [];
-const editFavoriteSheet = favoriteDialog({
-  base: () => photonUrl,
-  center: () => map.getCenter(),
-  search: (query) => searchAddress(query, state.nominatim),
-  locate: () =>
-    getPosition().then((position) => gpsPoint(positionView(position).center)),
-});
-/** A point this close to a favorite is that favorite (meters). */
-const FAVORITE_HERE = 30;
-const favoriteAt = (coord: Coord) =>
-  favoriteEntries.find((f) => meters(f.coord, coord) <= FAVORITE_HERE);
-/**
- * The favorites a point's menu lists: all of them while the field shows the
- * point itself, else those whose name matches what is typed.
- */
-function favoritesFor(typed: string, point: Point): Favorite[] {
-  const query = libraryKey(typed);
-  if (!query || typed === pointValue(point)) return favoriteEntries;
-  return favoriteEntries.filter((f) => f.id.includes(query));
-}
-function saveAsFavorite(point: Point) {
-  const coord = point.coord;
-  if (!coord) return;
-  const value = pointValue(point);
-  // A point typed as coordinates, or named by the app, has no name to suggest.
-  const named = !generatedName(point) && !parseCoordinates(value);
-  editFavoriteSheet({
-    title: 'Save favorite',
-    coord,
-    place: named ? value : undefined,
-    name: named ? splitPlace(value)[0] : '',
-    kind: 'place',
-    save: (name, kind, where, place) =>
-      saveFavorite(name, where, kind, place).then((favorite) => {
-        // The point now goes by the favorite's name, as when one is chosen,
-        // unless the sheet moved the favorite elsewhere.
-        if (point.coord === coord && where === coord && !editBlocked()) {
-          point.name = favorite.name;
-          syncUrl();
-          renderPoints();
-        }
-        status('Favorite saved on this device.');
-        return refreshFavorites();
-      }),
-  });
-}
-/** Add favorite, in Favorite places: the same sheet, starting empty. */
-iconControl($('add-favorite'), 'plus', 'Add favorite');
-$('add-favorite').onclick = () =>
-  editFavoriteSheet({
-    title: 'Add favorite',
-    name: '',
-    kind: 'place',
-    save: (name, kind, where, place) =>
-      saveFavorite(name, where, kind, place).then(() => {
-        favoriteMessage('Favorite saved.');
-        return refreshFavorites();
-      }),
-  });
-async function refreshFavorites() {
-  try {
-    favoriteEntries = await listFavorites();
-  } catch {
-    favoriteEntries = [];
+void library.refreshSavedRoutes();
+void library.refreshFavorites();
+library.updateSaveButton();
+
+/** Opens a saved route as it was stored: no routing request. */
+function openSavedRoute(record: SavedRoute) {
+  if (editBlocked()) return;
+  const language = state.language;
+  revision++;
+  clearTimeout(timer);
+  dirty.clear();
+  drafts = new WeakMap();
+  // Validation strips legacy fields such as a stored average speed.
+  state = validateState(structuredClone(record.state));
+  if (language) state.language = language;
+  else delete state.language;
+  selected = 0;
+  weather.invalidate();
+  current = structuredClone(record.route);
+  savedOrigin = { id: record.id, route: current };
+  // Tried before and the road had changed: show that, ask nothing.
+  if (record.directionsChecked) {
+    directionsTried.add(current);
+    directionsStatus.set(current, ROAD_CHANGED);
   }
-  $('favorite-count').textContent = `(${favoriteEntries.length})`;
-  const list = $('favorite-list');
-  list.replaceChildren();
-  if (!favoriteEntries.length)
-    list.append(
-      text('p', "No favorites. Add one here or from a point's menu.", 'hint'),
-    );
-  for (const favorite of favoriteEntries)
-    list.append(
-      libraryRow({
-        icon: FAVORITE_ICONS[favorite.kind ?? 'place'],
-        name: favorite.name,
-        detail: favorite.place ?? coordText(favorite.coord),
-        primary: `${t('Show on map')}: ${favorite.name}`,
-        // A tap on the name shows the place on the map.
-        onPrimary: () => {
-          if (!$('route-panel').hidden && compactLayout())
-            $('panel-toggle').click();
-          map.panTo(favorite.coord);
-        },
-        actions: [
-          {
-            icon: 'edit',
-            label: `Edit favorite: ${favorite.name}`,
-            run: () =>
-              editFavoriteSheet({
-                title: 'Edit favorite',
-                coord: favorite.coord,
-                place: favorite.place,
-                name: favorite.name,
-                kind: favorite.kind ?? 'place',
-                save: (next, kind, where, place) =>
-                  editFavorite(favorite.id, next, kind, where, place).then(
-                    () => {
-                      favoriteMessage('Favorite saved.');
-                      return refreshFavorites();
-                    },
-                  ),
-              }),
-          },
-          {
-            icon: 'trash',
-            label: `Delete favorite: ${favorite.name}`,
-            run: () =>
-              void deleteFavorite(favorite.id)
-                .then((deleted) => {
-                  if (deleted)
-                    offerUndo(
-                      $('favorite-status'),
-                      'Favorite deleted.',
-                      'Could not access favorites.',
-                      () =>
-                        restoreFavorite(deleted).then((restored) => {
-                          favoriteMessage(
-                            restored
-                              ? 'Favorite restored.'
-                              : 'A favorite with this name already exists.',
-                            !restored,
-                          );
-                          return refreshFavorites();
-                        }),
-                    );
-                  return refreshFavorites();
-                })
-                .catch(() =>
-                  favoriteMessage('Could not access favorites.', true),
-                ),
-          },
-        ],
-      }),
-    );
-  updateBackupButton();
+  syncUrl();
+  settings();
+  renderPoints();
+  renderRoute(current);
+  fit();
+  status('Saved route opened.');
+  void library.refreshSavedRoutes();
 }
-/** The backup holds saved routes and favorites: enabled when either exists. */
-function updateBackupButton() {
-  $<HTMLButtonElement>('backup-routes').disabled =
-    !savedEntries.length && !favoriteEntries.length;
-}
-async function refreshSavedRoutes() {
-  const version = ++libraryRevision;
-  try {
-    const rows = await listSavedRoutes();
-    if (version !== libraryRevision) return;
-    savedEntries = rows;
-    $('saved-count').textContent = `(${rows.length})`;
-    const list = $('saved-list');
-    list.replaceChildren();
-    if (!rows.length) list.append(text('p', 'No saved routes.', 'hint'));
-    const locale = state.language === 'pt' ? 'pt-BR' : 'en';
-    for (const record of rows) {
-      const open = () => {
-        if (editBlocked()) return;
-        const language = state.language;
-        revision++;
-        clearTimeout(timer);
-        dirty.clear();
-        drafts = new WeakMap();
-        // Validation strips legacy fields such as a stored average speed.
-        state = validateState(structuredClone(record.state));
-        if (language) state.language = language;
-        else delete state.language;
-        selected = 0;
-        weather.invalidate();
-        current = structuredClone(record.route);
-        savedOrigin = { id: record.id, route: current };
-        // Tried before and the road had changed: show that, ask nothing.
-        if (record.directionsChecked) {
-          directionsTried.add(current);
-          directionsStatus.set(current, ROAD_CHANGED);
-        }
-        syncUrl();
-        settings();
-        renderPoints();
-        renderRoute(current);
-        fit();
-        status('Saved route opened.');
-        void refreshSavedRoutes();
-      };
-      const download = () => {
-        const name = filename(record.state.points, record.name);
-        void exportFile(
-          generateGpx(record.route, record.state.points, record.name),
-          name,
-          {
-            share: shareExports,
-            types: GPX_TYPES,
-            downloadType: GPX_DOWNLOAD,
-          },
-        );
-      };
-      const remove = () =>
-        void deleteSavedRoute(record.id)
-          .then((deleted) => {
-            // The route on screen is no longer saved.
-            const onScreen = record.id === libraryKey(state.name);
-            // The status shows in the interface language.
-            const shown = $('status').textContent ?? '';
-            if (onScreen && SAVED_STATUS.some((m) => [m, t(m)].includes(shown)))
-              status('Route ready.');
-            if (deleted)
-              offerUndo(
-                $('library-status'),
-                'Saved route deleted.',
-                'Could not access saved routes.',
-                () =>
-                  restoreSavedRoute(deleted).then((restored) => {
-                    libraryMessage(
-                      restored
-                        ? 'Saved route restored.'
-                        : 'A saved route with this name already exists.',
-                      !restored,
-                    );
-                    return refreshSavedRoutes();
-                  }),
-              );
-            return refreshSavedRoutes();
-          })
-          .catch(() => libraryMessage('Could not access saved routes.', true));
-      const row = libraryRow({
-        icon: 'route',
-        name: record.name,
-        detail: `${distanceLabel(record.route.distance, distanceUnits(), locale)} · ${new Date(record.updatedAt).toLocaleDateString(locale)}`,
-        primary: `Open saved route: ${record.name}`,
-        onPrimary: open,
-        actions: [
-          {
-            icon: shareExports ? 'share' : 'download',
-            label: shareExports
-              ? `Share saved route: ${record.name}`
-              : `Download saved route: ${record.name}`,
-            run: download,
-          },
-          {
-            icon: 'trash',
-            label: `Delete saved route: ${record.name}`,
-            run: remove,
-          },
-        ],
-      });
-      row.querySelector<HTMLButtonElement>('.library-open')!.disabled = locked;
-      list.append(row);
-    }
-    updateBackupButton();
-    updateSaveButton();
-  } catch {
-    libraryMessage('Local route storage is unavailable in this browser.', true);
-  }
-}
-/** What the top status says while the route on screen is a saved one. */
-const SAVED_STATUS = ['Route saved on this device.', 'Saved route opened.'];
-/** Says how a saved-route action went, in Saved routes. */
-function libraryMessage(message: string, error = false) {
-  sectionMessage($('library-status'), message, error);
-}
-/** Says how a favorite action went, in Favorite places (#205). */
-function favoriteMessage(message: string, error = false) {
-  sectionMessage($('favorite-status'), message, error);
-}
-const undoTimers = new WeakMap<HTMLElement, number>();
-function sectionMessage(element: HTMLElement, message: string, error = false) {
-  clearTimeout(undoTimers.get(element));
-  element.replaceChildren(message);
-  element.classList.toggle('error', error);
-}
-/** How long Undo stays after a deletion (ms). */
-const UNDO_TIME = 8000;
-/**
- * A deletion's message with Undo beside it for `UNDO_TIME` (#205); the
- * message stays after the button goes.
- */
-function offerUndo(
-  element: HTMLElement,
-  message: string,
-  failure: string,
-  undo: () => Promise<unknown>,
-) {
-  sectionMessage(element, message);
-  const button = text('button', 'Undo', 'ghost') as HTMLButtonElement;
-  button.type = 'button';
-  button.onclick = () => {
-    button.disabled = true;
-    void undo().catch(() => sectionMessage(element, failure, true));
-  };
-  element.append(button);
-  undoTimers.set(
-    element,
-    window.setTimeout(() => button.remove(), UNDO_TIME),
-  );
-}
-/**
- * One row of Saved routes or Favorite places (#213): an icon, the name and
- * a detail line in the row's main button, then icon actions with full names.
- */
-function libraryRow(row: {
-  icon: IconName;
-  name: string;
-  detail: string;
-  primary: string;
-  onPrimary: () => void;
-  actions: { icon: IconName; label: string; run: () => void }[];
-}): HTMLElement {
-  const element = document.createElement('div');
-  element.className = 'library-row';
-  const mark = icon(row.icon);
-  mark.classList.add('library-icon');
-  const open = document.createElement('button');
-  open.type = 'button';
-  open.className = 'library-open';
-  open.title = row.name;
-  open.setAttribute('aria-label', row.primary);
-  open.append(text('strong', row.name), text('small', row.detail));
-  open.onclick = row.onPrimary;
-  element.append(mark, open);
-  for (const action of row.actions) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    iconControl(button, action.icon, action.label, true);
-    button.onclick = action.run;
-    element.append(button);
-  }
-  return element;
-}
-/** Backup and restore in Settings say how it went beside their buttons. */
-function backupMessage(message: string, error = false) {
-  $('backup-status').textContent = message;
-  $('backup-status').classList.toggle('error', error);
-}
-$('save-route').onclick = () => {
-  if (!current || !state.name.trim() || dirty.size) return;
-  const snapshot = structuredClone(state);
-  const route = structuredClone(current);
-  savingRoute = true;
-  updateSaveButton();
-  void saveNamedRoute(snapshot, route)
-    .then(() => {
-      status('Route saved on this device.');
-      return refreshSavedRoutes();
-    })
-    .catch(() => {
-      status('Could not save locally. Download the GPX to keep it.', true);
-    })
-    .finally(() => {
-      savingRoute = false;
-      updateSaveButton();
-    });
-};
-if (shareExports) $('backup-routes').textContent = 'Share backup';
-$('backup-routes').onclick = () => {
-  if (!savedEntries.length && !favoriteEntries.length) return;
-  void exportFile(
-    exportLibraryBackup({ routes: savedEntries, favorites: favoriteEntries }),
-    `nautavo-backup-${new Date().toISOString().slice(0, 10)}.json`,
-    {
-      share: shareExports,
-      types: JSON_TYPES,
-      downloadType: 'application/json',
-    },
-  );
-};
-$<HTMLInputElement>('restore-routes').onchange = () => {
-  const input = $<HTMLInputElement>('restore-routes');
-  const file = input.files?.[0];
-  if (!file) return;
-  if (file.size > 50_000_000) {
-    backupMessage('Choose a backup smaller than 50 MB.', true);
-    input.value = '';
-    return;
-  }
-  void file
-    .text()
-    .then((data) => importLibraryBackup(parseLibraryBackup(data)))
-    .then((count) => {
-      backupMessage(
-        `${count.routes === 1 ? 'Imported 1 route' : `Imported ${count.routes} routes`}${count.favorites ? (count.favorites === 1 ? ' and 1 favorite' : ` and ${count.favorites} favorites`) : ''}. Existing names were kept.`,
-      );
-      return Promise.all([refreshSavedRoutes(), refreshFavorites()]);
-    })
-    .catch(() => backupMessage('Could not import this route backup.', true))
-    .finally(() => {
-      input.value = '';
-    });
-};
-void refreshSavedRoutes();
-void refreshFavorites();
-updateSaveButton();
 
 setupPanel(map);
 setupHomeScreen();
@@ -2567,9 +1975,7 @@ function setLocked(value: boolean) {
   for (const id of ['reverse', 'roundtrip', 'apply-json', 'use-link-servers'])
     $<HTMLButtonElement>(id).disabled = locked;
   $<HTMLInputElement>('import').disabled = locked;
-  document
-    .querySelectorAll<HTMLButtonElement>('#saved-list .library-open')
-    .forEach((button) => (button.disabled = locked));
+  library.syncLock();
   // Rebuild the editor and markers with the new read-only/draggable state.
   renderPoints();
   status(

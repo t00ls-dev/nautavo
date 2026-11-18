@@ -14,6 +14,8 @@ export const GPX_TYPES = [
   'application/octet-stream',
   'text/plain',
 ];
+/** The type of a downloaded GPX file. */
+export const GPX_DOWNLOAD = 'application/gpx+xml;charset=utf-8';
 /** MIME types to offer for a JSON backup, most specific first. */
 export const JSON_TYPES = [
   'application/json',
