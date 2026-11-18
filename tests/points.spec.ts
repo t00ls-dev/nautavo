@@ -19,6 +19,7 @@ import {
   libraryEntry,
   routedPoints,
   openAdvancedSettings,
+  mockRegion,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
@@ -1619,7 +1620,7 @@ test('download still works if persistent browser storage is unavailable', async 
 });
 
 test.beforeEach(async ({ page }) => {
-  await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
+  await mockRegion(page);
 });
 
 test.beforeEach(async ({ page }) => {

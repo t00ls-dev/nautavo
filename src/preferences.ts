@@ -15,7 +15,6 @@ export const PREFERENCE = {
   autoDeparture: 'auto-departure',
   photonUrl: 'photon-url',
   weatherServer: 'weather-server',
-  regionUrl: 'region-url',
   detectRegion: 'detect-region',
   mapLayer: 'map-layer',
   satelliteVintage: 'satellite-vintage',

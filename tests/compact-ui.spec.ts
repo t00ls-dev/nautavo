@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
-import { base, boxSettled } from './app-helpers';
+import { base, boxSettled, mockRegion } from './app-helpers';
 test.use({ isMobile: true, hasTouch: true });
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
 
   await mockBasemap(page);
-  await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
+  await mockRegion(page);
   await page.route('https://photon.komoot.io/**', (r) =>
     r.fulfill({ json: { features: [] } }),
   );

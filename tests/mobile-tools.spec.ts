@@ -1,7 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { holdMap, mockBasemap, BASEMAP_STYLE, mapCanvas } from './map-helpers';
-import { base, gpxPoints } from './app-helpers';
+import { base, gpxPoints, mockRegion } from './app-helpers';
 const features = {
   features: [
     {
@@ -22,7 +22,7 @@ const gpx = `<gpx><trk><trkseg>${coords.map(([lat, lon]) => `<trkpt lat="${lat}"
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await mockBasemap(page);
-  await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
+  await mockRegion(page);
   await page.route('https://photon.komoot.io/**', (r) =>
     r.fulfill({ json: features }),
   );

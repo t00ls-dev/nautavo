@@ -1,9 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
-import { base, mockRouting, openAdvancedSettings } from './app-helpers';
+import {
+  base,
+  mockRouting,
+  openAdvancedSettings,
+  mockRegion,
+} from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
-  await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
+  await mockRegion(page);
   await page.route('https://photon.komoot.io/**', (r) =>
     r.fulfill({ json: { features: [] } }),
   );

@@ -1,11 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   // The site: the Vite build served as static assets (AGENTS.md, Hosting and
-  // publication). No Worker script: every request is a file. Deploys always
+  // publication). The Worker script (src/worker.ts) runs only for /api/*;
+  // every other request is a file. Deploys always
   // name an environment through CLOUDFLARE_ENV, the GitHub environment of the
   // Deploy workflow; this top level only serves `wrangler dev` and is never
   // published under a domain.
   "name": "nautavo-local",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-11-01",
   // One public address per environment: no *.workers.dev copy, no preview URLs.
   "workers_dev": false,
@@ -16,6 +18,7 @@
     // and /help.html redirects there (canonicals, sitemap and links use /help).
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "none",
+    "run_worker_first": ["/api/*"],
   },
   // No request logs or traces: the site keeps no visitor data.
   "observability": {

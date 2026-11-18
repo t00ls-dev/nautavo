@@ -1,10 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { gpsPoint, locationPermission, positionView } from '../src/location';
-import {
-  approximateRegion,
-  defaultRegionUrl,
-  regionUrl,
-} from '../src/services';
+import { approximateRegion } from '../src/services';
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -42,12 +38,11 @@ it('selects precision-dependent zoom and rejects invalid positions', () => {
     } as GeolocationPosition),
   ).toThrow();
 });
-it('does not access the network when IP detection is disabled and rejects insecure URLs', async () => {
+it('does not access the network when IP detection is disabled', async () => {
   const fetch = vi.fn();
   vi.stubGlobal('fetch', fetch);
-  expect(await approximateRegion(false, defaultRegionUrl)).toBeNull();
+  expect(await approximateRegion(false)).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
-  expect(() => regionUrl('http://example.com')).toThrow();
 });
 
 it('keeps GPS positions at the 6 decimals of links', () => {

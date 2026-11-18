@@ -80,5 +80,7 @@ jobs:
         if: steps.current.outputs.publish == 'true'
         env:
           CLOUDFLARE_ENV: ${{ env.TARGET }}
+          # No Wrangler usage telemetry from deploys.
+          WRANGLER_SEND_METRICS: 'false'
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

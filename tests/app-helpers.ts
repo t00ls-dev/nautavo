@@ -1,11 +1,23 @@
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { encodePolyline } from '../src/road-attributes';
+import { REGION_PATH } from '../src/region';
 
 /** The development server Playwright starts (playwright.config.ts). */
 export const base = 'http://127.0.0.1:5173/';
 /** The production preview the service worker tests use. */
 export const previewBase = 'http://127.0.0.1:4175/';
+
+/** The site's approximate-region endpoint (src/worker.ts) as a route pattern. */
+export const regionRoute = `**${REGION_PATH}`;
+/** An answer of that endpoint: Paris, as Cloudflare would place a visitor. */
+export const parisRegion = { city: 'Paris', latitude: 48.85, longitude: 2.35 };
+/** Answers the region endpoint with `answer`, or as unavailable without one. */
+export async function mockRegion(page: Page, answer?: object) {
+  await page.route(regionRoute, (r) =>
+    answer ? r.fulfill({ json: answer }) : r.fulfill({ status: 503 }),
+  );
+}
 
 /** The points ([lon, lat]) of an OSRM route request URL. */
 export function osrmPoints(url: string): number[][] {

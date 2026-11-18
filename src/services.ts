@@ -7,6 +7,7 @@ import {
   type WeatherPoint,
 } from './weather';
 import type { View } from './default-view';
+import { REGION_PATH, regionView } from './region';
 import {
   type Coord,
   type Modifier,
@@ -645,18 +646,9 @@ export async function searchAddress(
 }
 
 // One attempt per tab session, including failures. Only the coarse result lives in memory.
-export const defaultRegionUrl = 'https://ipwho.is/';
 let regionAttempt: Promise<View | null> | undefined;
-export function regionUrl(value: string): string {
-  const url = new URL(serverUrl(value));
-  if (url.protocol !== 'https:')
-    throw new Error('Region service requires HTTPS.');
-  return url.href;
-}
-export function approximateRegion(
-  enabled: boolean,
-  endpoint: string,
-): Promise<View | null> {
+/** The approximate region from the site's own Worker (src/region.ts). */
+export function approximateRegion(enabled: boolean): Promise<View | null> {
   if (!enabled) return Promise.resolve(null);
   if (regionAttempt) return regionAttempt;
   regionAttempt = (async () => {
@@ -664,31 +656,9 @@ export function approximateRegion(
     if (readSession(SESSION.regionAttempted)) return null;
     writeSession(SESSION.regionAttempted, 'true');
     try {
-      const url = new URL(regionUrl(endpoint));
-      url.searchParams.set('fields', 'success,latitude,longitude,city,region');
-      const response = await request(url.href, 3000, { noStore: true });
-      if (!response.ok) return null;
-      const data = await response.json();
-      if (
-        data.success !== true ||
-        ![data.city, data.region].some(
-          (name) => typeof name === 'string' && name.trim().length > 0,
-        ) ||
-        typeof data.latitude !== 'number' ||
-        !Number.isFinite(data.latitude) ||
-        Math.abs(data.latitude) > 90 ||
-        typeof data.longitude !== 'number' ||
-        !Number.isFinite(data.longitude) ||
-        Math.abs(data.longitude) > 180
-      )
-        return null;
-      return {
-        center: [
-          Math.round(data.latitude * 10) / 10,
-          Math.round(data.longitude * 10) / 10,
-        ] as Coord,
-        zoom: 9,
-      };
+      const response = await request(REGION_PATH, 3000, { noStore: true });
+      if (response.status !== 200) return null;
+      return regionView(await response.json());
     } catch {
       return null;
     }

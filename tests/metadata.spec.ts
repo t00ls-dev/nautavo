@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
-import { base, previewBase } from './app-helpers';
+import { base, previewBase, mockRegion } from './app-helpers';
 test('SEO metadata stays localized and excludes private route state', async ({
   page,
 }) => {
@@ -142,7 +142,7 @@ test('the production build names brand files by their contents', async ({
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
 
-  await page.route('https://ipwho.is/**', (r) => r.fulfill({ status: 503 }));
+  await mockRegion(page);
 });
 
 test('help switches language and metadata while preserving the route in its return link', async ({
