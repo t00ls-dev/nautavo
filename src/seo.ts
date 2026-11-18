@@ -31,7 +31,7 @@ const texts = {
   },
 } as const;
 
-const SITE = 'https://nautavo.com/';
+const SITE = import.meta.env.SITE_URL;
 /**
  * Every page has one indexable URL per language: English at the bare path
  * (also x-default) and Portuguese with `?lang=pt`, matching the hreflang

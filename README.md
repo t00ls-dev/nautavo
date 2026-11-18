@@ -76,7 +76,7 @@ The opt-in `npm run test:integration` calls real OSRM, `npm run test:tracks` che
 
 ## Deployment
 
-GitHub Actions runs checks on pull requests and pushes to `main`, and successful builds of the current `main` commit deploy to Cloudflare Workers, as static assets, at `https://dev.nautavo.com/`; each published release deploys to `https://nautavo.com/`. A weekly Lighthouse workflow, also run on demand, audits the live site. Changes reach `main` only through pull requests that pass CI. Vite uses `/` as its base path; see the [brand and hosting notes](docs/BRAND.md) before changing the hosting path.
+GitHub Actions runs checks on pull requests and pushes to `main`, and successful builds of the current `main` commit deploy to Cloudflare Workers, as static assets, at `https://dev.nautavo.com/`; each published release deploys to `https://nautavo.com/`. A weekly Lighthouse workflow, also run on demand, audits the live site. Changes reach `main` only through pull requests that pass CI. Vite uses `/` as its base path; see the [brand and hosting notes](docs/BRAND.md) before changing the hosting path. To publish your own copy at another domain, see [self-hosting](docs/SELF-HOSTING.md).
 
 ## Contributing
 
