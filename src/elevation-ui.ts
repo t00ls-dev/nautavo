@@ -164,7 +164,7 @@ export function setupElevation(
         plan.flatMap((p, i) =>
           values[i] === null
             ? []
-            : [{ at: p.at, ele: values[i]!, ...(p.gap ? { gap: true } : {}) }],
+            : [{ at: p.at, ele: values[i], ...(p.gap ? { gap: true } : {}) }],
         ),
         'terrain',
       );
@@ -332,7 +332,7 @@ export function setupElevation(
       cursorLayer.clearLayers();
       if (point)
         cursorLayer.add(
-          map.marker(point.coord as Coord, {
+          map.marker(point.coord, {
             className: 'elevation-cursor',
             size: [16, 16],
             anchor: [8, 8],
@@ -730,13 +730,11 @@ export function setupElevation(
       return true;
     },
     /** The smoothed profile of the current route and its source, when loaded. */
-    profile: () =>
-      profile
-        ? {
-            profile,
-            source: (fromService ? 'terrain' : 'recorded') as ElevationSource,
-          }
-        : null,
+    profile() {
+      if (!profile) return null;
+      const source: ElevationSource = fromService ? 'terrain' : 'recorded';
+      return { profile, source };
+    },
     /** A user of the profile was turned on: load it now if still missing. */
     want() {
       if (route && !profile && needed()) {

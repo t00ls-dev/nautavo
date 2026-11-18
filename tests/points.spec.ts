@@ -633,7 +633,7 @@ test('editing an imported track reroutes only the track around the edit', async 
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  const gpx = await readFile((await download.path())!, 'utf8');
+  const gpx = await readFile(await download.path(), 'utf8');
   const exported = gpx.match(/<trkpt[^>]*\/>/g)!;
   // Every point after the edited stop's next neighbour is the original track.
   expect(exported.slice(-150)).toEqual(
@@ -686,9 +686,9 @@ test('distance units change without rerouting, changing GPX geometry or the link
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  const originalGeometry = (
-    await readFile((await before.path())!, 'utf8')
-  ).match(/<trkpt[^>]*\/>/g);
+  const originalGeometry = (await readFile(await before.path(), 'utf8')).match(
+    /<trkpt[^>]*\/>/g,
+  );
   const hashBefore = page.url();
   await chooseUnits(page, { distance: 'imperial' });
   await expect(page.locator('#summary')).toContainText('26.1 mi');
@@ -698,7 +698,7 @@ test('distance units change without rerouting, changing GPX geometry or the link
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  const newGeometry = (await readFile((await after.path())!, 'utf8')).match(
+  const newGeometry = (await readFile(await after.path(), 'utf8')).match(
     /<trkpt[^>]*\/>/g,
   );
   expect(newGeometry).toEqual(originalGeometry);
@@ -1045,7 +1045,7 @@ test('the route name is visible and names the downloaded file, metadata and trac
     page.locator('#download').click(),
   ]);
   expect(download.suggestedFilename()).toBe('passeio-alto-grumari.gpx');
-  const xml = await readFile((await download.path())!, 'utf8');
+  const xml = await readFile(await download.path(), 'utf8');
   const names = await page.evaluate((xml) => {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     return [
@@ -1193,7 +1193,7 @@ test('only explicitly saved named routes persist, and reopening does not reroute
       })
       .click(),
   ]);
-  const xml = await readFile((await download.path())!, 'utf8');
+  const xml = await readFile(await download.path(), 'utf8');
   expect((xml.match(/<trkpt /g) || []).length).toBe(2);
   expect(download.suggestedFilename()).toBe('weekend-route.gpx');
 });
@@ -1211,8 +1211,10 @@ test('route backups restore deleted routes and skip existing names', async ({
     page.waitForEvent('download'),
     page.locator('#backup-routes').click(),
   ]);
-  const backup = await readFile((await download.path())!);
-  expect(JSON.parse(backup.toString()).routes).toHaveLength(1);
+  const backup = await readFile(await download.path());
+  expect(
+    (JSON.parse(backup.toString()) as { routes: unknown[] }).routes,
+  ).toHaveLength(1);
   await page.locator('#close-settings').click();
   await page.locator('.saved-routes > summary').click();
   await page
@@ -1363,7 +1365,7 @@ test('a route saved before turn directions gets them once, keeping its geometry'
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  const xml = await readFile((await download.path())!, 'utf8');
+  const xml = await readFile(await download.path(), 'utf8');
   expect((xml.match(/<trkpt /g) || []).length).toBe(3);
   // The saved entry now has the directions: reopening asks nothing. Wait for
   // the entry to be written before leaving the page.
@@ -1598,7 +1600,7 @@ test('an imported track gets directions by map matching when the itinerary opens
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  const xml = await readFile((await download.path())!, 'utf8');
+  const xml = await readFile(await download.path(), 'utf8');
   expect((xml.match(/<trkpt /g) || []).length).toBe(60);
   // Closing and reopening asks nothing more.
   await page.locator('#itinerary summary').click();

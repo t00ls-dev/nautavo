@@ -310,7 +310,7 @@ export function createNavigationTracker(
       const rejoin = off
         ? rejoinPoint(index, fix.coord, progress, nextStop(progress))
         : null;
-      const nextIndex = maneuvers.findIndex((m) => m.at > progress! + PASSED);
+      const nextIndex = maneuvers.findIndex((m) => m.at > progress + PASSED);
       const next = nextIndex < 0 ? null : maneuvers[nextIndex];
       const after = nextIndex < 0 ? null : (maneuvers[nextIndex + 1] ?? null);
       return {
@@ -396,7 +396,7 @@ export function isMoving(speed: number | null, wasMoving: boolean): boolean {
 export interface OrientationReading {
   alpha: number | null;
   absolute: boolean;
-  webkitCompassHeading?: number;
+  webkitCompassHeading?: number | undefined;
 }
 /**
  * Direction the top of the phone points to, degrees clockwise from north,

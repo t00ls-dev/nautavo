@@ -101,7 +101,7 @@ test('the preview redirects .html and trailing-slash pages to their public URL, 
   ]) {
     const response = await request.get(base + from, { maxRedirects: 0 });
     expect(response.status(), from).toBe(307);
-    expect(new URL(response.headers().location!, base).href, from).toBe(to);
+    expect(new URL(response.headers().location, base).href, from).toBe(to);
   }
 });
 

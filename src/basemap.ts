@@ -244,7 +244,7 @@ export function fetchStyle(
       )
       .catch(() => null);
     // A failed load is asked again next time, not remembered.
-    style.then((value) => {
+    void style.then((value) => {
       if (!value) styles.delete(url);
     });
     styles.set(url, style);

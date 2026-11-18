@@ -28,7 +28,7 @@ export interface FavoriteEdit {
   /** The place, unless the sheet starts empty to add a new favorite. */
   coord?: Coord;
   /** The place's address, if known. */
-  place?: string;
+  place?: string | undefined;
   /** Stores the choice; a rejection keeps the sheet open with its message. */
   save: (
     name: string,
@@ -66,7 +66,11 @@ export function favoriteDialog(services: {
   ];
   let current: FavoriteEdit | null = null;
   /** The place chosen in the sheet, and the text the field showed for it. */
-  let chosen: { coord: Coord; place?: string; shown: string } | null = null;
+  let chosen: {
+    coord: Coord;
+    place?: string | undefined;
+    shown: string;
+  } | null = null;
   const kind = () =>
     (kinds.find((k) => k.checked)?.value ?? 'place') as FavoriteKind;
   const fail = (message: string) => {
@@ -170,8 +174,8 @@ export function favoriteDialog(services: {
     void edit
       .save(name.value, kind(), place.coord, place.place)
       .then(() => dialog.close())
-      .catch((e: Error) => {
-        fail(e.message);
+      .catch((e: unknown) => {
+        fail((e as Error).message);
         name.focus();
       });
   };

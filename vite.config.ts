@@ -181,7 +181,7 @@ function workersParity(): Plugin {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname !== REGION_PATH) return next();
     void worker
-      .fetch(new Request(url, { method: req.method }))
+      .fetch(new Request(url, { method: req.method ?? 'GET' }))
       .then(async (response) => {
         res.statusCode = response.status;
         response.headers.forEach((value, name) => res.setHeader(name, value));

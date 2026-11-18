@@ -1263,7 +1263,7 @@ test('departure persists but forecasts and samples do not; reload refreshes; GPX
       page.waitForEvent('download'),
       page.locator('#download').click(),
     ]);
-    return readFile((await d.path())!, 'utf8');
+    return readFile(await d.path(), 'utf8');
   };
   const original = await download();
   await date(page);

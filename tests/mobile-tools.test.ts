@@ -45,18 +45,19 @@ describe('exportFile', () => {
       configurable: true,
       value: () => true,
     });
+    const mock = vi.fn(share);
     Object.defineProperty(navigator, 'share', {
       configurable: true,
-      value: vi.fn(share),
+      value: mock,
     });
-    return navigator.share as ReturnType<typeof vi.fn>;
+    return mock;
   };
   it('shares a named file of the first accepted type', async () => {
     const share = sharing(async () => {});
     expect(await exportFile('{}', 'backup.json', options)).toBe('shared');
     // Only the file: a title or text would be saved as a second file on iOS.
     expect(Object.keys(share.mock.calls[0][0])).toEqual(['files']);
-    const file = share.mock.calls[0][0].files[0] as File;
+    const file = share.mock.calls[0][0].files![0];
     expect([file.name, file.type]).toEqual(['backup.json', 'application/json']);
     expect(downloads).toEqual([]);
   });

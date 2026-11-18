@@ -30,13 +30,15 @@ async function noExactStorage(page: Page) {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const req = indexedDB.open(info.name!);
         req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        req.onerror = () =>
+          reject(req.error ?? new Error('IndexedDB request failed'));
       });
       for (const name of db.objectStoreNames) {
         const rows = await new Promise((resolve, reject) => {
           const req = db.transaction(name).objectStore(name).getAll();
           req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
+          req.onerror = () =>
+            reject(req.error ?? new Error('IndexedDB request failed'));
         });
         records.push(rows);
       }
@@ -1021,7 +1023,10 @@ test('the map view is kept on the device when the page is left', async ({
     document.dispatchEvent(new Event('visibilitychange'));
   });
   const saved = await page.evaluate(() => localStorage.getItem('last-view'));
-  const view = JSON.parse(saved!);
+  const view = JSON.parse(saved!) as {
+    zoom: number;
+    center: [number, number];
+  };
   expect(view.zoom).toBeCloseTo(13, 1);
   expect(view.center[0]).toBeCloseTo(-22.95, 3);
   expect(view.center[1]).toBeCloseTo(-43.2, 3);

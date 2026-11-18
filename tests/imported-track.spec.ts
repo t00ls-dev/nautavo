@@ -62,7 +62,7 @@ async function exported(page: Page) {
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  return gpxPoints(await readFile((await download.path())!, 'utf8'));
+  return gpxPoints(await readFile(await download.path(), 'utf8'));
 }
 
 test('a track is aligned to the roads after import, and the recording can be kept', async ({

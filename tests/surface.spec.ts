@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { defaults, encodeState, meters, type Coord } from '../src/core';
+import { defaults, encodeState, meters } from '../src/core';
 import { decodePolyline } from '../src/services';
 import { chooseUnits } from './unit-settings';
 import { coloringKinds, overlayCount } from './map-helpers';
@@ -10,7 +10,9 @@ import { base } from './app-helpers';
  * points, gravel between longitude 0.3 and 0.5 and paved elsewhere.
  */
 function traceAnswer(body: string) {
-  const coords = decodePolyline(JSON.parse(body).encoded_polyline) as Coord[];
+  const coords = decodePolyline(
+    (JSON.parse(body) as { encoded_polyline: string }).encoded_polyline,
+  );
   const edges = coords.slice(1).map((c, i) => {
     const middle = (c[1] + coords[i][1]) / 2;
     return {
@@ -98,7 +100,9 @@ test('surface is asked only when opened, totals and stretches translate and conv
   await expect(totals.nth(1)).toHaveText(/^Unpaved2[12](\.\d)? km · 20%$/);
   expect(requests).toHaveLength(1);
   // A POST to the Valhalla server with the sent shape and attributes.
-  const sent = JSON.parse(requests[0].body);
+  const sent = JSON.parse(requests[0].body) as {
+    filters: { attributes: string[] };
+  };
   expect(sent).toMatchObject({ costing: 'auto', shape_match: 'map_snap' });
   expect(sent.filters.attributes).toContain('edge.surface');
   const sections = page.locator('.surface-section');

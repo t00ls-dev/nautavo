@@ -232,7 +232,11 @@ $('keep-default-servers').onclick = () => {
   $('server-notice').hidden = true;
 };
 /** Language is a preference, not a route edit, so undo never reverts it. */
-const routeSnapshot = (s: State): State => ({ ...s, language: undefined });
+const routeSnapshot = (s: State): State => {
+  const snapshot = { ...s };
+  delete snapshot.language;
+  return snapshot;
+};
 /** Each undo step keeps the route shown for it, so undoing restores that exact geometry. */
 const undoHistory = new UndoHistory<State, Route>(routeSnapshot(state));
 let drafts = new WeakMap<Point, string>();
@@ -374,9 +378,9 @@ function useMyLocation(point: Point) {
       setPoint(point, index, coord, pointLabel(index));
       map.panTo(coord);
     })
-    .catch((error: GeolocationPositionError | Error) => {
+    .catch((error: unknown) => {
       if (revision === before)
-        status(locationError('code' in error ? error.code : 2), true);
+        status(locationError((error as { code?: number }).code ?? 2), true);
     });
 }
 /** Distance shown beside a suggestion: from the point before it, or after. */
@@ -670,7 +674,7 @@ function selectPoint(i: number, showMap = false) {
   renderMarkers();
   if (showMap) {
     $('map').scrollIntoView({ block: 'center', behavior: 'smooth' });
-    if (state.points[i].coord) map.panTo(state.points[i].coord!);
+    if (state.points[i].coord) map.panTo(state.points[i].coord);
   }
 }
 function updateSelection() {
@@ -742,7 +746,7 @@ function stopLabel(point: Point, route = current): string | null {
       placed.map((p) => p.coord!),
     );
     positions = new Map(
-      placed.flatMap((p, i) => (at[i] === null ? [] : [[p, at[i]!]])),
+      placed.flatMap((p, i) => (at[i] === null ? [] : [[p, at[i]]])),
     );
     pointPositions.set(route, positions);
   }
@@ -1403,9 +1407,7 @@ function renderSummary(route: Route) {
   if (route.snapped) {
     const far = route.snapped
       .map((p, i) => ({
-        distance: state.points[i]?.coord
-          ? meters(p, state.points[i].coord!)
-          : 0,
+        distance: state.points[i]?.coord ? meters(p, state.points[i].coord) : 0,
         index: i,
       }))
       .filter((p) => p.distance > 100);
@@ -1716,7 +1718,7 @@ function changed(preserveEditor = false, forceRouting = false) {
         updateSelection();
         if (version === fitRevision) fit();
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (version !== revision) return;
         updateSelection();
         if (!navigator.onLine) {
@@ -2014,7 +2016,7 @@ $<HTMLInputElement>('import').onchange = () => {
       status('Route imported. Edits recalculate only the changed sections.');
       void checkImported(current, imported.indices !== undefined);
     })
-    .catch((e) => status((e as Error).message, true))
+    .catch((e: unknown) => status((e as Error).message, true))
     .finally(() => {
       $<HTMLInputElement>('import').value = '';
     });
@@ -2303,7 +2305,8 @@ async function refreshSavedRoutes() {
         drafts = new WeakMap();
         // Validation strips legacy fields such as a stored average speed.
         state = validateState(structuredClone(record.state));
-        state.language = language;
+        if (language) state.language = language;
+        else delete state.language;
         selected = 0;
         weather.invalidate();
         current = structuredClone(record.route);

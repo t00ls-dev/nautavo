@@ -96,9 +96,8 @@ describe('SEO metadata', () => {
   it('JSON-LD describes the app with its meta description', () => {
     load('index.html');
     const schema = JSON.parse(
-      document.querySelector('script[type="application/ld+json"]')!
-        .textContent!,
-    );
+      document.querySelector('script[type="application/ld+json"]')!.textContent,
+    ) as { description: string; url: string };
     expect(schema.description).toBe(content('meta[name="description"]'));
     expect(schema.url).toBe(canonicalUrl('en', 'app'));
   });

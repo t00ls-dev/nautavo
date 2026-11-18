@@ -673,9 +673,8 @@ export function setupWeather(
           .map((p) => p.coord);
         const coords = together.length ? together : [m.point.coord];
         const before = map.getZoom();
-        map.fit(coords, {
-          padding: 0.2 * Math.min(...Object.values(map.size())),
-        });
+        const { x, y } = map.size();
+        map.fit(coords, { padding: 0.2 * Math.min(x, y) });
         map.setView(map.getCenter(), Math.max(before + 1, map.getZoom()));
         layoutClusters();
       });
@@ -692,7 +691,7 @@ export function setupWeather(
           headwind: relation === 'Headwind',
           wind: hour.wind,
           point: members.some((point) => !!point.stop),
-          pass: pass ?? undefined,
+          ...(pass ? { pass } : {}),
         },
       });
       detail.setAttribute(
@@ -928,7 +927,7 @@ export function setupWeather(
         stale = false;
         render();
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (!valid()) return;
         // Usage limit: a live countdown, then one automatic retry; refused
         // again, the button appears only when the countdown ends.

@@ -18,7 +18,7 @@ const directives = (policy: string) =>
 
 describe('security headers', () => {
   it('allow scripts only from the site and refuse framing', () => {
-    const policy = directives(SECURITY_HEADERS[CSP]!);
+    const policy = directives(SECURITY_HEADERS[CSP]);
     expect(policy['default-src']).toEqual(["'none'"]);
     expect(policy['script-src']).toEqual(["'self'"]);
     expect(policy['frame-ancestors']).toEqual(["'none'"]);
@@ -30,14 +30,14 @@ describe('security headers', () => {
   });
 
   it('connect the published site only to https services', () => {
-    const policy = directives(SECURITY_HEADERS[CSP]!);
+    const policy = directives(SECURITY_HEADERS[CSP]);
     expect(policy['connect-src']).toEqual(["'self'", 'https:']);
     expect(SECURITY_HEADERS[CSP]).not.toMatch(/\bhttp:/);
   });
 
   it('differ on the development server only by its styles and local servers', () => {
-    const published = directives(SECURITY_HEADERS[CSP]!);
-    const dev = directives(DEV_SECURITY_HEADERS[CSP]!);
+    const published = directives(SECURITY_HEADERS[CSP]);
+    const dev = directives(DEV_SECURITY_HEADERS[CSP]);
     expect(dev['style-src']).toEqual([
       ...published['style-src'],
       "'unsafe-inline'",

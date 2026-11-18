@@ -1166,6 +1166,7 @@ test.describe('phone navigation', () => {
     page,
   }) => {
     await page.addInitScript(() => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- called with this
       const get = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function (
         this: HTMLCanvasElement,

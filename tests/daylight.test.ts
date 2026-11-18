@@ -130,7 +130,7 @@ describe('route daylight', () => {
     expect(night).toBeCloseTo(result.nightDistance, 6);
     expect(
       routeDaylight(equator, Date.UTC(2026, 10, 8, 10), 60).ranges,
-    ).toEqual([{ from: 0, to: expect.any(Number), kind: 'day' }]);
+    ).toEqual([{ from: 0, to: expect.any(Number) as number, kind: 'day' }]);
   });
 
   it('has nothing in the dark at midday', () => {

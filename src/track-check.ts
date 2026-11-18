@@ -183,7 +183,7 @@ export async function checkTrack(
     kind: 'checked',
     check: {
       route: result,
-      elevations: rebuilt.elevations,
+      ...(rebuilt.elevations ? { elevations: rebuilt.elevations } : {}),
       glitches: glitches.length,
       aligned: aligned.length,
       off: offStretches(route.segments, runs),

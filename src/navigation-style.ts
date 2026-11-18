@@ -42,7 +42,7 @@ export function isRoadLine(id: string): boolean {
 export function scaleWidth(width: unknown, factor: number): unknown {
   if (typeof width === 'number') return width * factor;
   if (Array.isArray(width) && width[0] === 'interpolate')
-    return width.map((value, i) =>
+    return (width as unknown[]).map((value, i) =>
       i >= 4 && i % 2 === 0 && typeof value === 'number'
         ? value * factor
         : value,

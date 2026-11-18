@@ -81,7 +81,7 @@ export function setupMapLayers(map: PlannerMap) {
     base
       ? basemapStyle(base, active, {
           vintage,
-          terrain: terrain ?? undefined,
+          ...(terrain ? { terrain } : {}),
         })
       : NEUTRAL_STYLE;
   const apply = async () => {

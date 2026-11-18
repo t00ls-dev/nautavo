@@ -44,7 +44,7 @@ test('SEO metadata stays localized and excludes private route state', async ({
   );
   const schema = JSON.parse(
     await page.locator('script[type="application/ld+json"]').innerText(),
-  );
+  ) as { name: string; url: string };
   expect(schema.name).toBe('nautavo');
   expect(schema.url).toBe(canonical);
 });
@@ -74,7 +74,13 @@ test('manifest and icon files resolve at the custom-domain root', async ({
   const manifestUrl = new URL(href!, base);
   const response = await request.get(manifestUrl.href);
   expect(response.ok()).toBeTruthy();
-  const manifest = await response.json();
+  const manifest = (await response.json()) as {
+    id: string;
+    display: string;
+    start_url: string;
+    scope: string;
+    icons: { src: string; sizes: string }[];
+  };
   expect(manifest.id).toBe('/');
   expect(manifest.display).toBe('browser');
   expect(manifest.start_url).toBe('/');

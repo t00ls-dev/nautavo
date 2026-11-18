@@ -186,7 +186,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  const xml = await readFile((await download.path())!, 'utf8');
+  const xml = await readFile(await download.path(), 'utf8');
   expect(gpxPoints(xml)).toEqual(coords);
   expect(gpxPoints(shared.xml)).toEqual(coords);
   await page.locator('.map-zoom-in').click();
@@ -194,9 +194,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
     page.waitForEvent('download'),
     page.locator('#download').click(),
   ]);
-  expect(gpxPoints(await readFile((await after.path())!, 'utf8'))).toEqual(
-    coords,
-  );
+  expect(gpxPoints(await readFile(await after.path(), 'utf8'))).toEqual(coords);
   await page.evaluate(() =>
     Object.defineProperty(navigator, 'share', {
       configurable: true,

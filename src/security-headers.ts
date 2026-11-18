@@ -49,9 +49,9 @@ export const SECURITY_HEADERS = headers(policy(CSP));
 export const DEV_SECURITY_HEADERS = headers(
   policy({
     ...CSP,
-    'style-src': [...CSP['style-src']!, "'unsafe-inline'"],
+    'style-src': [...CSP['style-src'], "'unsafe-inline'"],
     'connect-src': [
-      ...CSP['connect-src']!,
+      ...CSP['connect-src'],
       'http://localhost:*',
       'http://127.0.0.1:*',
     ],

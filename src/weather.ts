@@ -10,7 +10,7 @@ export const DEFAULT_WEATHER_URL = 'https://api.open-meteo.com';
 export interface WeatherPoint {
   coord: Coord;
   distance: number;
-  name?: string;
+  name?: string | undefined;
   bearing?: number | null;
   /** A route point (start, stop or destination), not an interpolated sample. */
   stop?: boolean;

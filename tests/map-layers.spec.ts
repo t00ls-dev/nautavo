@@ -328,7 +328,7 @@ test('GPX bytes remain identical across map layers and saved state contains no l
       page.waitForEvent('download'),
       page.locator('#download').click(),
     ]);
-    const xml = await readFile((await download.path())!, 'utf8');
+    const xml = await readFile(await download.path(), 'utf8');
     if (!original) original = xml;
     else expect(xml).toBe(original);
   }
@@ -342,7 +342,7 @@ test('GPX bytes remain identical across map layers and saved state contains no l
       .click()
       .then(() => page.locator('#backup-routes').click()),
   ]);
-  const data = JSON.parse(await readFile((await backup.path())!, 'utf8'));
+  const data: unknown = JSON.parse(await readFile(await backup.path(), 'utf8'));
   expect(JSON.stringify(data)).not.toContain('map-layer');
   expect(JSON.stringify(data)).not.toContain('satellite-vintage');
 });

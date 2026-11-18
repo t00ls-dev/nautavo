@@ -113,7 +113,7 @@ describe('short v2 links', () => {
           ),
         ),
       ),
-    );
+    ) as unknown[];
   const sample = () => {
     const s = defaults();
     s.name = 'Observatório / Casa';

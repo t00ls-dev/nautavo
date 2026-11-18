@@ -76,12 +76,16 @@ export const defaults = (): State => ({
   nominatim: 'https://nominatim.openstreetmap.org',
 });
 export function validCoord(v: unknown): v is Coord {
+  if (!Array.isArray(v) || v.length !== 2) return false;
+  const pair: unknown[] = v;
+  const [lat, lon] = pair;
   return (
-    Array.isArray(v) &&
-    v.length === 2 &&
-    v.every((n) => typeof n === 'number' && Number.isFinite(n)) &&
-    Math.abs(v[0]) <= 90 &&
-    Math.abs(v[1]) <= 180
+    typeof lat === 'number' &&
+    typeof lon === 'number' &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lon) <= 180
   );
 }
 const validAmount = (value: unknown): value is number =>
@@ -215,17 +219,19 @@ function decodeV2(text: string): unknown {
   const optional = (value: unknown) =>
     value === 0 || value === undefined ? undefined : value;
   const initial = defaults();
-  const server = (index: number) =>
-    Array.isArray(servers) && servers[index] !== ''
-      ? servers[index]
-      : initial[SERVER_KEYS[index]];
+  const list: unknown[] | null = Array.isArray(servers) ? servers : null;
+  const server = (index: number): unknown =>
+    list && list[index] !== '' ? list[index] : initial[SERVER_KEYS[index]];
   return {
     version: 1,
-    points: (points as unknown[]).map((p) =>
-      Array.isArray(p)
-        ? { name: p[0], coord: p.length === 1 ? null : p.slice(1) }
-        : p,
-    ),
+    points: (points as unknown[]).map((p) => {
+      if (!Array.isArray(p)) return p;
+      const fields: unknown[] = p;
+      return {
+        name: fields[0],
+        coord: fields.length === 1 ? null : fields.slice(1),
+      };
+    }),
     prefer: prefer === 1 ? true : prefer === 0 ? false : prefer,
     name,
     language: optional(language),
@@ -646,7 +652,7 @@ function finishImport(parsed: ParsedTrack): ImportedTrack {
     points,
     // Empty when the file has no name; the interface supplies a localized default.
     name: parsed.name.slice(0, 160),
-    indices,
+    ...(indices ? { indices } : {}),
     ...(withElevation >= 0.8 * flat.length
       ? { elevations: elevationRows }
       : {}),

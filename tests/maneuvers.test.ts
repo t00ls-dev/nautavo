@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Coord, Route, Step } from '../src/core';
+import type { Coord, Modifier, Route, Step } from '../src/core';
 import { translate } from '../src/i18n';
 import {
   maneuverIcon,
@@ -57,13 +57,16 @@ describe('maneuver instructions', () => {
         'left',
         'sharp left',
       ].map((modifier) =>
-        maneuverText(
-          step({ kind: 'turn', modifier: modifier as Step['modifier'] }),
-        )!,
+        maneuverText(step({ kind: 'turn', modifier: modifier as Modifier }))!,
       ),
       ...['on ramp', 'off ramp', 'fork', 'merge'].flatMap((kind) =>
         [undefined, 'left', 'right'].map((modifier) =>
-          maneuverText(step({ kind, modifier: modifier as Step['modifier'] }))!,
+          maneuverText(
+            step({
+              kind,
+              ...(modifier ? { modifier: modifier as Modifier } : {}),
+            }),
+          )!,
         ),
       ),
       'Depart',

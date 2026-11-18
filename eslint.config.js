@@ -17,6 +17,21 @@ export default ts.config(
   js.configs.recommended,
   ...ts.configs.recommended,
   {
+    files: ['**/*.ts'],
+    extends: [...ts.configs.recommendedTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
+      // Mocks of asynchronous APIs are async functions without an await.
+      '@typescript-eslint/require-await': 'off',
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: {
       globals: {
