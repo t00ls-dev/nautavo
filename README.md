@@ -2,20 +2,19 @@
 
 Plan routes and export the complete track as GPX.
 
-A static web tool that turns addresses, coordinates and map points into a GPX 1.1 file with the complete track and named waypoints, with no account, API key or application backend.
+A static web tool that turns addresses, coordinates and map points into a GPX 1.1 file with the complete track and named waypoints, with no account or API key.
 
 ## Features
 
-- **Plan:** set start, destination and stops with addresses, coordinates, Choose on map, map clicks on desktop or your location, on a map you can turn with two fingers (a compass puts north up again).
-- **Edit:** move points precisely (a magnifier while dragging on touch screens, or a fixed pin over the moving map, chosen in Settings) and reorder them by dragging, reverse the route, add a return trip, undo changes and lock the route against accidental edits.
-- **Review:** distance, estimated duration, road references and an itinerary with turn directions, in kilometers or miles (detected from the browser, changeable in Settings), estimated from your own average speed (remembered on this device), plus sunrise, sunset and sections in the dark for a departure time, an elevation profile with altitude statistics and the climbs along the route, the road surface, paved or unpaved, with its unpaved stretches, and a virtual playback that travels the route.
-- **GPX, FIT and TCX:** import GPX, FIT and TCX files up to 10 MB, also as `.gz` or `.zip` (only geometry, names, course points and recorded elevation are read, locally) and export GPX 1.1 with complete track segments and named waypoints.
-- **Navigate:** on a phone, follow the route on screen with your live position, the next turn and the one after it, the remaining distance and time and the arrival time, on a map that turns with your direction of travel, or with the compass when you stop; zoom, drag or turn the map to look around and Re-center to follow again; off the route, a straight-line hint points back to it.
-- **Weather:** conditions and risks along the route for a departure date, including recent past dates, in Celsius or Fahrenheit.
-
-- **Map layers:** one vector map for planning and navigation, as standard, topographic (relief shading and contour lines) and satellite maps (with the map's labels), route coloring by daylight, grade or surface and route marks (direction arrows, separate out-and-back lines, weather icons on or off).
-- **Save and share:** route links, named routes and favorite places saved in this browser and JSON backup import/export.
-- **Interface:** available in English and Portuguese.
+- **Plan** with addresses, coordinates, map points or your location, on a map that turns.
+- **Edit:** move and reorder points, reverse, add a return trip, undo and lock the route.
+- **Review** distance, time from your own average speed, an itinerary with turn directions, elevation and climbs, road surface and daylight.
+- **Weather** along the route for the departure time, with wind relative to the route and risk alerts.
+- **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints.
+- **Navigate** on a phone with turn directions, a heading-up map, a way back to the route and optional spoken directions.
+- **Map layers:** standard, topographic and satellite, with route coloring by daylight, grade or surface.
+- **Save and share:** route links, saved routes and favorite places in this browser, and backups.
+- Works offline after the first visit, in English and Portuguese.
 
 ## Quick start
 
@@ -28,27 +27,22 @@ Gestures, shortcuts and every control are explained on the [Help page](https://n
 
 ## Good to know
 
-- Nothing is saved automatically: use **Save route** to keep the exact geometry in this browser, and export backups, since clearing browser data can remove saved routes and favorite places.
-- On phones, More actions › Add to home screen shows your browser's steps to open the site from an icon; there is nothing to install. Only the map zooms on phones, so the page never zooms by accident; Help and What's new still zoom with a pinch.
-- After one visit with a connection, the app opens offline in the same browser and saved routes open and download as GPX; map tiles, routing, search, weather, elevation and surface still need a connection.
-- Routing currently uses a car profile. **Prefer main roads** (on by default) routes with Valhalla favoring highways, with OSRM if Valhalla fails, and flags the local sections left; it does not guarantee their exclusion. With it off, OSRM routes first; estimates exclude stops and real-time traffic.
-- Imported GPX, FIT and TCX tracks are followed exactly. After an import, the track is aligned to the road actually taken wherever the road matches it closely, which removes GPS noise and glitches, with **Keep the recorded track** to undo it; elsewhere it keeps the recording, and stretches no road follows are flagged. Editing a point recalculates only about 1 km on each side of it; **Calculate route** keeps the aligned track and adds directions from its roads; Reverse and Round trip reuse the track. Share links store points and options, not imported geometry; share the GPX for the exact track.
-- Navigation follows the route on screen while the tab stays open and the screen on: browsers stop following the location with the screen off or in another tab, iOS Safari especially. Off the route, it points back to a point on the route ahead in a straight line (a hint that does not know the roads, working without a connection). Online, after 15 s off the route it recalculates a way back to the planned route (at most once a minute, or with Recalculate route); the automatic recalculation can be turned off, in the start notice or Settings, to follow the track exactly. The bottom bar opens a list of the turns and route points ahead. Spoken directions (off by default; the start notice, Settings or the speaker button) use the phone's own voice through the browser, with no request: each turn ahead, the arrival, leaving the route and a recalculated route. On iPhones the browser's voice follows the ring/silent switch and pauses other apps' audio, which a web page cannot override. A badge shows the current speed, and the arrival moves from the average speed to the trip's own (stops included). A weather chip shows the route forecast here and ahead, read from the forecast already fetched, with no request. It has no live traffic; it needs no connection apart from the map data and recalculation. Its map, like the planner's, is drawn by the browser from OpenFreeMap vector tiles, so street names stay upright as it turns; without WebGL only the directions show, and the planner shows a notice while its panel still plans and exports the route.
-- **Travel the route** replays the route on the navigation screen, with its turns, distances and arrival, using no location and no request besides the map.
-- Weather risks are a review aid, not an official warning, and the exported GPX carries no forecast or timestamps.
+- Nothing is saved automatically: **Save route** keeps the route in this browser; export backups, since clearing browser data removes saved routes and favorite places.
+- Routing uses a car profile; **Prefer main roads** favors highways but does not guarantee it, and estimates exclude stops and traffic.
+- Share links store points and options, not an imported track's geometry: share the GPX for the exact track.
+- Offline, saved routes open and download, but map tiles, routing, search, weather, elevation and surface need a connection.
+- Navigation needs the tab open and the screen on (iOS Safari is the strictest). Weather risks are a review aid, not an official warning.
+
+Every control, gesture and limit is explained on the [Help page](https://nautavo.com/help).
 
 ## Privacy
 
-- No cookies, analytics or account. A service worker keeps only the app's own files for offline use; it stores no locations and never caches map tiles or other services' responses.
-- Map, routing, search and weather providers receive the locations each request needs and your IP address.
-- Weather is requested only for the route and its departure. Without a chosen departure, the route leaves at the next half hour automatically, so weather is requested from Open-Meteo once the route is ready and at each new half hour; uncheck Automatic departure below the Departure field to turn this off on the device. Elevation is requested only when you open Elevation or choose the Grade coloring (points along the route go to Open-Meteo), or for one map point when you choose Elevation here; GPX files that record elevation need no request.
-- After an import, the imported track, in pieces of up to 190 km, goes once to the configured Valhalla server for map matching, and again when you choose **Calculate route** on it. Opening the Itinerary of an imported track sends that track, reduced to points about every 300 m, to the configured OSRM server for map matching; a route saved before turn directions existed gets them with one routing request. Neither changes the route's geometry.
-- Surface is requested only when you open Surface or choose the Surface coloring: the route geometry, in pieces of up to 190 km, goes to the configured Valhalla server for its OpenStreetMap road attributes.
-- Exact GPS coordinates stay in memory. Once location is allowed for the site, a dot follows your position on the map, with its accuracy circle, whenever the page is shown (the first Use my location asks for permission), and pauses while the page is hidden; turn it off by blocking location for the site in the browser. Navigation watches your location only from Start navigation until End, pauses while the page is hidden, and never stores the positions (to continue after a reload, the tab keeps only the route and the distance travelled along it, until End, arrival or 30 minutes); a route recalculation sends only the current position to the routing server. Using your location as a route point uses the exact position, like a tap on the map, and is sent and shared like any route point.
-- The app never asks for location when it opens. It opens on your position when the browser reports location as allowed; otherwise, where the map was when you last left it (kept in this browser only, never sent) or, without it or with location denied, your approximate region by IP, which can be turned off in **Settings**.
-- Every service URL is configurable in **Settings**. Route links that suggest other routing or search servers open with the defaults until you choose **Use link servers**.
+- No cookies, analytics or account. The site's own server stores nothing; besides the files, it only answers the approximate region by IP, which can be turned off.
+- Routing, search, map, weather, elevation and surface providers receive the locations each request needs and your IP address. Weather is asked for the route's departure (by default the next half hour, which can be turned off); elevation and surface only when you open them or choose their route coloring. An imported track goes to the Valhalla server once, to align it to the roads.
+- Your location is used only after the browser allows it and stays on the device, except when you add it as a route point or a navigation recalculation sends the current position.
+- Saved routes, favorite places and preferences stay in this browser; every service URL is configurable in **Settings**.
 
-Providers, limits, terms, weather sampling and map layers are detailed in [services and privacy](docs/SERVICES.md).
+The [Help page](https://nautavo.com/help) and [services and privacy](docs/SERVICES.md) detail each request, provider, limit and term.
 
 ## Local development
 
@@ -70,9 +64,7 @@ npm run test:browser              # Playwright browser workflows
 npm run build                     # TypeScript check and production build
 ```
 
-While working on a change, run the browser specs that cover it (`npx playwright test tests/<name>.spec.ts`); the complete browser suite also runs in every pull request's CI.
-
-The opt-in `npm run test:integration` calls real OSRM, `npm run test:tracks` checks imported-track matching on recorded tracks kept locally in the ignored `.audit.local/tracks/` folder, and `node scripts/browser-check.mjs` runs live acceptance checks against a local server (or a deployed site through `SITE_URL`), writing only to the ignored `.browser-check.local/` folder. `npm run lighthouse` audits every sitemap page on the local preview (or `SITE_URL`) with Lighthouse, the engine behind PageSpeed Insights, writing reports to the ignored `.lighthouse.local/` folder.
+While working on a change, run the browser specs that cover it (`npx playwright test tests/<name>.spec.ts`); the complete suite runs in every pull request's CI. Opt-in checks that use real services or local files (`npm run test:integration`, `npm run test:tracks`, `npm run lighthouse`, `node scripts/browser-check.mjs`) are described in [AGENTS.md](AGENTS.md#local-validation).
 
 ## Deployment
 
