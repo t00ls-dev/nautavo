@@ -34,6 +34,7 @@ import {
 import { languageQuery } from './seo';
 import {
   markHomeScreenApp,
+  onlineAttempt,
   registerServiceWorker,
   watchConnection,
 } from './offline';
@@ -1020,6 +1021,8 @@ const ROAD_CHANGED =
 const directionsTried = new WeakSet<Route>();
 /** Progress or outcome of a directions request, per route. */
 const directionsStatus = new WeakMap<Route, string>();
+/** Directions that failed offline wait for the connection (one attempt). */
+const directionsOnline = onlineAttempt();
 /** Itinerary open across re-renders (language, units, new directions). */
 let itineraryOpen = false;
 /** The saved entry the shown route came from, to store added directions. */
@@ -1093,12 +1096,26 @@ async function addDirections(route: Route) {
     }
   } catch (error) {
     if (!shown() || (error as Error).name === 'AbortError') return;
-    directionsStatus.set(
-      route,
-      need === 'match'
-        ? 'Directions unavailable for this track.'
-        : 'Directions unavailable. Try again later.',
-    );
+    // Offline: asked again when the connection returns, if the Itinerary is
+    // open then, or the next time it opens; until then the route stays tried,
+    // so re-rendering the summary asks nothing.
+    if (
+      directionsOnline(() => {
+        directionsTried.delete(route);
+        if (current === route) renderSummary(route);
+      })
+    ) {
+      directionsStatus.set(
+        route,
+        'No connection. Directions will be added when the connection returns.',
+      );
+    } else
+      directionsStatus.set(
+        route,
+        need === 'match'
+          ? 'Directions unavailable for this track.'
+          : 'Directions unavailable. Try again later.',
+      );
   }
   if (current === route) renderSummary(route);
 }
@@ -1263,6 +1280,8 @@ function keepRecorded(route: Route) {
   renderRoute(raw.route);
   status('Recorded track restored.');
 }
+/** An import made offline is checked when the connection returns, once. */
+const importOnline = onlineAttempt();
 /**
  * After an import: checks the track against the roads and replaces its GPS
  * glitches with the road taken. Offline, it waits for the connection once.
@@ -1270,16 +1289,13 @@ function keepRecorded(route: Route) {
 async function checkImported(raw: Route, autoStops: boolean) {
   const token = ++checkRevision;
   const fresh = () => token === checkRevision && current === raw;
-  if (!navigator.onLine) {
+  if (
+    importOnline(() => {
+      if (fresh()) void checkImported(raw, autoStops);
+    })
+  ) {
     status(
       'Route imported. No connection: the track will be checked against the roads when the connection returns.',
-    );
-    window.addEventListener(
-      'online',
-      () => {
-        if (fresh()) void checkImported(raw, autoStops);
-      },
-      { once: true },
     );
     return;
   }
@@ -1442,6 +1458,8 @@ function routingFailed(failed: boolean) {
     failed ? 'Try again' : 'Calculate route',
   );
 }
+/** A route that failed offline is calculated when the connection returns, once. */
+const routeOnline = onlineAttempt();
 function changed(preserveEditor = false, forceRouting = false) {
   weather.invalidate();
   revision++;
@@ -1502,19 +1520,16 @@ function changed(preserveEditor = false, forceRouting = false) {
       .catch((e: unknown) => {
         if (version !== revision) return;
         updateSelection();
-        if (!navigator.onLine) {
+        // One new attempt when the browser is back online, if nothing
+        // changed meanwhile: a single request, not a retry loop.
+        if (
+          routeOnline(() => {
+            if (version === revision) changed(true, forceRouting);
+          })
+        ) {
           status(
             'No connection. The route will be calculated when the connection returns.',
             true,
-          );
-          // One new attempt when the browser is back online, if nothing
-          // changed meanwhile: a single request, not a retry loop.
-          window.addEventListener(
-            'online',
-            () => {
-              if (version === revision) changed(true, forceRouting);
-            },
-            { once: true },
           );
           return;
         }

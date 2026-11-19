@@ -364,3 +364,48 @@ test('a route edited without a connection is calculated once when it returns', a
   await expect(page.locator('#status')).toHaveText('Route ready.');
   expect(network.routing - before).toBe(1);
 });
+
+test('map tiles that failed without a connection are asked again, once, when it returns', async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await mockServices(context);
+  const tiles = {
+    loaded: 0,
+    failed: new Set<string>(),
+    retried: [] as string[],
+  };
+  await context.route('https://tiles.openfreemap.org/**', (r) => {
+    const url = r.request().url();
+    if (url.includes('/styles/')) return r.fulfill({ json: BASEMAP_STYLE });
+    if (network.offline) {
+      tiles.failed.add(url);
+      return r.abort('internetdisconnected');
+    }
+    if (tiles.failed.has(url)) tiles.retried.push(url);
+    tiles.loaded++;
+    return r.fulfill({ status: 204 });
+  });
+  await controlled(page);
+  // The production build exposes no map object: its first tiles mean ready.
+  await page.locator('#map canvas.maplibregl-canvas').waitFor();
+  await expect.poll(() => tiles.loaded).toBeGreaterThan(0);
+  await page.waitForTimeout(1000);
+  await goOffline(context, true);
+  // Moved while offline: the tiles of the new area fail.
+  const map = (await page.locator('#map').boundingBox())!;
+  await page.mouse.move(map.x + map.width - 100, map.y + map.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(map.x + 100, map.y + map.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(() => tiles.failed.size).toBeGreaterThan(0);
+  await page.waitForTimeout(1000);
+  expect(tiles.retried).toHaveLength(0);
+  await goOffline(context, false);
+  await expect.poll(() => tiles.retried.length).toBeGreaterThan(0);
+  await page.waitForTimeout(1000);
+  // Each failed tile is asked once more, never in a loop.
+  expect(new Set(tiles.retried).size).toBe(tiles.retried.length);
+  expect(tiles.retried.every((url) => tiles.failed.has(url))).toBe(true);
+});

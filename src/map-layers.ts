@@ -8,6 +8,7 @@ import {
   TERRAIN_URL,
   basemapStyle,
   fetchStyle,
+  mapPixelRatio,
   webglSupported,
   type BaseLayer,
   type SatelliteVintage,
@@ -102,16 +103,18 @@ export function setupMapLayers(map: PlannerMap) {
   });
   /**
    * The first load draws at a lower resolution until its tiles are drawn (or
-   * 4 s pass), then at the screen's. Where the browser renders WebGL without
-   * the GPU, each frame's cost grows with its pixels, and the first load draws
-   * one frame per arriving tile.
+   * 4 s pass), then at the screen's (one pixel per CSS pixel without a GPU,
+   * `mapPixelRatio`). Where the browser renders WebGL without the GPU, each
+   * frame's cost grows with its pixels, and the first load draws one frame
+   * per arriving tile.
    */
   const sharpenWhenLoaded = (gl: NonNullable<ReturnType<PlannerMap['gl']>>) => {
     const sharpen = () => {
       clearTimeout(timer);
       // null (documented, missing from the type) follows devicePixelRatio
-      // again, as when the browser zooms or the window changes screens.
-      gl.setPixelRatio(null as unknown as number);
+      // again, as when the browser zooms or the window changes screens;
+      // without a GPU the map keeps one pixel per CSS pixel (mapPixelRatio).
+      gl.setPixelRatio(mapPixelRatio() ?? (null as unknown as number));
     };
     const timer = setTimeout(sharpen, FIRST_LOAD_WAIT);
     gl.once('idle', sharpen);

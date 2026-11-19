@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import type { StyleSpecification } from 'maplibre-gl';
 import {
   basemapStyle,
@@ -117,4 +117,52 @@ it('credits each layer once, keeps OpenStreetMap and names the imagery license',
   expect(newer.some((c) => c.url.endsWith('/by-nc-sa/4.0/'))).toBe(true);
   // The labels drawn over the imagery are OpenFreeMap's.
   expect(newer.some((c) => c.text === 'OpenFreeMap')).toBe(true);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  vi.resetModules();
+});
+
+/** A canvas whose WebGL context names `renderer`; null for no WebGL. */
+const renderer = (name: string | null) =>
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
+    () =>
+      (name === null
+        ? null
+        : {
+            getExtension: (ext: string) =>
+              ext === 'WEBGL_debug_renderer_info'
+                ? { UNMASKED_RENDERER_WEBGL: 1 }
+                : null,
+            getParameter: () => name,
+          }) as unknown as RenderingContext,
+  );
+
+it('draws one pixel per CSS pixel only where WebGL runs on the CPU (#151)', async () => {
+  vi.stubGlobal('devicePixelRatio', 2.6);
+  const cases: [string | null, number | undefined][] = [
+    [
+      'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)',
+      1,
+    ],
+    ['llvmpipe (LLVM 15.0.7, 256 bits)', 1],
+    [
+      'ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)',
+      undefined,
+    ],
+    ['Adreno (TM) 740', undefined],
+    [null, undefined],
+  ];
+  for (const [name, ratio] of cases) {
+    vi.resetModules();
+    const spy = renderer(name);
+    const { mapPixelRatio } = await import('../src/basemap');
+    expect(mapPixelRatio(), String(name)).toBe(ratio);
+    // Asked once per page.
+    mapPixelRatio();
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  }
 });

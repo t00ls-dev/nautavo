@@ -11,7 +11,14 @@ import { icon, iconControl } from './icons';
 import { gpsPoint, locationError } from './location';
 import { navigationRoute } from './routing';
 import { creditsDialog } from './map-credits';
-import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
+import {
+  NEUTRAL_STYLE,
+  STYLE_URL,
+  fetchStyle,
+  mapPixelRatio,
+  refetchTilesOnline,
+  vectorCredits,
+} from './basemap';
 import { loadMapLibre } from './maplibre-loader';
 import { maneuverText, stepRoad } from './maneuvers';
 import { navigationStyle } from './navigation-style';
@@ -368,6 +375,7 @@ export function setupNavigation(deps: {
     const [ml, style] = await Promise.all([loadMapLibre(), loadStyle()]);
     MarkerClass = ml.Marker;
     noStyle = !style;
+    const pixelRatio = mapPixelRatio();
     map = new ml.Map({
       container: 'nav-map',
       style: style ?? NEUTRAL_STYLE,
@@ -386,6 +394,8 @@ export function setupNavigation(deps: {
       keyboard: false,
       fadeDuration: 0,
       renderWorldCopies: false,
+      // The screen's resolution, or one pixel per CSS pixel without a GPU.
+      ...(pixelRatio ? { pixelRatio } : {}),
       // MapLibre's default 'same-origin' credentials send nothing cross-origin.
     });
     const m = map;
@@ -422,6 +432,25 @@ export function setupNavigation(deps: {
       else m.once('load', () => resolve());
     });
     addNavigationLayers(m);
+    // The map lives as long as the page: tiles that failed offline are asked
+    // again when the connection returns, and so is a style that failed (one
+    // attempt per `online` event, as the planner does), with the route and
+    // the travelled line drawn again over it.
+    refetchTilesOnline(m);
+    window.addEventListener('online', () => {
+      if (!noStyle) return;
+      void loadStyle().then((next) => {
+        if (!next || !noStyle) return;
+        noStyle = false;
+        m.once('style.load', () => {
+          addNavigationLayers(m);
+          if (route) drawRoute(route);
+          render();
+          mapNotice();
+        });
+        m.setStyle(next, { diff: false });
+      });
+    });
   }
   /** The dashed way back from the position to the rejoin point, or nothing. */
   function drawRejoin() {

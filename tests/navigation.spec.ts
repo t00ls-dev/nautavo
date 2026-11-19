@@ -3,6 +3,7 @@ import { chooseUnits } from './unit-settings';
 import { sunTimes } from '../src/daylight';
 import { decimalYear, magneticDeclination } from '../src/declination';
 import { base, osrmFirst } from './app-helpers';
+import { BASEMAP_STYLE } from './map-helpers';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
 const lon = (i: number) => -43.24 + i * 0.001;
@@ -79,6 +80,22 @@ async function setup(page: Page, road = 'Estrada das Furnas') {
   await expect(page.locator('#navigate')).toBeEnabled({ timeout: 15000 });
 }
 /** Every navigation text stays on its line inside the screen. */
+/** The navigation route's color on screen. */
+const ROUTE_COLOR = [0x12, 0x79, 0x6e];
+/** The color of one screen pixel, as drawn. */
+async function pixel(page: Page, x: number, y: number) {
+  const png = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
+  return page.evaluate(async (data) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${data}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(image, 0, 0);
+    return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+  }, png.toString('base64'));
+}
 async function fits(page: Page) {
   return page.evaluate(() => {
     const problems: string[] = [];
@@ -1140,26 +1157,38 @@ test.describe('phone navigation', () => {
     // The route ahead draws up the screen from the traveler, in its color,
     // over the neutral background.
     const arrow = (await page.locator('.nav-arrow').boundingBox())!;
-    const color = async (x: number, y: number) => {
-      const png = await page.screenshot({
-        clip: { x, y, width: 1, height: 1 },
-      });
-      return page.evaluate(async (data) => {
-        const image = new Image();
-        image.src = `data:image/png;base64,${data}`;
-        await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 1;
-        const context = canvas.getContext('2d')!;
-        context.drawImage(image, 0, 0);
-        return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
-      }, png.toString('base64'));
-    };
     const cx = arrow.x + arrow.width / 2;
+    await expect.poll(() => pixel(page, cx, arrow.y - 60)).toEqual(ROUTE_COLOR);
+    expect(await pixel(page, cx + 60, arrow.y - 60)).toEqual([
+      0xe9, 0xec, 0xe9,
+    ]);
+  });
+
+  test('a map style that failed without a connection loads when it returns, under the route', async ({
+    page,
+    context,
+  }) => {
+    await setup(page);
+    let offline = true;
+    await page.route('https://tiles.openfreemap.org/**', (r) =>
+      offline
+        ? r.abort('internetdisconnected')
+        : r.request().url().includes('/styles/')
+          ? r.fulfill({ json: BASEMAP_STYLE })
+          : r.fulfill({ status: 204 }),
+    );
+    await context.setOffline(true);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-no-map')).toBeVisible();
+    offline = false;
+    await context.setOffline(false);
+    await expect(page.locator('#nav-no-map')).toBeHidden();
+    // The route is drawn again over the new style, ahead of the traveler.
+    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
     await expect
-      .poll(() => color(cx, arrow.y - 60))
-      .toEqual([0x12, 0x79, 0x6e]);
-    expect(await color(cx + 60, arrow.y - 60)).toEqual([0xe9, 0xec, 0xe9]);
+      .poll(() => pixel(page, arrow.x + arrow.width / 2, arrow.y - 60))
+      .toEqual(ROUTE_COLOR);
   });
 
   test('without WebGL the directions still guide, with a notice', async ({

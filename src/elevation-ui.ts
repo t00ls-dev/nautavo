@@ -34,6 +34,7 @@ import {
   pointAtDistance,
   trackSlice,
 } from './track-position';
+import { onlineAttempt } from './offline';
 import { travelTimeSeconds } from './travel-time';
 import { distanceLabel, elevationLabel, milepostLabel } from './units';
 import { distanceUnits } from './unit-preferences';
@@ -78,6 +79,8 @@ export function setupElevation(
     stats = $('elevation-stats'),
     status = $('elevation-status'),
     retry = $<HTMLButtonElement>('elevation-retry');
+  /** A profile that failed offline waits for the connection (one attempt). */
+  const whenOnline = onlineAttempt();
   /** Markers of one kind, removed together. */
   const group = () => {
     const items: MapMarker[] = [];
@@ -185,6 +188,16 @@ export function setupElevation(
         return;
       }
       retried = false;
+      if (
+        whenOnline(() => {
+          if (route === target) void load();
+        })
+      ) {
+        message(
+          'No connection. The elevation will load when the connection returns.',
+        );
+        return;
+      }
       message(
         error instanceof Error
           ? error.message

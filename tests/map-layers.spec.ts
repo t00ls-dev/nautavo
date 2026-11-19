@@ -139,32 +139,57 @@ for (const [layer, attribute] of [
     expect(started).toBe(asked);
     expect(finished).toBe(6);
   });
-test('the first load draws at half resolution, then at the screen resolution', async ({
-  browser,
-}) => {
-  const context = await browser.newContext({ deviceScaleFactor: 2 });
-  await context.route('https://**/*', (r) => r.fulfill({ status: 204 }));
-  await mockBasemap(context);
-  // Tiles held back keep the first load from finishing.
-  let release = () => {};
-  const held = new Promise<void>((resolve) => (release = resolve));
-  await context.route('https://tiles.openfreemap.org/planet/**', async (r) => {
-    await held;
-    await r.fulfill({ status: 204 });
-  });
-  const page = await context.newPage();
-  const ratio = () =>
-    canvas(page).evaluate(
-      (el: HTMLCanvasElement) =>
-        Math.round((el.width / el.clientWidth) * 100) / 100,
+for (const [renderer, final] of [
+  // A GPU's name, as browsers report it: the screen's resolution.
+  ['ANGLE (Apple, ANGLE Metal Renderer: Apple M1)', 2],
+  // The test browser's own CPU renderer (SwiftShader): one pixel per CSS
+  // pixel, since every frame there blocks the page (#151).
+  [null, 1],
+] as const)
+  test(`the first load draws at half resolution, then at ${final}× with ${renderer ? 'a GPU' : 'WebGL on the CPU'}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ deviceScaleFactor: 2 });
+    if (renderer)
+      await context.addInitScript((name) => {
+        // UNMASKED_RENDERER_WEBGL of WEBGL_debug_renderer_info.
+        const UNMASKED_RENDERER = 0x9246;
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- called with this
+        const get = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function (
+          this: WebGLRenderingContext,
+          parameter: number,
+        ) {
+          return parameter === UNMASKED_RENDERER
+            ? name
+            : (get.call(this, parameter) as unknown);
+        };
+      }, renderer);
+    await context.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+    await mockBasemap(context);
+    // Tiles held back keep the first load from finishing.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await context.route(
+      'https://tiles.openfreemap.org/planet/**',
+      async (r) => {
+        await held;
+        await r.fulfill({ status: 204 });
+      },
     );
-  await page.goto(base);
-  await expect(canvas(page)).toBeVisible();
-  expect(await ratio()).toBe(0.5);
-  release();
-  await expect.poll(ratio).toBe(2);
-  await context.close();
-});
+    const page = await context.newPage();
+    const ratio = () =>
+      canvas(page).evaluate(
+        (el: HTMLCanvasElement) =>
+          Math.round((el.width / el.clientWidth) * 100) / 100,
+      );
+    await page.goto(base);
+    await expect(canvas(page)).toBeVisible();
+    expect(await ratio()).toBe(0.5);
+    release();
+    await expect.poll(ratio).toBe(final);
+    await context.close();
+  });
 test('without the style or WebGL the route still draws with a notice', async ({
   page,
 }) => {

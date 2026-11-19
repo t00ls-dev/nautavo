@@ -130,6 +130,32 @@ test('surface is asked only when opened, totals and stretches translate and conv
   expect(requests).toHaveLength(1);
 });
 
+test('surface that fails without a connection loads once it returns', async ({
+  page,
+  context,
+}) => {
+  await setup(page);
+  let offline = true;
+  const requests = await mockTrace(page, (r) =>
+    offline
+      ? r.abort('internetdisconnected')
+      : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
+  );
+  await context.setOffline(true);
+  await page.locator('#surface > summary').click();
+  await expect(page.locator('#surface-status')).toHaveText(
+    'No connection. The surface will load when the connection returns.',
+  );
+  await expect(page.locator('#surface-retry')).toBeHidden();
+  const asked = requests.length;
+  await page.waitForTimeout(1500);
+  expect(requests).toHaveLength(asked);
+  offline = false;
+  await context.setOffline(false);
+  await expect(page.locator('.surface-totals li')).toHaveCount(2);
+  expect(requests).toHaveLength(asked + 1);
+});
+
 test('the Surface coloring asks on its own choice and shows only the surfaces present', async ({
   page,
 }) => {

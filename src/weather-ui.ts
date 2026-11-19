@@ -1,3 +1,4 @@
+import { onlineAttempt } from './offline';
 import { speedFromKmh } from './travel-time';
 import { byId as $ } from './dom';
 import { isolate, type MapMarker, type PlannerMap } from './planner-map';
@@ -95,6 +96,8 @@ export function setupWeather(
 ) {
   const departure = $<HTMLInputElement>('departure'),
     retry = $<HTMLButtonElement>('weather-retry');
+  /** A forecast that failed offline waits for the connection (one attempt). */
+  const whenOnline = onlineAttempt();
   /** Markers on the map, for clustering those that would overlap (#119). */
   let placed: Placed[] = [];
   const markers = {
@@ -951,6 +954,17 @@ export function setupWeather(
                 retry.hidden = false;
               }
             },
+          );
+          return;
+        }
+        // Offline: asked once more when the connection returns.
+        if (
+          whenOnline(() => {
+            if (valid()) requestForecast();
+          })
+        ) {
+          message(
+            'No connection. The weather will load when the connection returns.',
           );
           return;
         }
