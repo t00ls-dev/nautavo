@@ -15,9 +15,9 @@ it('converts weather temperature and precipitation with the temperature units', 
   expect(temperatureLabel(24.1, 'celsius', 'pt-BR')).toBe('24,1 °C');
   expect(temperatureLabel(24.1, 'fahrenheit')).toBe('75.4 °F');
   expect(temperatureLabel(-40, 'fahrenheit')).toBe('-40 °F');
-  expect(temperatureLabel(null, 'fahrenheit')).toBe('— °F');
+  expect(temperatureLabel(null, 'fahrenheit')).toBe('- °F');
   expect(precipitationLabel(0.2, 'celsius', 'pt-BR')).toBe('0,2 mm');
   expect(precipitationLabel(12.7, 'fahrenheit')).toBe('0.5 in');
   expect(precipitationLabel(0.2, 'fahrenheit', 'pt-BR')).toBe('0,01 in');
-  expect(precipitationLabel(null)).toBe('— mm');
+  expect(precipitationLabel(null)).toBe('- mm');
 });

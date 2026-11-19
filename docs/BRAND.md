@@ -1,4 +1,4 @@
-# nautavo identity
+# Nautavo identity
 
 Do not version project UI screenshots or embed them in the README. Use the project logo; keep local verification captures in an ignored `*.local/` folder.
 
@@ -42,3 +42,19 @@ The manifest supplies browser metadata and uses browser display mode. Its `theme
 SEO metadata is present in the initial HTML, with localized titles and descriptions after a language change. Canonical URLs and sharing images never include a route hash or user coordinates. The application, help and What's new have one canonical URL per language, English at the bare path (also `x-default`) and Portuguese with `?lang=pt`; `src/seo.ts` sets that canonical at runtime, so their raw HTML carries only the `hreflang` alternates. The sitemap lists each of these canonical URLs with its `lastmod` and the same alternates. Pages are published without their extension (`/help`, `/changelog`). `public/robots.txt` and the sitemap target the custom-domain root, https://nautavo.com/, which Cloudflare Workers serves over HTTPS (see `AGENTS.md`, Hosting and publication).
 
 A copy published at another domain root needs no edit: build it with `SITE_URL` set to that address ([self-hosting](SELF-HOSTING.md)), and the canonical and sharing URLs, `hreflang` alternates, sitemap and robots.txt name it. Changing the default domain means changing `DEFAULT_SITE_URL` in `src/site.ts` and the same URLs in the three HTML files and `public/`; a path other than the root also needs Vite's base and the manifest `id`/`start_url`/`scope`.
+
+## Name and writing
+
+The name is **Nautavo**, a proper noun with a capital N in every text: page titles, metadata, help, What's new, README, documentation, alternative text, accessible names and the GPX `creator`. Only the drawn wordmark is lowercase (it is a logo, not text), and so are the domain, URLs and identifiers (`nautavo.com`, the npm package, the Workers). Stored names from before the rename keep `route-gpx` (see `AGENTS.md`).
+
+Page titles read `Nautavo: <subject>` in both languages (`Nautavo: Route Planner & GPX Export`, `Nautavo: Novidades`), the same in the initial HTML and `src/seo.ts`.
+
+Text should read as written by someone who knows the product and its users: plain, specific and short, saying what a control does or what happened. Avoid the marks of generated text:
+
+- No em dash (U+2014) anywhere, in the product or the repository: use a colon, a comma, parentheses or two sentences. An en dash (–) only joins a range, without spaces (`UV 7–8`, `10:30–12:30`, `3–8%`). A value that is not known shows a plain hyphen (`MISSING` in `src/units.ts`).
+- Straight quotes and apostrophes (`'` and `"`), never curly ones. Name a control as the interface shows it, without quotes (Calculate route, Prefer main roads); Markdown documentation sets it in bold.
+- No filler or hype: seamless, robust, effortless, powerful, leverage, empower, unlock (the Unlock editing control aside), elevate, streamline, cutting-edge, journey, tailored, "whether you…", "at your fingertips". No rhetorical questions, no "not only … but also", no lists of three adjectives, no exclamation marks.
+- No emoji, in text or as decoration (`AGENTS.md`, Interface, text and assets).
+- The ellipsis character (…) stays for work in progress (Loading…).
+
+`tests/writing.test.ts` checks the em dash, curly quotes and the name's capital in every tracked text file, except third-party texts kept word for word (licenses, notices, the Code of Conduct).

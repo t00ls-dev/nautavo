@@ -45,7 +45,7 @@ test('SEO metadata stays localized and excludes private route state', async ({
   const schema = JSON.parse(
     await page.locator('script[type="application/ld+json"]').innerText(),
   ) as { name: string; url: string };
-  expect(schema.name).toBe('nautavo');
+  expect(schema.name).toBe('Nautavo');
   expect(schema.url).toBe(canonical);
 });
 test('?lang=pt opens the app in Portuguese over the saved preference and keeps the route', async ({
@@ -195,7 +195,7 @@ test("What's new switches language and metadata and keeps the route for Back to 
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
   await expect(page.locator('#changelog-pt')).toBeVisible();
   await expect(page.locator('#changelog-en')).toBeHidden();
-  await expect(page).toHaveTitle('nautavo — Novidades');
+  await expect(page).toHaveTitle('Nautavo: Novidades');
   await expect(page.locator('link[rel=canonical]')).toHaveAttribute(
     'href',
     'https://nautavo.com/changelog?lang=pt',
@@ -203,7 +203,7 @@ test("What's new switches language and metadata and keeps the route for Back to 
   await expect(page.locator('#back')).toHaveAttribute('href', './#v2=abc');
   await page.locator('#language').selectOption('en');
   await expect(page.locator('#changelog-en')).toBeVisible();
-  await expect(page).toHaveTitle("nautavo — What's New");
+  await expect(page).toHaveTitle("Nautavo: What's New");
   await expect(page.locator('meta[name=description]')).toHaveAttribute(
     'content',
     /See what changed/,
@@ -240,7 +240,7 @@ test("the panel footer and the help page link to What's new in the chosen langua
   );
 });
 
-test('the Help and What’s new headers fit on one line from 320 px', async ({
+test("the Help and What's new headers fit on one line from 320 px", async ({
   page,
 }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));

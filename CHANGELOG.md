@@ -1,6 +1,6 @@
 # Changelog
 
-All notable user-visible changes to [nautavo](https://nautavo.com/) are documented in this file, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/). Internal changes (CI, dependencies, tests and repository documentation) are not listed.
+All notable user-visible changes to [Nautavo](https://nautavo.com/) are documented in this file, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/). Internal changes (CI, dependencies, tests and repository documentation) are not listed.
 
 The site is deployed from `main` after every merge, so entries under Unreleased are already live; a release gives them a version. The [What's new](https://nautavo.com/changelog) page (`changelog.html`) shows the same entries in English and Portuguese and must stay in sync with this file.
 
@@ -8,21 +8,22 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- The name is written Nautavo, with a capital N, in page titles and every text; the logo is unchanged. A value that is not known shows a hyphen.
 - When the connection returns, weather, elevation, surface and the Itinerary's directions that could not load without it load once on their own, saying so meanwhile, instead of showing an error with Try again.
 - On a computer without a graphics processor, or one the browser does not use, the map draws at standard resolution so it stays responsive; screens with a graphics processor are unchanged.
-- Downloaded GPX files no longer name a means of transport in their keywords, only nautavo.
+- Downloaded GPX files no longer name a means of transport in their keywords, only Nautavo.
 
 ### Fixed
 
 - Map areas that failed to load while the connection was down, such as after moving the map offline, load when it returns, on the route planner and while navigating, instead of staying blank; a navigation started offline also gets its map when the connection returns.
-- In Settings, a server address over plain HTTP is refused when you apply it on nautavo.com, which connects only to HTTPS servers, instead of being accepted and then failing on every request; nautavo run on your own computer still accepts a server there.
+- In Settings, a server address over plain HTTP is refused when you apply it on nautavo.com, which connects only to HTTPS servers, instead of being accepted and then failing on every request; Nautavo run on your own computer still accepts a server there.
 - For part of November 18, Cloudflare, which hosts the site, added its visitor analytics script to nautavo.com's pages through a hosting setting, against the site's no-analytics promise; the setting was turned off the same day, and the site's security policy now blocks such scripts.
 
 ## [2.0.1] - 2026-11-18
 
 ### Changed
 
-- nautavo.com sends security headers that let it connect only to HTTPS servers: a routing, search or weather server on your own computer over plain HTTP now works only when you run nautavo there yourself.
+- nautavo.com sends security headers that let it connect only to HTTPS servers: a routing, search or weather server on your own computer over plain HTTP now works only when you run Nautavo there yourself.
 
 ### Fixed
 
@@ -43,7 +44,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 - Moving a point on the map is precise on touch screens: while you drag a marker, a magnifier above your finger shows the exact spot under it. In Settings, Moving points on the map can instead be Tap, then move the map: tap a marker, move the map under a fixed marker and Confirm.
 - Speed while navigating: a round badge shows your current speed (0 when stopped), and the time left and the arrival start from your average speed and move to the trip's own average, stops included, over the first 10 minutes. Simulate navigation shows the trip's clock next to Replay.
 - Navigate, on phones: follow the route on screen with your live position, the next turn and its road, the turn after it, the remaining distance and time and the arrival time, on a map that turns with your direction of travel, or with the compass, corrected to true north, when you stop, and keeps the screen on. Pinch, double tap or double tap and drag to zoom, drag or turn the map with your fingers, and Re-center, at the bottom left, to follow you again; on a turned map, the compass puts north up. The next turn shows on a card floating over the map. A short safety notice shows when navigation starts and can be turned off, also in Settings. Your location is watched only until End, pauses while the page is hidden and is never stored; it is sent only for a recalculation of the way back to the route; without map tiles the route and your position still show.
-- Add to home screen, in More actions on phones, shows your browser's steps to open nautavo from an icon on the home screen; there is nothing to install. Help explains it for each platform.
+- Add to home screen, in More actions on phones, shows your browser's steps to open Nautavo from an icon on the home screen; there is nothing to install. Help explains it for each platform.
 - After one visit with a connection, the app opens without one in the same browser: saved routes open, show their summary and directions and download as GPX, with a notice that you are offline; map tiles, routing, search, weather, elevation and surface still need a connection.
 - Surface in the route summary: how much of the route is paved or unpaved, the unpaved stretches to check, each shown on the map when selected, and a Surface route coloring in Map layers; the route's road attributes are requested from Valhalla only on these choices.
 - Elevation marks the highest and lowest points of the route on the map with their altitude while it is open, and Elevation here in the map point menu shows the approximate altitude of any point, requested only on that choice.
@@ -53,7 +54,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
-- route-gpx is now nautavo, at nautavo.com, with a new compass logo and a sea-green interface; Help and What's new are at nautavo.com/help and nautavo.com/changelog.
+- route-gpx is now Nautavo, at nautavo.com, with a new compass logo and a sea-green interface; Help and What's new are at nautavo.com/help and nautavo.com/changelog.
 - The approximate region for the first map view now comes from the site's own server instead of ipwho.is, so no other service sees your IP address for it; the region service address is no longer a setting.
 - Weather cards are compact: the time and place, then the sky, temperature and rain, then the wind and UV, with other risks on one more line only when there are any; the date shows only when the day changes, and the tab on the card names the main risk (Heavy rain) instead of a level number.
 - Settings come in sections: Units, Map and points, Navigation and Backup apply at once, and Advanced, folded, holds the servers, satellite imagery, the IP region and the JSON editor, with Apply servers.

@@ -1,5 +1,10 @@
 import type { Coord, Route, Step } from './core';
-import { distanceLabel, milepostLabel, stepDistanceLabel } from './units';
+import {
+  distanceLabel,
+  MISSING,
+  milepostLabel,
+  stepDistanceLabel,
+} from './units';
 import { distanceUnits } from './unit-preferences';
 import { icon } from './icons';
 import { isImportedRoute } from './track-legs';
@@ -46,7 +51,7 @@ export function summaryStats(
   const distance = distanceLabel(route.distance, distanceUnits(), locale);
   const time =
     minutes === null
-      ? '—'
+      ? MISSING
       : minutes < 60
         ? `${minutes} min`
         : `${Math.floor(minutes / 60)}h ${minutes % 60} min`;

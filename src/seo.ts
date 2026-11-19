@@ -1,32 +1,32 @@
 const texts = {
   app: {
     en: [
-      'nautavo — Route Planner & GPX Export',
+      'Nautavo: Route Planner & GPX Export',
       'Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account.',
     ],
     pt: [
-      'nautavo — Planejador de rotas e exportação GPX',
+      'Nautavo: Planejador de rotas e exportação GPX',
       'Crie rotas pelas ruas, importe GPX, FIT ou TCX, veja clima, elevação e pavimento, navegue pelo celular e baixe o traçado completo em GPX. Sem cadastro.',
     ],
   },
   help: {
     en: [
-      'nautavo — Route Planning & GPX Help',
+      'Nautavo: Route Planning & GPX Help',
       'Learn to plan and edit routes, import GPX, FIT and TCX, read the itinerary, weather, elevation and surface, navigate, set units, and save or share routes.',
     ],
     pt: [
-      'nautavo — Ajuda para criar e exportar rotas',
+      'Nautavo: Ajuda para criar e exportar rotas',
       'Aprenda a criar e editar rotas, importar GPX, FIT e TCX, ver itinerário, clima, elevação e pavimento, navegar, ajustar unidades e salvar ou compartilhar.',
     ],
   },
   changelog: {
     en: [
-      "nautavo — What's New",
-      'See what changed in nautavo: new features, changes and fixes in the route planner and GPX export, newest first.',
+      "Nautavo: What's New",
+      'See what changed in Nautavo: new features, changes and fixes in the route planner and GPX export, newest first.',
     ],
     pt: [
-      'nautavo — Novidades',
-      'Veja o que mudou no nautavo: novos recursos, mudanças e correções no planejador de rotas e na exportação GPX, das mais recentes às mais antigas.',
+      'Nautavo: Novidades',
+      'Veja o que mudou no Nautavo: novos recursos, mudanças e correções no planejador de rotas e na exportação GPX, das mais recentes às mais antigas.',
     ],
   },
 } as const;

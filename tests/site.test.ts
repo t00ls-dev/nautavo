@@ -31,7 +31,7 @@ describe('site address', () => {
       '"image": "https://nautavo.com/src/brand/social-card.png",',
       '<loc>https://nautavo.com/changelog</loc>',
       'Sitemap: https://nautavo.com/sitemap.xml',
-      '<li>route-gpx is now nautavo, at nautavo.com.</li>',
+      '<li>route-gpx is now Nautavo, at nautavo.com.</li>',
     ].join('\n');
     expect(withSite(text, site)).toBe(
       [
@@ -39,7 +39,7 @@ describe('site address', () => {
         '"image": "https://routes.example.org/src/brand/social-card.png",',
         '<loc>https://routes.example.org/changelog</loc>',
         'Sitemap: https://routes.example.org/sitemap.xml',
-        '<li>route-gpx is now nautavo, at nautavo.com.</li>',
+        '<li>route-gpx is now Nautavo, at nautavo.com.</li>',
       ].join('\n'),
     );
     expect(withSite(text, DEFAULT_SITE_URL)).toBe(text);

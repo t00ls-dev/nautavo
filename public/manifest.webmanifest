@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "nautavo — Route Planner",
-  "short_name": "nautavo",
+  "name": "Nautavo: Route Planner",
+  "short_name": "Nautavo",
   "description": "Plan routes and export complete GPX tracks. Free and open source.",
   "lang": "en",
   "start_url": "/",

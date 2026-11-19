@@ -108,7 +108,7 @@ describe('language preference', () => {
 describe('translation coverage', () => {
   // Product names, units, language codes and licenses stay the same in Portuguese.
   const sameInBothLanguages = new Set([
-    'nautavo',
+    'Nautavo',
     // The format's name, the Settings › Advanced row of the JSON editor.
     'JSON',
     // Required map attribution, kept as written.

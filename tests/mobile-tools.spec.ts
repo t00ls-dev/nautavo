@@ -343,7 +343,7 @@ test('long press on the map cannot start a native text selection, but the panel 
   await expect(page.locator('html')).not.toHaveClass(/map-touching/);
   await session.detach();
   await page.waitForTimeout(400);
-  // The nautavo point menu still opens on hold.
+  // The Nautavo point menu still opens on hold.
   await holdMap(page);
   await expect(page.locator('#point-menu')).toBeVisible();
   await context.close();

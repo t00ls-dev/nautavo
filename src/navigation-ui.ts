@@ -69,7 +69,7 @@ import {
   replayAdvance,
   replayFix,
 } from './navigation-replay';
-import { distanceLabel } from './units';
+import { distanceLabel, MISSING } from './units';
 import { distanceUnits } from './unit-preferences';
 
 /**
@@ -740,7 +740,7 @@ export function setupNavigation(deps: {
     if (!tracker) return;
     const remaining = r ? r.remaining : tracker.total;
     const seconds = travelTimeSeconds(remaining, arrivalSpeed());
-    $('nav-time').textContent = r ? navigationDurationLabel(seconds) : '—';
+    $('nav-time').textContent = r ? navigationDurationLabel(seconds) : MISSING;
     const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
       deps.locale(),
       { hour: '2-digit', minute: '2-digit' },
