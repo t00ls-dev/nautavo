@@ -1,7 +1,7 @@
 import { speedFromKmh } from './travel-time';
 import { byId as $ } from './dom';
 import { isolate, type MapMarker, type PlannerMap } from './planner-map';
-import { type Route, type State, serverUrl } from './core';
+import { type Route, type State, serverUrl, settingsServerUrl } from './core';
 import { t, weatherDescription } from './i18n';
 import { distanceLabel, precipitationLabel, temperatureLabel } from './units';
 import { classifyWeather, groupWeather, uvCategory } from './weather-risk';
@@ -977,7 +977,7 @@ export function setupWeather(
     /** The Open-Meteo base URL (device preference), also used for elevation. */
     endpoint: () => endpoint,
     applyServer() {
-      const value = serverUrl(
+      const value = settingsServerUrl(
         $<HTMLInputElement>('weather-server').value.trim(),
       );
       if (value !== endpoint) invalidate();

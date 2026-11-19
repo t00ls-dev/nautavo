@@ -51,6 +51,7 @@ import {
   meters,
   parseCoordinates,
   serverUrl,
+  settingsServerUrl,
   trackStops,
   validateState,
   type Coord,
@@ -1681,9 +1682,15 @@ $('save-settings').onclick = () => {
   try {
     // Validate every URL before applying any, so an invalid field changes nothing.
     const servers = (['osrm', 'valhalla', 'nominatim'] as const).map(
-      (key) => [key, serverUrl($<HTMLInputElement>(key).value.trim())] as const,
+      (key) =>
+        [
+          key,
+          settingsServerUrl($<HTMLInputElement>(key).value.trim()),
+        ] as const,
     );
-    const photon = serverUrl($<HTMLInputElement>('photon').value.trim());
+    const photon = settingsServerUrl(
+      $<HTMLInputElement>('photon').value.trim(),
+    );
     const reroute = servers.some(([key, url]) => state[key] !== url);
     // Routing server changes recalculate the route; device preferences do not.
     if (reroute && editBlocked()) return;

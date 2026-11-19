@@ -6,6 +6,15 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ## [Unreleased]
 
+### Changed
+
+- Downloaded GPX files no longer name a means of transport in their keywords, only nautavo.
+
+### Fixed
+
+- In Settings, a server address over plain HTTP is refused when you apply it on nautavo.com, which connects only to HTTPS servers, instead of being accepted and then failing on every request; nautavo run on your own computer still accepts a server there.
+- For part of November 18, Cloudflare, which hosts the site, added its visitor analytics script to nautavo.com's pages through a hosting setting, against the site's no-analytics promise; the setting was turned off the same day, and the site's security policy now blocks such scripts.
+
 ## [2.0.1] - 2026-11-18
 
 ### Changed
@@ -30,8 +39,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 - A point's field opens a menu with My location (your exact position) and Choose on map (move the map under a fixed marker and Confirm); place suggestions show their name, the rest of the address and the distance from the point before or after.
 - Moving a point on the map is precise on touch screens: while you drag a marker, a magnifier above your finger shows the exact spot under it. In Settings, Moving points on the map can instead be Tap, then move the map: tap a marker, move the map under a fixed marker and Confirm.
 - Speed while navigating: a round badge shows your current speed (0 when stopped), and the time left and the arrival start from your average speed and move to the trip's own average, stops included, over the first 10 minutes. Simulate navigation shows the trip's clock next to Replay.
-- Weather while navigating: a chip at the top left shows the weather here, with an icon, the temperature and the chance of rain (amber with an alert); tap it for the next samples ahead with their distance, passage time and alerts. It reads the forecast already fetched for the route, makes no request and never sends your position; it also follows Simulate navigation.
-- Navigate, on phones: follow the route on screen with your live position, the next turn and its road, the turn after it, the remaining distance and time and the arrival time, on a map that turns with your direction of travel, or with the compass, corrected to true north, when you stop, and keeps the screen on. Pinch, double tap or double tap and drag to zoom, drag or turn the map with your fingers, and Re-center, at the bottom left, to follow you again; on a turned map, the compass puts north up. The next turn shows on a card floating over the map. A short safety notice shows when navigation starts and can be turned off, also in Settings. Your location is watched only until End, pauses while the page is hidden and is never stored or sent; without map tiles the route and your position still show.
+- Navigate, on phones: follow the route on screen with your live position, the next turn and its road, the turn after it, the remaining distance and time and the arrival time, on a map that turns with your direction of travel, or with the compass, corrected to true north, when you stop, and keeps the screen on. Pinch, double tap or double tap and drag to zoom, drag or turn the map with your fingers, and Re-center, at the bottom left, to follow you again; on a turned map, the compass puts north up. The next turn shows on a card floating over the map. A short safety notice shows when navigation starts and can be turned off, also in Settings. Your location is watched only until End, pauses while the page is hidden and is never stored; it is sent only for a recalculation of the way back to the route; without map tiles the route and your position still show.
 - Add to home screen, in More actions on phones, shows your browser's steps to open nautavo from an icon on the home screen; there is nothing to install. Help explains it for each platform.
 - After one visit with a connection, the app opens without one in the same browser: saved routes open, show their summary and directions and download as GPX, with a notice that you are offline; map tiles, routing, search, weather, elevation and surface still need a connection.
 - Surface in the route summary: how much of the route is paved or unpaved, the unpaved stretches to check, each shown on the map when selected, and a Surface route coloring in Map layers; the route's road attributes are requested from Valhalla only on these choices.

@@ -833,18 +833,21 @@
           Nominatim requests are spaced at least 1.1 seconds apart; its
           one-request-per-second limit applies across all users. Use your own
           service before scaling. Routing changes are debounced and serialized;
-          OSRM falls back to Valhalla.
+          with Prefer main roads (the default) Valhalla routes and OSRM is the
+          fallback, and without it the other way round.
         </p>
         <p>
           No cookies, accounts or analytics. Coordinates, searches and visible
           map tiles are sent to the selected services. Links include your
           locations. The browser stores a search timestamp to coordinate tabs,
           and the named routes and favorite places you explicitly save in local
-          IndexedDB. It also remembers language, region preferences and panel
-          state without location data. A service worker keeps only nautavo's own
-          files so it opens offline; it stores no locations and never caches map
-          tiles or answers from other services. Do not enter confidential
-          addresses.
+          IndexedDB. It also remembers your preferences and the panel state; the
+          only location among them is the map view you last left (center and
+          zoom), and while navigating this tab keeps the route and the distance
+          travelled, never your position, until navigation ends. A service
+          worker keeps only nautavo's own files so it opens offline; it stores
+          no locations and never caches map tiles or answers from other
+          services. Do not enter confidential addresses.
         </p>
         <p>
           <a href="https://operations.osmfoundation.org/policies/nominatim/"
@@ -1665,18 +1668,21 @@
           consultas Nominatim têm ao menos 1,1 s entre requisições; o limite de
           uma requisição por segundo vale para todos os usuários. Use uma
           instância própria antes de ampliar o uso. O roteamento tem debounce e
-          fila; o Valhalla é usado se o OSRM falhar.
+          fila; com Preferir vias principais (o padrão) o Valhalla calcula e o
+          OSRM é a alternativa, e sem ela o contrário.
         </p>
         <p>
           Sem cookies, cadastro ou analytics. Coordenadas, buscas e área visível
           do mapa são enviados aos serviços escolhidos. Links incluem seus
           locais. O navegador guarda um horário de busca para coordenar abas e
           as rotas nomeadas e os lugares favoritos que você salvar
-          explicitamente no IndexedDB local. Também lembra idioma, preferências
-          de região e estado do painel, sem dados de localização. Um service
-          worker guarda só os arquivos do próprio nautavo para ele abrir sem
-          conexão; não guarda locais e nunca guarda blocos do mapa nem respostas
-          de outros serviços. Não informe endereços confidenciais.
+          explicitamente no IndexedDB local. Também lembra suas preferências e o
+          estado do painel; o único local entre eles é a vista do mapa onde você
+          parou (centro e zoom), e durante a navegação esta aba guarda a rota e
+          a distância percorrida, nunca a sua posição, até a navegação acabar.
+          Um service worker guarda só os arquivos do próprio nautavo para ele
+          abrir sem conexão; não guarda locais e nunca guarda blocos do mapa nem
+          respostas de outros serviços. Não informe endereços confidenciais.
         </p>
         <p>
           <a href="https://operations.osmfoundation.org/policies/nominatim/"

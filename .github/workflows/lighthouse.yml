@@ -30,7 +30,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run lighthouse
         env:
-          SITE_URL: https://nautavo.com/
+          TARGET_URL: https://nautavo.com/
           RUNS: 3
       - name: Summary
         if: ${{ !cancelled() }}

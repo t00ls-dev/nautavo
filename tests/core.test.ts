@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import {
   defaults,
@@ -7,6 +7,7 @@ import {
   encodeStateV1,
   decodeState,
   validateState,
+  settingsServerUrl,
   linkServerOverrides,
   validRoute,
   highways,
@@ -329,6 +330,46 @@ describe('route validation', () => {
     expect(validRoute('route')).toBe(false);
   });
 });
+describe('servers typed in Settings', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const page = (href: string) => vi.stubGlobal('location', new URL(href));
+  const refused = 'Use HTTPS for a server accessed from this site.';
+
+  it('refuses plain http on the published site, local servers included', () => {
+    page('https://nautavo.com/');
+    expect(settingsServerUrl('https://osrm.example.org/')).toBe(
+      'https://osrm.example.org',
+    );
+    for (const url of [
+      'http://localhost:5000',
+      'http://127.0.0.1:5000',
+      'http://[::1]:5000',
+      'http://osrm.example.org',
+    ])
+      expect(() => settingsServerUrl(url)).toThrow(refused);
+  });
+
+  it('accepts a local http server only while the app runs locally over http', () => {
+    page('http://127.0.0.1:5173/');
+    expect(settingsServerUrl('http://localhost:5000/')).toBe(
+      'http://localhost:5000',
+    );
+    expect(settingsServerUrl('http://127.0.0.1:5000')).toBe(
+      'http://127.0.0.1:5000',
+    );
+    // The development policy cannot name IPv6 or LAN hosts.
+    expect(() => settingsServerUrl('http://[::1]:5000')).toThrow(refused);
+    expect(() => settingsServerUrl('http://192.168.1.5:5000')).toThrow(refused);
+  });
+
+  it('leaves stored data valid: links and backups keep an http local server', () => {
+    page('https://nautavo.com/');
+    expect(
+      validateState({ ...defaults(), osrm: 'http://localhost:5000' }).osrm,
+    ).toBe('http://localhost:5000');
+  });
+});
+
 describe('link server overrides', () => {
   it('is null for default servers and returns all servers otherwise', () => {
     const s = defaults();
