@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
 import { sunTimes } from '../src/daylight';
 import { decimalYear, magneticDeclination } from '../src/declination';
-import { base, osrmFirst } from './app-helpers';
+import { base, boxSettled, osrmFirst } from './app-helpers';
 import { BASEMAP_STYLE } from './map-helpers';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
@@ -420,11 +420,16 @@ test.describe('phone navigation', () => {
       await page.mouse.move(x + dx, y + dy, { steps: 8 });
       await page.mouse.up();
     };
+    await boxSettled(page, '.nav-arrow');
     const start = (await marker.boundingBox())!;
     await drag(-60, 80);
-    const moved = (await marker.boundingBox())!;
-    expect(moved.x - start.x).toBeLessThan(-40);
-    expect(moved.y - start.y).toBeGreaterThan(60);
+    // MapLibre moves the camera on its next frame, later under load.
+    const shift = async () => {
+      const moved = (await marker.boundingBox())!;
+      return { x: moved.x - start.x, y: moved.y - start.y };
+    };
+    await expect.poll(async () => (await shift()).x).toBeLessThan(-40);
+    expect((await shift()).y).toBeGreaterThan(60);
     await expect(resume).toBeVisible();
     // Panned, the map stays as the finger left it: the compass no longer
     // turns it.
@@ -1457,7 +1462,8 @@ test.describe('phone navigation', () => {
    * announcement is said only for a turn first seen beyond 400 m.
    */
   const firstFix = (page: Page) =>
-    expect(page.locator('.nav-position')).toBeVisible();
+    // The marker needs the navigation map, slower to create under load.
+    expect(page.locator('.nav-position')).toBeVisible({ timeout: 15000 });
 
   test('voice is off by default and, turned on, speaks the turns', async ({
     page,
