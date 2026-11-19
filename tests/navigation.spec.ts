@@ -1449,6 +1449,16 @@ test.describe('phone navigation', () => {
       page.evaluate(() => (window as unknown as { said: string[][] }).said);
   }
 
+  /**
+   * The first fix (the context's position, about 410 m before the turn) has
+   * reached navigation: the browser delivers it some time after the watch
+   * starts, later under load, and a position set meanwhile would be the
+   * first one seen instead. Only then may a test move on, since the far
+   * announcement is said only for a turn first seen beyond 400 m.
+   */
+  const firstFix = (page: Page) =>
+    expect(page.locator('.nav-position')).toBeVisible();
+
   test('voice is off by default and, turned on, speaks the turns', async ({
     page,
     context,
@@ -1469,6 +1479,7 @@ test.describe('phone navigation', () => {
     await voiceBox.check();
     await page.locator('#nav-notice-start').click();
     await expect.poll(said).toEqual([['Navigation started.', 'en']]);
+    await firstFix(page);
     await context.setGeolocation({ latitude: lat, longitude: lon(9) });
     await expect
       .poll(async () => (await said()).at(-1)?.[0])
@@ -1495,8 +1506,8 @@ test.describe('phone navigation', () => {
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-voice').check();
     await page.locator('#nav-notice-start').click();
-    // Moving only once navigation has started, as the English test does.
     await expect.poll(said).toEqual([['Navegação iniciada.', 'pt-BR']]);
+    await firstFix(page);
     await context.setGeolocation({ latitude: lat, longitude: lon(9) });
     await expect
       .poll(async () => (await said()).at(-1))
