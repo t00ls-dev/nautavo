@@ -150,6 +150,31 @@ export function serverUrl(text: string): string {
     throw new Error('Use HTTPS for a server accessed from this site.');
   return u.href.replace(/\/$/, '');
 }
+/** Hosts the development server's policy lets the app reach over http. */
+const LOCAL_HOSTS = ['localhost', '127.0.0.1'];
+/**
+ * A server URL typed in Settings, which this page can actually reach: the
+ * published security policy (src/security-headers.ts) allows only https, and
+ * the development one also http on this machine, so plain http is accepted
+ * only for a local server while the app itself runs locally over http.
+ * Links, saved routes and backups keep `serverUrl`, so stored data with an
+ * http server still opens.
+ */
+export function settingsServerUrl(text: string): string {
+  const url = serverUrl(text);
+  const { protocol, hostname } = new URL(url);
+  if (
+    protocol === 'http:' &&
+    typeof location !== 'undefined' &&
+    !(
+      location.protocol === 'http:' &&
+      LOCAL_HOSTS.includes(location.hostname) &&
+      LOCAL_HOSTS.includes(hostname)
+    )
+  )
+    throw new Error('Use HTTPS for a server accessed from this site.');
+  return url;
+}
 const toBase64Url = (bytes: Uint8Array) =>
   btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join(''))
     .replaceAll('+', '-')
@@ -352,7 +377,7 @@ export function generateGpx(
   )
     throw new Error('No valid route geometry to export.');
   const tag = (s: string) => escapeXml(s);
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="nautavo"><metadata><name>${tag(name)}</name><time>${date.toISOString()}</time><keywords>driving,nautavo</keywords></metadata>${points
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="nautavo"><metadata><name>${tag(name)}</name><time>${date.toISOString()}</time><keywords>nautavo</keywords></metadata>${points
     .filter((p) => p.coord)
     .map(
       (p) =>

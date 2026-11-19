@@ -3,11 +3,11 @@ import { previewBase, mockRegion } from './app-helpers';
 import { mapCanvas, mockBasemap } from './map-helpers';
 import { SECURITY_HEADERS } from '../src/security-headers';
 
-/** Content Security Policy problems: blocked loads and rejected sources. */
+/** Policy problems: blocked loads, rejected sources and unknown permissions. */
 function watchPolicy(page: Page) {
   const problems: string[] = [];
   page.on('console', (message) => {
-    if (/Content Security Policy/i.test(message.text()))
+    if (/Content Security Policy|Permissions-Policy/i.test(message.text()))
       problems.push(message.text());
   });
   return problems;

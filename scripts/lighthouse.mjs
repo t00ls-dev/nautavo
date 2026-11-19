@@ -2,8 +2,8 @@
 // PageSpeed Insights, on mobile, plus the app on desktop. A new public page is
 // audited once it is in the sitemap, which the SEO rules already require.
 // Opt-in: it loads the real pages, with their map tiles.
-//   SITE_URL  site to audit (default: the local `npm run preview` server)
-//   RUNS      runs per page; scores are the median (default 1)
+//   TARGET_URL  site to audit (default: the local `npm run preview` server)
+//   RUNS        runs per page; scores are the median (default 1)
 // Writes reports and summary.md only to the ignored .lighthouse.local/ folder
 // and exits 1 when a score is below its minimum.
 import { spawnSync } from 'node:child_process';
@@ -15,10 +15,10 @@ import { chromium } from '@playwright/test';
 // npx, so the summary says when a newer release exists (see latestLighthouse).
 const VERSION = '13.6.0';
 const LIGHTHOUSE = `lighthouse@${VERSION}`;
-const base = process.env.SITE_URL || 'http://127.0.0.1:4173/';
+const base = process.env.TARGET_URL || 'http://127.0.0.1:4173/';
 const runs = Math.max(1, Number.parseInt(process.env.RUNS ?? '1', 10) || 1);
 const out = '.lighthouse.local';
-// Sitemap URLs name the published site; the same paths are audited on SITE_URL.
+// Sitemap URLs name the published site; the same paths are audited on TARGET_URL.
 const sitemap = await fs.readFile('public/sitemap.xml', 'utf8');
 const paths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => {
   const url = new URL(loc.replaceAll('&amp;', '&'));

@@ -1,8 +1,9 @@
 // The Cloudflare Worker behind nautavo.com (wrangler.jsonc). Static files are
 // served without it: it runs for /api/* (assets.run_worker_first) and for
 // paths no file matches, which get its 404.
-import { REGION_PATH, regionAnswer, type RegionFields } from './region';
-import { SECURITY_HEADERS } from './security-headers';
+// Runtime imports keep their extension: vite.config.ts loads this file.
+import { REGION_PATH, regionAnswer, type RegionFields } from './region.ts';
+import { SECURITY_HEADERS } from './security-headers.ts';
 
 /** Answers carry a location or nothing; none may be kept by any cache. */
 const NO_STORE = { 'Cache-Control': 'no-store' };

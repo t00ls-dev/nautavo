@@ -111,6 +111,32 @@
           changes. For instructions, see the
           <a href="./help" data-page-link>help</a>.
         </p>
+        <section data-release="Unreleased">
+          <h2>Recent changes</h2>
+          <h3 data-kind="Changed">Changed</h3>
+          <ul>
+            <li>
+              Downloaded GPX files no longer name a means of transport in their
+              keywords, only nautavo.
+            </li>
+          </ul>
+          <h3 data-kind="Fixed">Fixed</h3>
+          <ul>
+            <li>
+              In Settings, a server address over plain HTTP is refused when you
+              apply it on nautavo.com, which connects only to HTTPS servers,
+              instead of being accepted and then failing on every request;
+              nautavo run on your own computer still accepts a server there.
+            </li>
+            <li>
+              For part of November 18, Cloudflare, which hosts the site, added
+              its visitor analytics script to nautavo.com's pages through a
+              hosting setting, against the site's no-analytics promise; the
+              setting was turned off the same day, and the site's security
+              policy now blocks such scripts.
+            </li>
+          </ul>
+        </section>
         <section data-release="2.0.1">
           <h2>2.0.1 · <time datetime="2026-11-18">Nov 18, 2026</time></h2>
           <h3 data-kind="Changed">Changed</h3>
@@ -204,14 +230,6 @@
               clock next to Replay.
             </li>
             <li>
-              Weather while navigating: a chip at the top left shows the weather
-              here, with an icon, the temperature and the chance of rain (amber
-              with an alert); tap it for the next samples ahead with their
-              distance, passage time and alerts. It reads the forecast already
-              fetched for the route, makes no request and never sends your
-              position; it also follows Simulate navigation.
-            </li>
-            <li>
               Navigate, on phones: follow the route on screen with your live
               position, the next turn and its road, the turn after it, the
               remaining distance and time and the arrival time, on a map that
@@ -223,8 +241,9 @@
               next turn shows on a card floating over the map. A short safety
               notice shows when navigation starts and can be turned off, also in
               Settings. Your location is watched only until End, pauses while
-              the page is hidden and is never stored or sent; without map tiles
-              the route and your position still show.
+              the page is hidden and is never stored; it is sent only for a
+              recalculation of the way back to the route; without map tiles the
+              route and your position still show.
             </li>
             <li>
               Add to home screen, in More actions on phones, shows your
@@ -774,6 +793,34 @@
           Mudanças recentes. Para instruções de uso, veja a
           <a href="./help" data-page-link>ajuda</a>.
         </p>
+        <section data-release="Unreleased">
+          <h2>Mudanças recentes</h2>
+          <h3 data-kind="Changed">Alterado</h3>
+          <ul>
+            <li>
+              Os arquivos GPX baixados não citam mais um meio de transporte nas
+              palavras-chave, só nautavo.
+            </li>
+          </ul>
+          <h3 data-kind="Fixed">Corrigido</h3>
+          <ul>
+            <li>
+              Nas Configurações, um endereço de servidor via HTTP simples é
+              recusado ao aplicar no nautavo.com, que só se conecta a servidores
+              HTTPS, em vez de ser aceito e depois falhar em cada pedido; o
+              nautavo rodando no seu próprio computador ainda aceita um servidor
+              nele.
+            </li>
+            <li>
+              Durante parte do dia 18 de novembro, a Cloudflare, que hospeda o
+              site, adicionou seu script de estatísticas de visitantes às
+              páginas do nautavo.com por uma configuração da hospedagem, contra
+              a promessa de não ter estatísticas; a configuração foi desligada
+              no mesmo dia, e a política de segurança do site agora bloqueia
+              scripts assim.
+            </li>
+          </ul>
+        </section>
         <section data-release="2.0.1">
           <h2>2.0.1 · <time datetime="2026-11-18">18 nov. 2026</time></h2>
           <h3 data-kind="Changed">Alterado</h3>
@@ -869,14 +916,6 @@
               relógio da viagem ao lado de Reprodução.
             </li>
             <li>
-              Tempo durante a navegação: um chip no topo à esquerda mostra o
-              tempo aqui, com ícone, temperatura e chance de chuva (âmbar com
-              alerta); toque nele para ver as próximas amostras adiante, com
-              distância, horário de passagem e alertas. Ele lê a previsão já
-              buscada para a rota, não faz pedidos e nunca envia a sua posição;
-              também acompanha a Simular navegação.
-            </li>
-            <li>
               Navegar, no celular: siga a rota na tela com sua posição ao vivo,
               a próxima conversão e sua rua, a conversão seguinte, a distância e
               o tempo restantes e o horário de chegada, num mapa que gira com a
@@ -889,8 +928,9 @@
               aparece num cartão flutuando sobre o mapa. Um aviso curto de
               segurança aparece ao iniciar a navegação e pode ser desligado,
               também nas Configurações. Sua localização é acompanhada só até
-              Sair, pausa com a página oculta e nunca é guardada nem enviada;
-              sem os blocos do mapa, a rota e sua posição continuam na tela.
+              Sair, pausa com a página oculta e nunca é guardada; só é enviada
+              para recalcular o caminho de volta à rota; sem os blocos do mapa,
+              a rota e sua posição continuam na tela.
             </li>
             <li>
               Adicionar à tela inicial, em Mais ações no celular, mostra os

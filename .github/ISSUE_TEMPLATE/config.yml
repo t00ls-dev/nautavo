@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Help page
-    url: https://nautavo.com/help.html
+    url: https://nautavo.com/help
     about: Instructions for every control, gesture and shortcut.
   - name: Security vulnerability
     url: https://github.com/t00ls-dev/nautavo/security/policy

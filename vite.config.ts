@@ -140,7 +140,7 @@ function siteAddress(site: string): Plugin {
 const PUBLIC_REWRITES: Record<string, (text: string) => string> = {
   'sitemap.xml': (text) => withSite(text, SITE),
   'robots.txt': (text) => withSite(text, SITE),
-  _headers: headersFile,
+  _headers: (text) => headersFile(text, SITE),
 };
 
 /**
@@ -229,8 +229,9 @@ export default defineConfig({
     // Brand files keep their own hashed URLs instead of being inlined.
     assetsInlineLimit: (file) =>
       file.includes(BRAND_PATH) ? false : undefined,
-    // MapLibre GL JS (about 1,090 kB minified, 296 kB gzipped) is one
-    // lazy chunk loaded only when navigation starts; the default 500 kB
+    // MapLibre GL JS (about 1,105 kB minified, 300 kB gzipped) is one lazy
+    // chunk (src/maplibre-loader.ts), loaded after the page's first painted
+    // frame for the planner map and shared by navigation; the default 500 kB
     // limit warned about it on every build. The app's own entry stays far
     // below this, so a new warning still means a chunk worth reviewing.
     chunkSizeWarningLimit: 1200,

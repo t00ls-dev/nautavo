@@ -2,7 +2,7 @@ import { URL } from 'node:url';
 import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-const base = process.env.SITE_URL || 'http://localhost:5173/';
+const base = process.env.TARGET_URL || 'http://localhost:5173/';
 const artifacts = '.browser-check.local';
 const browser = await chromium.launch({
   headless: true,

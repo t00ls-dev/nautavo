@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Only the current `main` branch, published at <https://nautavo.com/>, is supported.
+Only the latest release, published at <https://nautavo.com/>, and the current `main` branch, published at <https://dev.nautavo.com/>, are supported.
 
 ## Reporting a vulnerability
 
@@ -18,7 +18,7 @@ In scope: the code in this repository, its build and its Cloudflare Workers conf
 - unsafe handling of configurable service URLs;
 - location data leaking outside the documented route, link and storage flows.
 
-Out of scope: problems in the third-party services the app uses (OSRM, Valhalla, Nominatim, Photon, map tile providers and Open-Meteo). Please report those to their operators.
+Out of scope: problems in the third-party services the app uses (OSRM, Valhalla, Nominatim, Photon, map tile providers and Open-Meteo) and in the Cloudflare platform that hosts it. Please report those to their operators.
 
 ## Response
 

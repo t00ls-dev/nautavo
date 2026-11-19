@@ -81,6 +81,15 @@ describe('security headers', () => {
       expect(block).toContain(`\n  ${name}: ${value}\n`);
   });
 
+  it("leave HSTS to the owner of another site's address", () => {
+    const rules = readRepoFile('public/_headers');
+    const file = headersFile(rules, 'https://routes.example.org/');
+    expect(file).not.toContain('Strict-Transport-Security');
+    for (const [name, value] of Object.entries(SECURITY_HEADERS))
+      if (name !== 'Strict-Transport-Security')
+        expect(file).toContain(`\n  ${name}: ${value}`);
+  });
+
   it('keep Cloudflare from rewriting every page in the sitemap', () => {
     const rules = readRepoFile('public/_headers').split('\n');
     const paths = [
