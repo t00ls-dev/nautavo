@@ -8,6 +8,7 @@ import type {
 } from 'maplibre-gl';
 import type { Feature, FeatureCollection, LineString } from 'geojson';
 import type { Coord } from './core';
+import { refetchTilesOnline } from './basemap';
 import { optionalById } from './dom';
 
 /**
@@ -350,6 +351,8 @@ export class PlannerMap {
     });
     this.map = map;
     map.on('style.load', () => this.restore());
+    // Tiles that failed offline are asked again when the connection returns.
+    refetchTilesOnline(map);
     for (const marker of this.markers) marker.attach(ml, map);
     if (this.view.below)
       map.panBy([0, this.view.below / 2], { animate: false });

@@ -11,7 +11,14 @@ import { icon, iconControl } from './icons';
 import { gpsPoint, locationError } from './location';
 import { navigationRoute } from './routing';
 import { creditsDialog } from './map-credits';
-import { NEUTRAL_STYLE, STYLE_URL, fetchStyle, vectorCredits } from './basemap';
+import {
+  NEUTRAL_STYLE,
+  STYLE_URL,
+  fetchStyle,
+  mapPixelRatio,
+  refetchTilesOnline,
+  vectorCredits,
+} from './basemap';
 import { loadMapLibre } from './maplibre-loader';
 import { maneuverText, stepRoad } from './maneuvers';
 import { navigationStyle } from './navigation-style';
@@ -365,9 +372,13 @@ export function setupNavigation(deps: {
   }
 
   async function createMap() {
+    // A style missing because the device was offline is asked again when the
+    // connection returns, even if it returns while the map is being created.
+    const offlineAtStart = !navigator.onLine;
     const [ml, style] = await Promise.all([loadMapLibre(), loadStyle()]);
     MarkerClass = ml.Marker;
     noStyle = !style;
+    const pixelRatio = mapPixelRatio();
     map = new ml.Map({
       container: 'nav-map',
       style: style ?? NEUTRAL_STYLE,
@@ -386,9 +397,13 @@ export function setupNavigation(deps: {
       keyboard: false,
       fadeDuration: 0,
       renderWorldCopies: false,
+      // The screen's resolution, or one pixel per CSS pixel without a GPU.
+      ...(pixelRatio ? { pixelRatio } : {}),
       // MapLibre's default 'same-origin' credentials send nothing cross-origin.
     });
     const m = map;
+    // Tiles that failed offline are asked again when the connection returns.
+    refetchTilesOnline(m);
     // Gestures carry the event that caused them; the code's moves do not.
     m.on('dragstart', (e) => {
       if (e.originalEvent) goFree();
@@ -422,6 +437,27 @@ export function setupNavigation(deps: {
       else m.once('load', () => resolve());
     });
     addNavigationLayers(m);
+    // The map lives as long as the page: a style that failed offline is
+    // asked again when the connection returns (one attempt per `online`
+    // event, as the planner does), with the route and the travelled line
+    // drawn again over it.
+    const retryStyle = () => {
+      if (!noStyle) return;
+      void loadStyle().then((next) => {
+        if (!next || !noStyle) return;
+        noStyle = false;
+        m.once('style.load', () => {
+          addNavigationLayers(m);
+          if (route) drawRoute(route);
+          render();
+          mapNotice();
+        });
+        m.setStyle(next, { diff: false });
+      });
+    };
+    window.addEventListener('online', retryStyle);
+    // Back online while the map was being created: that event has passed.
+    if (offlineAtStart && navigator.onLine) retryStyle();
   }
   /** The dashed way back from the position to the rejoin point, or nothing. */
   function drawRejoin() {

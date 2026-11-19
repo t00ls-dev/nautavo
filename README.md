@@ -30,7 +30,7 @@ Gestures, shortcuts and every control are explained on the [Help page](https://n
 - Nothing is saved automatically: **Save route** keeps the route in this browser; export backups, since clearing browser data removes saved routes and favorite places.
 - Routing uses a car profile; **Prefer main roads** favors highways but does not guarantee it, and estimates exclude stops and traffic.
 - Share links store points and options, not an imported track's geometry: share the GPX for the exact track.
-- Offline, saved routes open and download, but map tiles, routing, search, weather, elevation and surface need a connection.
+- Offline, saved routes open and download, but map tiles, routing, search, weather, elevation and surface need a connection; what could not load is fetched once when it returns.
 - Navigation needs the tab open and the screen on (iOS Safari is the strictest). Weather risks are a review aid, not an official warning.
 
 Every control, gesture and limit is explained on the [Help page](https://nautavo.com/help).

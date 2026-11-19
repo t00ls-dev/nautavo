@@ -350,9 +350,11 @@
           directions and downloads as GPX, and a notice says you are offline.
           Map tiles, routing, search, weather, elevation and surface still need
           a connection, so the map background may be empty. Offline, Calculate
-          route keeps the route on screen, and a route changed offline is
-          calculated once the connection returns. A new version is used on the
-          next visit with a connection.
+          route keeps the route on screen. When the connection returns, what
+          could not load meanwhile loads once on its own: a route changed
+          offline is calculated, and the map, weather, elevation, surface and
+          directions asked for without a connection are fetched. A new version
+          is used on the next visit with a connection.
         </p>
         <h2>GPX, import and sharing</h2>
         <p>
@@ -1164,9 +1166,12 @@
           instruções e pode ser baixada em GPX, e um aviso diz que você está sem
           conexão. Os blocos do mapa, o roteamento, a busca, o clima, a elevação
           e o pavimento continuam precisando de conexão, então o fundo do mapa
-          pode ficar vazio. Sem conexão, Calcular rota mantém a rota na tela, e
-          uma rota alterada sem conexão é calculada quando a conexão voltar. Uma
-          versão nova é usada na próxima visita com conexão.
+          pode ficar vazio. Sem conexão, Calcular rota mantém a rota na tela.
+          Quando a conexão volta, o que não pôde carregar nesse meio-tempo
+          carrega uma vez sozinho: uma rota alterada sem conexão é calculada, e
+          o mapa, o clima, a elevação, o pavimento e as direções pedidos sem
+          conexão são buscados. Uma versão nova é usada na próxima visita com
+          conexão.
         </p>
         <h2>GPX, importação e links</h2>
         <p>

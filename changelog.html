@@ -116,12 +116,30 @@
           <h3 data-kind="Changed">Changed</h3>
           <ul>
             <li>
+              When the connection returns, weather, elevation, surface and the
+              Itinerary's directions that could not load without it load once on
+              their own, saying so meanwhile, instead of showing an error with
+              Try again.
+            </li>
+            <li>
+              On a computer without a graphics processor, or one the browser
+              does not use, the map draws at standard resolution so it stays
+              responsive; screens with a graphics processor are unchanged.
+            </li>
+            <li>
               Downloaded GPX files no longer name a means of transport in their
               keywords, only nautavo.
             </li>
           </ul>
           <h3 data-kind="Fixed">Fixed</h3>
           <ul>
+            <li>
+              Map areas that failed to load while the connection was down, such
+              as after moving the map offline, load when it returns, on the
+              route planner and while navigating, instead of staying blank; a
+              navigation started offline also gets its map when the connection
+              returns.
+            </li>
             <li>
               In Settings, a server address over plain HTTP is refused when you
               apply it on nautavo.com, which connects only to HTTPS servers,
@@ -798,12 +816,30 @@
           <h3 data-kind="Changed">Alterado</h3>
           <ul>
             <li>
+              Quando a conexão volta, o clima, a elevação, o pavimento e as
+              direções do Itinerário que não puderam carregar sem ela carregam
+              uma vez sozinhos, avisando enquanto isso, em vez de mostrar um
+              erro com Tentar de novo.
+            </li>
+            <li>
+              Num computador sem processador gráfico, ou com um que o navegador
+              não usa, o mapa é desenhado em resolução padrão para continuar
+              fluido; telas com processador gráfico não mudam.
+            </li>
+            <li>
               Os arquivos GPX baixados não citam mais um meio de transporte nas
               palavras-chave, só nautavo.
             </li>
           </ul>
           <h3 data-kind="Fixed">Corrigido</h3>
           <ul>
+            <li>
+              Áreas do mapa que não carregaram enquanto a conexão estava fora,
+              como depois de mover o mapa sem conexão, carregam quando ela
+              volta, no planejador e durante a navegação, em vez de ficarem em
+              branco; uma navegação iniciada sem conexão também recebe o mapa
+              quando ela volta.
+            </li>
             <li>
               Nas Configurações, um endereço de servidor via HTTP simples é
               recusado ao aplicar no nautavo.com, que só se conecta a servidores

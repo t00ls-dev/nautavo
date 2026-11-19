@@ -541,6 +541,71 @@ test('routes with more than 20 stops still get weather', async ({ page }) => {
     'Clima amostrado em 20 de 25 paradas.',
   );
 });
+test('weather and elevation that fail without a connection load once it returns', async ({
+  page,
+  context,
+}) => {
+  await setup(page, true);
+  await date(page);
+  await fetchWeather(page);
+  // Registered after setup so they take precedence over its routes.
+  const network = { offline: false, forecast: 0, elevation: 0 };
+  await page.route('**/v1/forecast?**', (r) => {
+    network.forecast++;
+    return network.offline
+      ? r.abort('internetdisconnected')
+      : r.fulfill({ json: weatherResponse(new URL(r.request().url())) });
+  });
+  await page.route('**/v1/elevation?**', (r) => {
+    network.elevation++;
+    if (network.offline) return r.abort('internetdisconnected');
+    const lons = new URL(r.request().url()).searchParams
+      .get('longitude')!
+      .split(',')
+      .map(Number);
+    return r.fulfill({ json: { elevation: lons.map((lon) => lon * 1000) } });
+  });
+  network.offline = true;
+  await context.setOffline(true);
+  await date(page, '2026-11-09T10:00');
+  // Open-Meteo requests start at least 6 s apart.
+  await expect(page.locator('#weather-status')).toHaveText(
+    'No connection. The weather will load when the connection returns.',
+    { timeout: 10000 },
+  );
+  await page.locator('#elevation > summary').click();
+  await expect(page.locator('#elevation-status')).toHaveText(
+    'No connection. The elevation will load when the connection returns.',
+  );
+  // Waiting, not failed: no Try again while there is no connection.
+  await expect(page.locator('#weather-retry')).toBeHidden();
+  await expect(page.locator('#elevation-retry')).toBeHidden();
+  await page.locator('#language').selectOption('pt');
+  await expect(page.locator('#weather-status')).toHaveText(
+    'Sem conexão. O clima será carregado quando a conexão voltar.',
+  );
+  await page.locator('#language').selectOption('en');
+  // Nothing more is asked while offline: no retry loop.
+  const asked = { ...network };
+  await page.waitForTimeout(1500);
+  expect([network.forecast, network.elevation]).toEqual([
+    asked.forecast,
+    asked.elevation,
+  ]);
+  network.offline = false;
+  await context.setOffline(false);
+  // One attempt, on the same 6 s spacing.
+  await expect(page.locator('#weather-result')).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.locator('#weather-status')).not.toContainText(
+    'No connection',
+  );
+  expect(network.forecast).toBe(asked.forecast + 1);
+  await expect(page.locator('#elevation-stats')).toContainText(
+    'Min 0 m · Max 1,000 m',
+  );
+});
 // Rolling terrain: ±500 m every 22 km, grades up to about 14 % both ways.
 const rolling = (lon: number) => 600 + 500 * Math.sin(lon * Math.PI * 10);
 test('the Grade coloring requests elevation on its own choice and draws every class with a legend', async ({

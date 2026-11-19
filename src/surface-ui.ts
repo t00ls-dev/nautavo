@@ -20,6 +20,7 @@ import {
   SURFACE_KINDS,
   type SurfaceRange,
 } from './surface';
+import { onlineAttempt } from './offline';
 import { indexTrack, legDistances, trackSlice } from './track-position';
 import { distanceLabel, milepostLabel } from './units';
 import { distanceUnits } from './unit-preferences';
@@ -48,6 +49,19 @@ export function setupSurface(
     status = $('surface-status'),
     retry = $<HTMLButtonElement>('surface-retry'),
     content = $('surface-result');
+  /** Surface that failed offline waits for the connection (one attempt). */
+  const whenOnline = onlineAttempt();
+  /** Offline: says so and asks once more when the connection returns. */
+  function offline(current: () => boolean): boolean {
+    const waiting = whenOnline(() => {
+      if (current()) void load();
+    });
+    if (waiting)
+      message(
+        'No connection. The surface will load when the connection returns.',
+      );
+    return waiting;
+  }
   const setHighlight = map.overlay('rg-surface', RANK.highlight, () =>
     highlightLayers('rg-surface-line'),
   );
@@ -97,7 +111,7 @@ export function setupSurface(
       );
       if (!current()) return;
       if (results.every((r) => r === 'failed')) {
-        message('Surface unavailable. Try again.', true);
+        if (!offline(current)) message('Surface unavailable. Try again.', true);
         return;
       }
       const edges: EdgeRange[] = results.flatMap((r, i) =>
@@ -110,6 +124,7 @@ export function setupSurface(
       render();
     } catch (error) {
       if (!current() || (error as Error).name === 'AbortError') return;
+      if (!(error instanceof ValhallaLimitError) && offline(current)) return;
       message(
         error instanceof ValhallaLimitError
           ? error.message

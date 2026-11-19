@@ -1535,13 +1535,12 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
   await page.waitForTimeout(2000);
   expect(routeRequests).toHaveLength(1);
 });
-test('an imported track gets directions by map matching when the itinerary opens', async ({
-  page,
-}) => {
-  await setup(page);
+/** OSRM map matching: depart on Rua A (Rua B after the first request), then a right turn. `fail` aborts like a lost connection. */
+async function mockMatch(page: Page, fail: () => boolean = () => false) {
   const matches: string[] = [];
   await page.route('**/match/v1/driving/**', (r) => {
     matches.push(r.request().url());
+    if (fail()) return r.abort('internetdisconnected');
     const coords = new URL(r.request().url()).pathname
       .split('/driving/')[1]
       .split(';')
@@ -1587,7 +1586,10 @@ test('an imported track gets directions by map matching when the itinerary opens
       },
     });
   });
-  await page.goto(base);
+  return matches;
+}
+/** Imports a 60-point ride heading east, about 6.5 km. */
+async function importRide(page: Page) {
   const track = Array.from({ length: 60 }, (_, i) => [
     -22.9,
     -43.4 + i * 0.001,
@@ -1599,6 +1601,14 @@ test('an imported track gets directions by map matching when the itinerary opens
     buffer: Buffer.from(gpx),
   });
   await expect(page.locator('#download')).toBeEnabled();
+}
+test('an imported track gets directions by map matching when the itinerary opens', async ({
+  page,
+}) => {
+  await setup(page);
+  const matches = await mockMatch(page);
+  await page.goto(base);
+  await importRide(page);
   expect(matches).toHaveLength(0);
   await page.locator('#itinerary summary').click();
   // 6.5 km traced every 300 m: 23 points in 3 chunks of up to 10.
@@ -1626,6 +1636,33 @@ test('an imported track gets directions by map matching when the itinerary opens
   await page.locator('#itinerary summary').click();
   await page.locator('#itinerary summary').click();
   expect(matches).toHaveLength(3);
+});
+test('directions that fail without a connection are added once it returns', async ({
+  page,
+  context,
+}) => {
+  await setup(page);
+  let offline = false;
+  const matches = await mockMatch(page, () => offline);
+  await page.goto(base);
+  await importRide(page);
+  offline = true;
+  await context.setOffline(true);
+  await page.locator('#itinerary summary').click();
+  await expect(page.locator('#directions-status')).toHaveText(
+    'No connection. Directions will be added when the connection returns.',
+    { timeout: 15000 },
+  );
+  const asked = matches.length;
+  await page.waitForTimeout(1500);
+  expect(matches).toHaveLength(asked);
+  offline = false;
+  await context.setOffline(false);
+  await expect(page.locator('#itinerary li').nth(1)).toContainText(
+    'Turn right · R. B',
+    { timeout: 15000 },
+  );
+  await expect(page.locator('#directions-status')).toBeHidden();
 });
 test('download still works if persistent browser storage is unavailable', async ({
   page,

@@ -158,6 +158,14 @@ const pt: Record<string, string> = {
     'Sem conexão. A rota na tela foi mantida; calcule de novo quando a conexão voltar.',
   'No connection. The route will be calculated when the connection returns.':
     'Sem conexão. A rota será calculada quando a conexão voltar.',
+  'No connection. The weather will load when the connection returns.':
+    'Sem conexão. O clima será carregado quando a conexão voltar.',
+  'No connection. The elevation will load when the connection returns.':
+    'Sem conexão. A elevação será carregada quando a conexão voltar.',
+  'No connection. The surface will load when the connection returns.':
+    'Sem conexão. O pavimento será carregado quando a conexão voltar.',
+  'No connection. Directions will be added when the connection returns.':
+    'Sem conexão. As direções serão adicionadas quando a conexão voltar.',
   'You are offline. The route on screen and saved routes still work; routing, search, weather, elevation and surface need a connection.':
     'Você está sem conexão. A rota na tela e as rotas salvas continuam funcionando; roteamento, busca, clima, elevação e pavimento precisam de conexão.',
   'Back to map': 'Voltar ao mapa',
