@@ -604,6 +604,12 @@ test('editing an imported track reroutes only the track around the edit', async 
     ),
   });
   await expect(page.locator('#download')).toBeEnabled();
+  // The check against the roads ends with its own status: waited for, so it
+  // cannot replace a later one (Settings applied) under load.
+  await expect(page.locator('#status')).toHaveText(
+    'Route imported. Edits recalculate only the changed sections.',
+    { timeout: 15000 },
+  );
   const count = await page.locator('#points li').count();
   expect(count).toBeGreaterThan(3);
   // Automatic stops are named by their place on the route (#208), in order.
