@@ -1166,9 +1166,20 @@ test.describe('phone navigation', () => {
 
   test('a map style that failed without a connection loads when it returns, under the route', async ({
     page,
-    context,
   }) => {
     await setup(page);
+    // Only the browser's connection state and the style's server go offline:
+    // the development server has no service worker, so a real offline
+    // context would also fail MapLibre's own worker, which the published
+    // site keeps in its app-shell cache.
+    const onLine = (value: boolean) =>
+      page.evaluate((now) => {
+        Object.defineProperty(navigator, 'onLine', {
+          configurable: true,
+          get: () => now,
+        });
+        window.dispatchEvent(new Event(now ? 'online' : 'offline'));
+      }, value);
     let offline = true;
     await page.route('https://tiles.openfreemap.org/**', (r) =>
       offline
@@ -1177,12 +1188,12 @@ test.describe('phone navigation', () => {
           ? r.fulfill({ json: BASEMAP_STYLE })
           : r.fulfill({ status: 204 }),
     );
-    await context.setOffline(true);
+    await onLine(false);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
     await expect(page.locator('#nav-no-map')).toBeVisible();
     offline = false;
-    await context.setOffline(false);
+    await onLine(true);
     await expect(page.locator('#nav-no-map')).toBeHidden();
     // The route is drawn again over the new style, ahead of the traveler.
     const arrow = (await page.locator('.nav-arrow').boundingBox())!;

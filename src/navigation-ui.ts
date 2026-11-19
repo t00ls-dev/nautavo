@@ -372,6 +372,9 @@ export function setupNavigation(deps: {
   }
 
   async function createMap() {
+    // A style missing because the device was offline is asked again when the
+    // connection returns, even if it returns while the map is being created.
+    const offlineAtStart = !navigator.onLine;
     const [ml, style] = await Promise.all([loadMapLibre(), loadStyle()]);
     MarkerClass = ml.Marker;
     noStyle = !style;
@@ -399,6 +402,8 @@ export function setupNavigation(deps: {
       // MapLibre's default 'same-origin' credentials send nothing cross-origin.
     });
     const m = map;
+    // Tiles that failed offline are asked again when the connection returns.
+    refetchTilesOnline(m);
     // Gestures carry the event that caused them; the code's moves do not.
     m.on('dragstart', (e) => {
       if (e.originalEvent) goFree();
@@ -432,12 +437,11 @@ export function setupNavigation(deps: {
       else m.once('load', () => resolve());
     });
     addNavigationLayers(m);
-    // The map lives as long as the page: tiles that failed offline are asked
-    // again when the connection returns, and so is a style that failed (one
-    // attempt per `online` event, as the planner does), with the route and
-    // the travelled line drawn again over it.
-    refetchTilesOnline(m);
-    window.addEventListener('online', () => {
+    // The map lives as long as the page: a style that failed offline is
+    // asked again when the connection returns (one attempt per `online`
+    // event, as the planner does), with the route and the travelled line
+    // drawn again over it.
+    const retryStyle = () => {
       if (!noStyle) return;
       void loadStyle().then((next) => {
         if (!next || !noStyle) return;
@@ -450,7 +454,10 @@ export function setupNavigation(deps: {
         });
         m.setStyle(next, { diff: false });
       });
-    });
+    };
+    window.addEventListener('online', retryStyle);
+    // Back online while the map was being created: that event has passed.
+    if (offlineAtStart && navigator.onLine) retryStyle();
   }
   /** The dashed way back from the position to the rejoin point, or nothing. */
   function drawRejoin() {
