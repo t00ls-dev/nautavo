@@ -31,8 +31,8 @@ export function preferredLanguage(): Language {
 }
 const pt: Record<string, string> = {
   'Add to home screen': 'Adicionar à tela inicial',
-  'Open nautavo from an icon, like an app. It opens in your browser, and saved routes open even without a connection.':
-    'Abra o nautavo por um ícone, como um app. Ele abre no navegador, e as rotas salvas abrem mesmo sem conexão.',
+  'Open Nautavo from an icon, like an app. It opens in your browser, and saved routes open even without a connection.':
+    'Abra o Nautavo por um ícone, como um app. Ele abre no navegador, e as rotas salvas abrem mesmo sem conexão.',
   'iPhone and iPad': 'iPhone e iPad',
   'Tap Share: in Safari, at the bottom of the screen or in the ⋯ menu; in Chrome, in the address bar.':
     'Toque em Compartilhar: no Safari, na parte de baixo da tela ou no menu ⋯; no Chrome, na barra de endereço.',
@@ -207,8 +207,8 @@ const pt: Record<string, string> = {
     'Os horários de passagem ultrapassam o intervalo consultado.',
 
   'Weather data by Open-Meteo': 'Dados de clima por Open-Meteo',
-  'Passage times and risk summaries calculated by nautavo.':
-    'Horários de passagem e resumos de risco calculados pelo nautavo.',
+  'Passage times and risk summaries calculated by Nautavo.':
+    'Horários de passagem e resumos de risco calculados pelo Nautavo.',
   'Open-Meteo server': 'Servidor Open-Meteo',
   'Automatic departure': 'Partida automática',
   'Choose departure': 'Escolher partida',

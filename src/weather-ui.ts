@@ -4,7 +4,12 @@ import { byId as $ } from './dom';
 import { isolate, type MapMarker, type PlannerMap } from './planner-map';
 import { type Route, type State, serverUrl, settingsServerUrl } from './core';
 import { t, weatherDescription } from './i18n';
-import { distanceLabel, precipitationLabel, temperatureLabel } from './units';
+import {
+  distanceLabel,
+  MISSING,
+  precipitationLabel,
+  temperatureLabel,
+} from './units';
 import { classifyWeather, groupWeather, uvCategory } from './weather-risk';
 import { windRelation, windStrength, windFlowDirection } from './weather-wind';
 import { icon, centerIcon } from './icons';
@@ -529,7 +534,7 @@ export function setupWeather(
         icon('droplet'),
         `${range(
           values((i) => at(i).hour.probability),
-          (v) => `${v ?? '—'}%`,
+          (v) => `${v ?? MISSING}%`,
         )} · ${range(
           values((i) => at(i).hour.precipitation),
           (v) => precipitationLabel(v, temperatureUnits(), locale),
@@ -541,7 +546,7 @@ export function setupWeather(
         ? null
         : range(
             values((i) => at(i).hour.wind),
-            (v) => speedLabel(v) ?? '—',
+            (v) => speedLabel(v) ?? MISSING,
           );
       wind.append(
         icon('wind'),
@@ -629,7 +634,7 @@ export function setupWeather(
       windValue.className = 'weather-marker-wind-value';
       windValue.textContent =
         hour.wind === null
-          ? '—'
+          ? MISSING
           : speedFromKmh(hour.wind, distanceUnits()).toLocaleString(locale, {
               maximumFractionDigits: hour.wind < 100 ? 1 : 0,
             });

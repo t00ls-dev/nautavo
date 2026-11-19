@@ -2442,7 +2442,7 @@ for (const [speed, direction, strength, angle] of [
     );
     await expect(badge.locator('.weather-marker-wind-unit')).toHaveText('km/h');
     await expect(badge.locator('.weather-marker-wind-value')).toHaveText(
-      speed === null ? '—' : String(speed),
+      speed === null ? '-' : String(speed),
     );
     if (angle === null)
       await expect(badge.locator('.weather-wind-arrow')).toHaveCount(0);

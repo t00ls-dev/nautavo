@@ -1,6 +1,6 @@
-# Contributing to nautavo
+# Contributing to Nautavo
 
-Thanks for your interest in improving nautavo, a static route planner with GPX export.
+Thanks for your interest in improving Nautavo, a static route planner with GPX export.
 
 ## Project boundaries
 

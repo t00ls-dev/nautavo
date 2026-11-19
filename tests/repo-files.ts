@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -14,3 +15,13 @@ export const sourceFiles = (): string[] =>
   readdirSync(resolve(ROOT, 'src'))
     .filter((file) => file.endsWith('.ts'))
     .map((file) => `src/${file}`);
+
+/** Binary and generated files, never read as text. */
+const NOT_TEXT =
+  /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|fit|gz|zip)$|^package-lock\.json$/;
+
+/** Every text file the repository tracks, as paths like `src/seo.ts`. */
+export const trackedTextFiles = (): string[] =>
+  execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter((file) => file && !NOT_TEXT.test(file));

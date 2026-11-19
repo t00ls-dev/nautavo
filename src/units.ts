@@ -48,13 +48,16 @@ export function elevationLabel(
   );
   return `${value.toLocaleString(locale)} ${units === 'imperial' ? 'ft' : 'm'}`;
 }
-/** Weather temperature from °C, at most one decimal; `—` when unknown. */
+/** Shown in place of a value that is not known (a plain hyphen, docs/BRAND.md). */
+export const MISSING = '-';
+/** Weather temperature from °C, at most one decimal; `MISSING` when unknown. */
 export function temperatureLabel(
   celsius: number | null,
   units: TemperatureUnits = 'celsius',
   locale = 'en',
 ): string {
-  if (celsius === null) return `— ${units === 'fahrenheit' ? '°F' : '°C'}`;
+  if (celsius === null)
+    return `${MISSING} ${units === 'fahrenheit' ? '°F' : '°C'}`;
   const value = units === 'fahrenheit' ? (celsius * 9) / 5 + 32 : celsius;
   return `${value.toLocaleString(locale, { maximumFractionDigits: 1 })} ${units === 'fahrenheit' ? '°F' : '°C'}`;
 }
@@ -68,7 +71,7 @@ export function precipitationLabel(
   locale = 'en',
 ): string {
   const unit = units === 'fahrenheit' ? 'in' : 'mm';
-  if (mm === null) return `— ${unit}`;
+  if (mm === null) return `${MISSING} ${unit}`;
   const value = units === 'fahrenheit' ? mm / 25.4 : mm;
   return `${value.toLocaleString(locale, { maximumFractionDigits: units === 'fahrenheit' ? 2 : 1 })} ${unit}`;
 }

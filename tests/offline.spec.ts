@@ -59,7 +59,7 @@ async function routedPair(page: Page) {
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
 }
 
-test('after one online visit, the app, help and What’s new open offline', async ({
+test("after one online visit, the app, help and What's new open offline", async ({
   page,
   context,
 }) => {
