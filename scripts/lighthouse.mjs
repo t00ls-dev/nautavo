@@ -18,6 +18,13 @@ const LIGHTHOUSE = `lighthouse@${VERSION}`;
 const base = process.env.TARGET_URL || 'http://127.0.0.1:4173/';
 const runs = Math.max(1, Number.parseInt(process.env.RUNS ?? '1', 10) || 1);
 const out = '.lighthouse.local';
+/** Attempts of one run whose trace Chrome recorded incompletely. */
+const TRACE_ATTEMPTS = 3;
+/** The trace error codes Lighthouse reports for an incomplete recording. */
+const traceError = (stderr) =>
+  /Runtime error encountered:.*\((NO_NAVSTART|NO_TRACING_STARTED)\)/.exec(
+    stderr ?? '',
+  )?.[1];
 // Sitemap URLs name the published site; the same paths are audited on TARGET_URL.
 const sitemap = await fs.readFile('public/sitemap.xml', 'utf8');
 const paths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => {
@@ -66,26 +73,46 @@ for (const page of pages) {
   const results = [];
   for (let run = 1; run <= runs; run++) {
     const prefix = `${out}/${page.name}-${run}`;
-    const { status, stderr } = spawnSync(
-      'npx',
-      [
-        '--yes',
-        LIGHTHOUSE,
-        url,
-        '--quiet',
-        '--output=json',
-        '--output=html',
-        `--output-path=${prefix}`,
-        '--chrome-flags=--headless=new --no-sandbox',
-        // No IP region lookup from the audit machine; tiles stay real.
-        '--blocked-url-patterns=*/api/region',
-        ...(page.desktop ? ['--preset=desktop'] : []),
-      ],
-      {
-        encoding: 'utf8',
-        env: { ...process.env, CHROME_PATH: chromium.executablePath() },
-      },
-    );
+    const audit = () =>
+      spawnSync(
+        'npx',
+        [
+          '--yes',
+          LIGHTHOUSE,
+          url,
+          '--quiet',
+          '--output=json',
+          '--output=html',
+          `--output-path=${prefix}`,
+          '--chrome-flags=--headless=new --no-sandbox',
+          // No IP region lookup from the audit machine; tiles stay real.
+          '--blocked-url-patterns=*/api/region',
+          ...(page.desktop ? ['--preset=desktop'] : []),
+        ],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, CHROME_PATH: chromium.executablePath() },
+        },
+      );
+    let { status, stderr } = audit();
+    // A trace Chrome recorded without the page's main thread (NO_NAVSTART,
+    // Lighthouse issue 15382, intermittent on Linux) is Lighthouse's own
+    // runtime error, not a score: that run is tried again, as Lighthouse's
+    // CI does, at most `TRACE_ATTEMPTS` times. A low score never is.
+    for (
+      let attempt = 2;
+      status !== 0 && attempt <= TRACE_ATTEMPTS && traceError(stderr);
+      attempt++
+    ) {
+      const note = `${page.name} run ${run}: ${traceError(stderr)}, audited again.`;
+      // Visible in the run, like the update note below.
+      console.log(
+        process.env.GITHUB_ACTIONS
+          ? `::warning title=Lighthouse trace::${note}`
+          : note,
+      );
+      ({ status, stderr } = audit());
+    }
     if (status !== 0) {
       console.error(stderr);
       throw new Error(`Lighthouse failed for ${url}`);
