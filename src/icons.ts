@@ -109,6 +109,11 @@ const paths = {
   homescreen:
     '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 8v6m-3-3h6"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .5-1.5 1-1.5 2M12 16v1"/>',
+  // Recorded activity values (#156).
+  heart:
+    '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/>',
+  cadence: '<circle cx="12" cy="12" r="8"/><path d="m12 12 4-3M12 4v2"/>',
+  power: '<path d="M13 3 6 13h5l-1 8 7-10h-5Z"/>',
 } as const;
 export type IconName = keyof typeof paths;
 export function icon(name: IconName): SVGSVGElement {

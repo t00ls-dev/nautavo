@@ -597,6 +597,37 @@ const pt: Record<string, string> = {
   Start: 'Início',
   Destination: 'Destino',
   Via: 'Passagem',
+  // Recorded activities (#156).
+  'Recorded activity': 'Atividade gravada',
+  'Moving time': 'Em movimento',
+  'Heart rate': 'Frequência cardíaca',
+  Cadence: 'Cadência',
+  Power: 'Potência',
+  Temperature: 'Temperatura',
+  Climb: 'Subida',
+  'Values shown': 'Dados exibidos',
+  HR: 'FC',
+  'L/R': 'E/D',
+  'Grd.': 'Incl.',
+  'Power balance': 'Equilíbrio de potência',
+  'Spd.': 'Vel.',
+  'Cad.': 'Cad.',
+  'Pwr.': 'Pot.',
+  'Alt.': 'Alt.',
+  Clock: 'Hora',
+  'Time of day': 'Hora',
+  Altitude: 'Altitude',
+  'Highest point': 'Ponto mais alto',
+  Speed: 'Velocidade',
+  'Use as route': 'Usar como rota',
+  'Close activity': 'Fechar atividade',
+  'Play activity': 'Reproduzir atividade',
+  'Times and sensor values are read on this device only and are not saved.':
+    'Horários e valores dos sensores são lidos só neste aparelho e não são salvos.',
+  'Activity opened. Its times and values stay on this device.':
+    'Atividade aberta. Horários e valores ficam neste aparelho.',
+  'Activity closed. The planned route is as you left it.':
+    'Atividade fechada. A rota planejada está como você deixou.',
 };
 const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Edit favorite: (.+)$/, (name) => `Editar favorito: ${name}`],
@@ -678,6 +709,19 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
       `UV ${value} · ${({ Low: 'baixo', Moderate: 'moderado', High: 'alto', 'Very high': 'muito alto', Extreme: 'extremo' } as Record<string, string>)[category]}`,
   ],
   [/^(\S+ (?:km|mi)) of (\S+ (?:km|mi))$/, (done, all) => `${done} de ${all}`],
+  // Recorded activities (#156).
+  [/^max\. (.+)$/, (value) => `máx. ${value}`],
+  [
+    /^(\d+) (bpm|W), max\. (\d+)$/,
+    (n, unit, max) => `${n} ${unit}, máx. ${max}`,
+  ],
+  [/^Stop of (\d+) min skipped$/, (n) => `Parada de ${n} min pulada`],
+  [/^Top speed: (.+)$/, (v) => `Velocidade máxima: ${v}`],
+  [/^Highest heart rate: (.+)$/, (v) => `Maior frequência cardíaca: ${v}`],
+  [/^Highest cadence: (.+)$/, (v) => `Maior cadência: ${v}`],
+  [/^Highest power: (.+)$/, (v) => `Maior potência: ${v}`],
+  [/^Highest point: (.+)$/, (v) => `Ponto mais alto: ${v}`],
+  [/^total (.+)$/, (value) => `total ${value}`],
   // Sunset and sunrise ahead while navigating, on screen and spoken.
   [/^Sunset in (\d+) min$/, (n) => `Sol se põe em ${n} min`],
   [/^Sunrise in (\d+) min$/, (n) => `Sol nasce em ${n} min`],

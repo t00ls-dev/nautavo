@@ -12,6 +12,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 - **Weather** along the route for the departure time, with wind relative to the route and risk alerts.
 - **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints.
 - **Navigate** on a phone with turn directions, a heading-up map, a way back to the route and optional spoken directions.
+- **Replay** recorded activities at their own pace, with moving time, speeds, heart rate, cadence, power and temperature, apart from the route you are planning.
 - **Map layers:** standard, topographic and satellite, with route coloring by daylight, grade or surface.
 - **Save and share:** route links, saved routes and favorite places in this browser, and backups.
 - Works offline after the first visit, in English and Portuguese.
@@ -38,9 +39,10 @@ Every control, gesture and limit is explained on the [Help page](https://nautavo
 ## Privacy
 
 - No cookies, analytics or account. The site's own server stores nothing; besides the files, it only answers the approximate region by IP, which can be turned off.
-- Routing, search, map, weather, elevation and surface providers receive the locations each request needs and your IP address. Weather is asked for the route's departure (by default the next half hour, which can be turned off); elevation and surface only when you open them or choose their route coloring. An imported track goes to the Valhalla server once, to align it to the roads.
+- Routing, search, map, weather, elevation and surface providers receive the locations each request needs and your IP address. Weather is asked for the route's departure (by default the next half hour, which can be turned off); elevation and surface only when you open them or choose their route coloring. A track imported as a route goes to the Valhalla server once, to align it to the roads; a recorded activity is opened on the device only.
 - Your location is used only after the browser allows it and stays on the device, except when you add it as a route point or a navigation recalculation sends the current position.
 - Saved routes, favorite places and preferences stay in this browser; every service URL is configurable in **Settings**.
+- A recorded activity's times, heart rate and other sensor values are read on the device, kept only while the page is open and never saved or sent.
 
 The [Help page](https://nautavo.com/help) and [services and privacy](docs/SERVICES.md) detail each request, provider, limit and term.
 

@@ -18,6 +18,19 @@ import { loadMapLibre } from './maplibre-loader';
 import { byId as $ } from './dom';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 
+/**
+ * A recorded or planned line on the planner map: its color on each base map,
+ * drawn over a white casing (the route, an activity's track).
+ */
+const ROUTE_COLORS: Record<string, string> = {
+  standard: '#12796e',
+  topographic: '#174cbd',
+  satellite: '#b61f64',
+};
+export const routeLineColor = (): string =>
+  ROUTE_COLORS[document.body.dataset.mapLayer ?? 'standard'] ??
+  ROUTE_COLORS.standard;
+
 /** Contour intervals in meters per zoom: [minor, major]. */
 const CONTOUR_THRESHOLDS: Record<number, [number, number]> = {
   11: [100, 500],

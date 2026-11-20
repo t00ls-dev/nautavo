@@ -14,7 +14,7 @@
     <title>Nautavo: Route Planner &amp; GPX Export</title>
     <meta
       name="description"
-      content="Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account."
+      content="Plan routes on real roads, import GPX, FIT or TCX, replay activities, check weather, elevation and surface, navigate on your phone and download GPX. No account."
     />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="application-name" content="Nautavo" />
@@ -47,7 +47,7 @@
     />
     <meta
       property="og:description"
-      content="Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account."
+      content="Plan routes on real roads, import GPX, FIT or TCX, replay activities, check weather, elevation and surface, navigate on your phone and download GPX. No account."
     />
     <meta property="og:url" content="https://nautavo.com/" />
     <meta property="og:locale" content="en_US" />
@@ -68,7 +68,7 @@
     />
     <meta
       name="twitter:description"
-      content="Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account."
+      content="Plan routes on real roads, import GPX, FIT or TCX, replay activities, check weather, elevation and surface, navigate on your phone and download GPX. No account."
     />
     <meta
       name="twitter:image"
@@ -84,7 +84,7 @@
         "@type": "WebApplication",
         "name": "Nautavo",
         "url": "https://nautavo.com/",
-        "description": "Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account.",
+        "description": "Plan routes on real roads, import GPX, FIT or TCX, replay activities, check weather, elevation and surface, navigate on your phone and download GPX. No account.",
         "applicationCategory": "TravelApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript and an internet connection.",
@@ -99,6 +99,7 @@
           "Elevation profile and climbs",
           "Road surface along the route",
           "Sunrise, sunset and daylight along the route",
+          "Recorded activity replay at its own pace with heart rate, cadence and power",
           "Route links, saved routes and backups"
         ],
         "license": "https://github.com/t00ls-dev/nautavo/blob/main/LICENSE",
@@ -165,6 +166,25 @@
         </button>
         <aside id="route-panel" aria-label="Plan your route">
           <h1 class="sr-only">Plan your route</h1>
+          <section
+            id="activity"
+            class="activity"
+            aria-labelledby="activity-title"
+            hidden
+          >
+            <h2 id="activity-title"></h2>
+            <p id="activity-when" class="hint"></p>
+            <dl id="activity-stats" class="stats"></dl>
+            <ul id="activity-values" class="activity-values"></ul>
+            <p class="hint">
+              Times and sensor values are read on this device only and are not
+              saved.
+            </p>
+            <div class="activity-actions">
+              <button id="activity-route" type="button">Use as route</button
+              ><button id="activity-close" type="button">Close activity</button>
+            </div>
+          </section>
           <div id="lock-notice" class="notice warning lock-notice" hidden>
             <p>Route locked. Map, export and sharing still work.</p>
             <button id="unlock" type="button">Unlock editing</button>
@@ -373,7 +393,9 @@
             </div>
           </div>
           <div class="export-actions">
-            <button id="navigate" class="primary" disabled type="button">
+            <button id="activity-replay" class="primary" type="button" hidden>
+              Play activity</button
+            ><button id="navigate" class="primary" disabled type="button">
               Navigate</button
             ><button id="download" class="primary" disabled type="button">
               Download GPX</button
@@ -764,6 +786,7 @@
       <div id="nav-stage" class="nav-stage">
         <div id="nav-rotor" class="nav-rotor"><div id="nav-map"></div></div>
         <div class="nav-chips">
+          <p id="nav-activity-notice" class="nav-chip" hidden role="status"></p>
           <p id="nav-sun" class="nav-chip" hidden></p>
           <p id="nav-waiting" class="nav-chip" hidden>
             <span>Waiting for GPS</span>
@@ -805,6 +828,15 @@
             type="button"
           ></button
           ><button
+            id="nav-values"
+            class="nav-map-button"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="nav-values-menu"
+            hidden
+          ></button
+          ><button
             id="nav-voice"
             class="nav-map-button"
             type="button"
@@ -817,6 +849,13 @@
             hidden
           ></button>
         </div>
+        <div
+          id="nav-values-menu"
+          class="nav-values-menu"
+          role="menu"
+          aria-label="Values shown"
+          hidden
+        ></div>
         <button
           id="nav-reroute"
           class="nav-resume nav-reroute"
@@ -859,6 +898,7 @@
           </div>
           <button id="nav-stop" class="nav-stop" type="button">End</button>
         </div>
+        <div id="nav-activity" class="nav-activity" hidden></div>
         <div id="nav-replay" class="nav-replay" hidden>
           <button id="nav-replay-toggle" type="button"></button
           ><input

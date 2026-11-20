@@ -2,21 +2,21 @@ const texts = {
   app: {
     en: [
       'Nautavo: Route Planner & GPX Export',
-      'Plan routes along real roads, import GPX, FIT or TCX, check weather, elevation and surface, navigate on your phone and download complete GPX tracks. No account.',
+      'Plan routes on real roads, import GPX, FIT or TCX, replay activities, check weather, elevation and surface, navigate on your phone and download GPX. No account.',
     ],
     pt: [
       'Nautavo: Planejador de rotas e exportação GPX',
-      'Crie rotas pelas ruas, importe GPX, FIT ou TCX, veja clima, elevação e pavimento, navegue pelo celular e baixe o traçado completo em GPX. Sem cadastro.',
+      'Crie rotas pelas ruas, importe GPX, FIT ou TCX, reveja atividades, veja clima, elevação e pavimento, navegue pelo celular e baixe em GPX. Sem cadastro.',
     ],
   },
   help: {
     en: [
       'Nautavo: Route Planning & GPX Help',
-      'Learn to plan and edit routes, import GPX, FIT and TCX, read the itinerary, weather, elevation and surface, navigate, set units, and save or share routes.',
+      'Learn to plan and edit routes, import GPX, FIT and TCX, replay activities, read the itinerary, weather, elevation and surface, navigate and share routes.',
     ],
     pt: [
       'Nautavo: Ajuda para criar e exportar rotas',
-      'Aprenda a criar e editar rotas, importar GPX, FIT e TCX, ver itinerário, clima, elevação e pavimento, navegar, ajustar unidades e salvar ou compartilhar.',
+      'Aprenda a criar e editar rotas, importar GPX, FIT e TCX, rever atividades, ver itinerário, clima, elevação e pavimento, navegar, salvar e compartilhar.',
     ],
   },
   changelog: {

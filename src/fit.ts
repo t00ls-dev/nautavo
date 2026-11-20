@@ -1,10 +1,12 @@
-import type { Coord } from './core';
+import type { Channel, Coord, Recorded } from './core';
 
 /**
- * Minimal FIT decoder for route import: course and activity positions,
- * altitude, course points and the course name. Every other message and field
- * (heart rate, power, timestamps, developer data) is skipped and never kept.
- * Input is untrusted: sizes are bounded and the file CRC is checked.
+ * Minimal FIT decoder: course and activity positions, altitude, course
+ * points and the course name, and for each position its recorded time and
+ * sensor values (heart rate, cadence, power, temperature, speed), which only
+ * the activity view reads (#156). Every other message and field (developer
+ * data included) is skipped. Input is untrusted: sizes are bounded and the
+ * file CRC is checked.
  */
 
 export interface FitTrack {
@@ -12,6 +14,8 @@ export interface FitTrack {
   segments: Coord[][];
   /** Altitude per position, parallel to `segments`. */
   elevations: (number | null)[][];
+  /** Recorded time and raw sensor values per position, parallel to `segments`. */
+  recorded: Recorded[][];
   /** Course points with a position. */
   waypoints: { name: string; coord: Coord }[];
 }
@@ -23,7 +27,23 @@ const MAX_POSITIONS = 200_000,
 
 const RECORD = 20,
   COURSE = 31,
-  COURSE_POINT = 32;
+  COURSE_POINT = 32,
+  /** Field number of the timestamp in every message. */
+  TIMESTAMP = 253,
+  /** Record field of the left/right power balance. */
+  LEFT_RIGHT_BALANCE = 30,
+  /** FIT times count seconds from 1989-12-31T00:00:00Z. */
+  FIT_EPOCH_MS = Date.UTC(1989, 11, 31);
+
+/** Record fields read for the activity view: number, channel, scale. */
+const RECORD_CHANNELS: [number, Channel, number][] = [
+  [3, 'hr', 1],
+  [4, 'cadence', 1],
+  [7, 'power', 1],
+  [13, 'temperature', 1],
+  [6, 'speed', 1000],
+  [73, 'speed', 1000],
+];
 
 const CRC_TABLE = [
   0x0000, 0xcc01, 0xd801, 0x1400, 0xf001, 0x3c00, 0x2800, 0xe401, 0xa001,
@@ -70,21 +90,26 @@ export function decodeFit(
     name: '',
     segments: [],
     elevations: [],
+    recorded: [],
     waypoints: [],
   };
   let positions = 0,
     missing = false,
-    last: Coord | null = null;
+    last: Coord | null = null,
+    /** Latest full timestamp, for compressed-timestamp headers (seconds). */
+    lastTime: number | null = null;
 
-  const addPosition = (coord: Coord, ele: number | null) => {
+  const addPosition = (coord: Coord, ele: number | null, record: Recorded) => {
     if (++positions > MAX_POSITIONS)
       throw new Error('This file has too many track points.');
     if (!last || (missing && meters(last, coord) > GAP_METERS)) {
       track.segments.push([]);
       track.elevations.push([]);
+      track.recorded.push([]);
     }
     track.segments.at(-1)!.push(coord);
     track.elevations.at(-1)!.push(ele);
+    track.recorded.at(-1)!.push(record);
     last = coord;
     missing = false;
   };
@@ -112,8 +137,17 @@ export function decodeFit(
     while (at < end) {
       const header = bytes[at++];
       let local: number;
-      if (header & 0x80) local = (header >> 5) & 0x3;
-      else {
+      /** Seconds of a compressed-timestamp header, from the last full time. */
+      let compressed: number | null = null;
+      if (header & 0x80) {
+        local = (header >> 5) & 0x3;
+        const offset = header & 0x1f;
+        if (lastTime !== null) {
+          compressed = (lastTime & ~0x1f) + offset;
+          if (offset < (lastTime & 0x1f)) compressed += 0x20;
+          lastTime = compressed;
+        }
+      } else {
         local = header & 0x0f;
         if (header & 0x40) {
           // Definition message.
@@ -160,6 +194,9 @@ export function decodeFit(
       }
       need(definition.developer);
       at += definition.developer;
+      const stamp = values.get(TIMESTAMP);
+      if (typeof stamp === 'number') lastTime = stamp;
+      const seconds = typeof stamp === 'number' ? stamp : compressed;
 
       if (definition.global === RECORD) {
         const coord = position(values.get(0), values.get(1));
@@ -169,9 +206,23 @@ export function decodeFit(
         }
         const raw = values.get(78) ?? values.get(2);
         const ele = typeof raw === 'number' ? raw / 5 - 500 : null;
+        const readings: Recorded['values'] = {};
+        for (const [num, channel, scale] of RECORD_CHANNELS) {
+          const value = values.get(num);
+          if (typeof value === 'number') readings[channel] = value / scale;
+        }
+        // Left/right balance: the right leg's share when bit 7 is set (the
+        // side is unknown otherwise), kept as the left leg's share.
+        const balance = values.get(LEFT_RIGHT_BALANCE);
+        if (typeof balance === 'number' && balance & 0x80)
+          readings.balance = 100 - (balance & 0x7f);
         addPosition(
           coord,
           ele !== null && ele > -500 && ele < 9000 ? ele : null,
+          {
+            time: seconds === null ? null : FIT_EPOCH_MS + seconds * 1000,
+            values: readings,
+          },
         );
       } else if (definition.global === COURSE_POINT) {
         const coord = position(values.get(2), values.get(3));
@@ -207,6 +258,12 @@ function readField(
   little: boolean,
 ): number | string | null {
   switch (field.type) {
+    case 0x01: // sint8
+      if (field.size !== 1) return null;
+      return nonInvalid(view.getInt8(at), 0x7f);
+    case 0x02: // uint8
+      if (field.size !== 1) return null;
+      return nonInvalid(view.getUint8(at), 0xff);
     case 0x07: {
       // Null-terminated UTF-8 string.
       const raw = bytes.subarray(at, at + field.size);
