@@ -26,6 +26,8 @@ export const PREFERENCE = {
   /** Spoken directions while navigating: 'on', or absent for off (#190). */
   navigationVoice: 'navigation-voice',
   pointPlacement: 'point-placement',
+  /** Recorded values hidden on the activity replay screen (#156), comma-separated. */
+  activityValues: 'activity-values',
   /** The planner map's center and zoom when the page was last left. */
   lastView: 'last-view',
   /**

@@ -520,12 +520,66 @@ export interface ImportedTrack {
   elevations?: (number | null)[][];
 }
 
-/** Geometry, names and elevation read from a file, before shared processing. */
-interface ParsedTrack {
+/**
+ * Sensor channels a recording may carry per track point (#156): heart rate
+ * (bpm), cadence (rpm), power (W), the left leg's share of it (%, from a
+ * two-sided power meter), temperature (°C) and speed (m/s).
+ */
+export const CHANNELS = [
+  'hr',
+  'cadence',
+  'power',
+  'balance',
+  'temperature',
+  'speed',
+] as const;
+export type Channel = (typeof CHANNELS)[number];
+/** What a recording says about one track point: when, and its sensor values. */
+export interface Recorded {
+  /** Milliseconds since the epoch, or null when the point has no time. */
+  time: number | null;
+  values: Partial<Record<Channel, number>>;
+}
+/** Values outside these bounds are sensor errors and are dropped. */
+const CHANNEL_BOUNDS: Record<Channel, [number, number]> = {
+  hr: [20, 250],
+  cadence: [0, 255],
+  power: [0, 3000],
+  balance: [0, 100],
+  temperature: [-60, 70],
+  speed: [0, 100],
+};
+/** The plausible values of a point's raw readings. */
+function channelValues(
+  raw: Partial<Record<Channel, number | undefined>>,
+): Partial<Record<Channel, number>> {
+  const values: Partial<Record<Channel, number>> = {};
+  for (const channel of CHANNELS) {
+    const value = raw[channel];
+    const [low, high] = CHANNEL_BOUNDS[channel];
+    if (value !== undefined && Number.isFinite(value))
+      if (value >= low && value <= high) values[channel] = value;
+  }
+  return values;
+}
+const recordedTime = (text: string | null | undefined): number | null => {
+  const time = text ? Date.parse(text.trim()) : NaN;
+  return Number.isFinite(time) ? time : null;
+};
+
+/**
+ * What a file holds, before shared processing: geometry, names, elevation
+ * and, per point, the recorded time and sensor values. Planning import
+ * (`finishImport`) uses only the geometry, names and elevation; the
+ * activity view (#156) also reads the recording, in page memory only.
+ */
+export interface ParsedTrack {
   format: 'GPX' | 'TCX' | 'FIT';
   name: string;
   segments: Coord[][];
   elevations: (number | null)[][];
+  /** Parallel to `segments`. */
+  recorded: Recorded[][];
   waypoints: { name: string; coord: Coord }[];
 }
 
@@ -566,11 +620,30 @@ function parseGpx(doc: Document): ParsedTrack {
     const text = all(e, 'ele')[0]?.textContent?.trim();
     return text ? recordedElevation(Number(text)) : null;
   };
+  // Garmin's TrackPointExtension (v1, v2) and the common `power` element.
+  const reading = (e: Element, ...tags: string[]) => {
+    for (const tag of tags) {
+      const text = all(e, tag)[0]?.textContent?.trim();
+      if (text) return Number(text);
+    }
+    return undefined;
+  };
+  const recorded = (e: Element): Recorded => ({
+    time: recordedTime(all(e, 'time')[0]?.textContent),
+    values: channelValues({
+      hr: reading(e, 'hr'),
+      cadence: reading(e, 'cad'),
+      power: reading(e, 'power', 'PowerInWatts'),
+      temperature: reading(e, 'atemp', 'wtemp'),
+      speed: reading(e, 'speed'),
+    }),
+  });
   return {
     format: 'GPX',
     name: all(doc, 'name')[0]?.textContent || '',
     segments: elements.map((s) => s.map(coord)),
     elevations: elements.map((s) => s.map(ele)),
+    recorded: elements.map((s) => s.map(recorded)),
     waypoints: all(doc, 'wpt').map((w) => ({
       name: all(w, 'name')[0]?.textContent || 'Stop',
       coord: coord(w),
@@ -594,21 +667,38 @@ function parseTcx(doc: Document): ParsedTrack {
       throw new Error('The TCX contains invalid coordinates.');
     return c;
   };
+  const reading = (e: Element | undefined, tag: string) => {
+    const text = e && all(e, tag)[0]?.textContent?.trim();
+    return text ? Number(text) : undefined;
+  };
   const segments: Coord[][] = [],
-    elevations: (number | null)[][] = [];
+    elevations: (number | null)[][] = [],
+    recorded: Recorded[][] = [];
   for (const track of all(doc, 'Track')) {
     const coords: Coord[] = [],
-      eles: (number | null)[] = [];
+      eles: (number | null)[] = [],
+      records: Recorded[] = [];
     for (const point of all(track, 'Trackpoint')) {
       const c = position(point);
       if (!c) continue;
       const text = child(point, 'AltitudeMeters')?.textContent?.trim();
       coords.push(c);
       eles.push(text ? recordedElevation(Number(text)) : null);
+      const extensions = child(point, 'Extensions');
+      records.push({
+        time: recordedTime(child(point, 'Time')?.textContent),
+        values: channelValues({
+          hr: reading(child(point, 'HeartRateBpm'), 'Value'),
+          cadence: reading(point, 'Cadence'),
+          power: reading(extensions, 'Watts'),
+          speed: reading(extensions, 'Speed'),
+        }),
+      });
     }
     if (coords.length >= 2) {
       segments.push(coords);
       elevations.push(eles);
+      recorded.push(records);
     }
   }
   const course = all(doc, 'Course')[0];
@@ -617,6 +707,7 @@ function parseTcx(doc: Document): ParsedTrack {
     name: (course && child(course, 'Name')?.textContent?.trim()) || '',
     segments,
     elevations,
+    recorded,
     waypoints: all(doc, 'CoursePoint').flatMap((p) => {
       const c = position(p);
       return c
@@ -694,26 +785,43 @@ export function importGpx(xml: string): ImportedTrack {
 }
 
 /**
- * Imports a GPX, TCX or FIT file, detected by content rather than extension.
- * Only geometry, names, course points and recorded elevation are read.
+ * Reads a GPX, TCX or FIT file, detected by content rather than extension:
+ * geometry, names, course points, recorded elevation and, per point, the
+ * recorded time and sensor values.
  */
-export function importTrackFile(input: Uint8Array): ImportedTrack {
+export function readTrackFile(input: Uint8Array): ParsedTrack {
   if (input.length > MAX_IMPORT_BYTES)
     throw new Error('Choose a file smaller than 10 MB.');
   const bytes = unpack(input);
   if (isFit(bytes)) {
     const fit = decodeFit(bytes, meters);
-    return finishImport({ format: 'FIT', ...fit });
+    return {
+      format: 'FIT',
+      ...fit,
+      recorded: fit.recorded.map((segment) =>
+        segment.map((r) => ({ time: r.time, values: channelValues(r.values) })),
+      ),
+    };
   }
   // Like File.text(): UTF-8, with invalid bytes replaced. Some exported TCX
   // files start with spaces before the XML declaration, which XML rejects.
   const doc = parseXml(new TextDecoder().decode(bytes).trimStart());
   const root = doc?.documentElement.localName;
-  if (doc && root === 'gpx') return finishImport(parseGpx(doc));
-  if (doc && root === 'TrainingCenterDatabase')
-    return finishImport(parseTcx(doc));
+  if (doc && root === 'gpx') return parseGpx(doc);
+  if (doc && root === 'TrainingCenterDatabase') return parseTcx(doc);
   throw new Error('This file is not a valid GPX, TCX or FIT file.');
 }
+
+/**
+ * Imports a file as a route: only geometry, names, course points and
+ * recorded elevation are kept; times and sensor values are dropped.
+ */
+export function importTrackFile(input: Uint8Array): ImportedTrack {
+  return importParsed(readTrackFile(input));
+}
+/** A file already read, imported as a route (see `importTrackFile`). */
+export const importParsed = (parsed: ParsedTrack): ImportedTrack =>
+  finishImport(parsed);
 
 const TRACK_FILE = /\.(gpx|fit|tcx)$/i;
 

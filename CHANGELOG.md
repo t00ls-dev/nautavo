@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- Recorded activities: importing a GPX, FIT or TCX file with recorded times, such as an activity from a bike computer, watch or app, opens it apart from the route you are planning, with its distance, moving and total time, average and maximum speed and the heart rate, cadence, power and temperature it carries. Play activity replays it at its own pace (1× to 300× real time) with the recorded clock and the values you choose to show, including altitude, grade, climb so far and left/right power balance, noting the top speed and the highest heart rate, cadence, power and point as it passes them and skipping stops of a minute or more; Use as route imports it as a route as before. The activity is read on the device only and is not saved or sent.
 - The list of turns ahead while navigating starts with the road you are on, highlighted, with its stage of the route (Step 2 of 6).
 
 ### Changed

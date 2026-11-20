@@ -7,7 +7,7 @@ import type {
 import { meters, type Coord, type Route, type State, type Step } from './core';
 import { byId as $, text } from './dom';
 import { t } from './i18n';
-import { icon, iconControl } from './icons';
+import { icon, iconControl, type IconName } from './icons';
 import { gpsPoint, locationError } from './location';
 import { navigationRoute } from './routing';
 import { creditsDialog } from './map-credits';
@@ -69,8 +69,20 @@ import {
   replayAdvance,
   replayFix,
 } from './navigation-replay';
+import {
+  activityAdvance,
+  distanceAt,
+  playedAt,
+  playedLength,
+  timeAtPlayed,
+  valuesAt,
+  type Activity,
+  type Peak,
+  type Stop,
+} from './activity';
 import { distanceLabel, MISSING } from './units';
 import { distanceUnits } from './unit-preferences';
+import { activityValues, unitOf, valueLabel } from './activity-values';
 
 /**
  * Guided navigation screen (#31, first delivery): follows the route on screen
@@ -82,6 +94,24 @@ import { distanceUnits } from './unit-preferences';
  * them the route and position still draw over a neutral background.
  */
 
+/** The highest values the activity replay announces as it passes them. */
+const PEAK_ICONS: Record<Peak['kind'], IconName> = {
+  speed: 'navigate',
+  hr: 'heart',
+  cadence: 'cadence',
+  power: 'power',
+  altitude: 'summit',
+};
+const PEAK_TEXT: Record<Peak['kind'], string> = {
+  speed: 'Top speed',
+  hr: 'Highest heart rate',
+  cadence: 'Highest cadence',
+  power: 'Highest power',
+  altitude: 'Highest point',
+};
+/** Replay speeds: a route's (× 250 m/s), a recorded activity's (× real time). */
+const ROUTE_RATES = [1, 2, 5, 10],
+  ACTIVITY_RATES = [1, 10, 60, 300];
 /**
  * Following zoom, live and in a replay: far enough out to show a good stretch
  * of the road ahead (vector tiles are 512 px, so 15 is raster zoom 16).
@@ -235,6 +265,13 @@ export function setupNavigation(deps: {
     headingDistance = 0,
     /** Replay: direction of the road's segment under the traveler, or null. */
     replayBearing: number | null = null,
+    /** A recorded activity being replayed at its own pace (#156), or null. */
+    activity: Activity | null = null,
+    /** The replayed activity's recorded time, ms since the epoch. */
+    activityTime = 0,
+    /** What gets the focus back when the activity replay ends. */
+    activityBack: HTMLElement | null = null,
+    skippedTimer = 0,
     /** A travelled-line redraw is under way; the latest progress waits. */
     travelledBusy = false,
     travelledNext: number | null = null,
@@ -252,10 +289,12 @@ export function setupNavigation(deps: {
     meter = createSpeedMeter();
   /** The traveler's clock: simulated while replaying. */
   const now = () =>
-    replaying && replayIndex
-      ? replayDeparture +
-        travelTimeSeconds(replayDistance, deps.speedKmh()) * 1000
-      : Date.now();
+    activity
+      ? activityTime
+      : replaying && replayIndex
+        ? replayDeparture +
+          travelTimeSeconds(replayDistance, deps.speedKmh()) * 1000
+        : Date.now();
 
   const units = () => distanceUnits();
 
@@ -568,6 +607,10 @@ export function setupNavigation(deps: {
 
   function render() {
     if (!route || !tracker) return;
+    if (activity) {
+      renderActivity(activity);
+      return;
+    }
     const r = readout;
     const turn = $('nav-turn');
     const arrived = !!r?.arrived;
@@ -615,13 +658,16 @@ export function setupNavigation(deps: {
   }
   /** The current speed badge (#136); a replay shows its own speed. */
   function renderSpeed() {
-    const metersPerSecond = replaying
-      ? replayFrame
-        ? deps.speedKmh() / 3.6
-        : 0
-      : last
-        ? meter.current()
-        : null;
+    // An activity shows its speed with its other values.
+    const metersPerSecond = activity
+      ? null
+      : replaying
+        ? replayFrame
+          ? deps.speedKmh() / 3.6
+          : 0
+        : last
+          ? meter.current()
+          : null;
     const badge = $('nav-speed');
     badge.hidden = metersPerSecond === null;
     if (metersPerSecond === null) return;
@@ -755,7 +801,10 @@ export function setupNavigation(deps: {
    */
   function replayLead(): number {
     if (!replaying || !replayFrame || !map || !last) return 0;
-    const speed = METERS_PER_SECOND * Number(replayRate.value);
+    const speed =
+      (activity
+        ? (valuesAt(activity, activityTime).speed ?? 0)
+        : METERS_PER_SECOND) * Number(replayRate.value);
     // Meters per CSS pixel at this zoom (512 px vector tiles).
     const perPixel =
       (40075016.7 * Math.cos((last.coord[0] * Math.PI) / 180)) /
@@ -868,6 +917,11 @@ export function setupNavigation(deps: {
   }
   function placeStops() {
     if (!route) return;
+    // A recorded activity has no route points.
+    if (activity) {
+      stopPlaces = [];
+      return;
+    }
     const points = deps
       .state()
       .points.slice(1)
@@ -899,6 +953,7 @@ export function setupNavigation(deps: {
   });
   /** Route points after the start, so neither hint nor reroute skips one. */
   function stops(): Coord[] {
+    if (activity) return [];
     return deps
       .state()
       .points.slice(1)
@@ -1038,8 +1093,13 @@ export function setupNavigation(deps: {
    * `remind`: the notice was skipped, so a chip says recalculation is on.
    * `replay`: simulated positions along the route, with no location.
    */
-  function start(remind: boolean, replay = false, progress = 0) {
-    route = deps.route();
+  function start(
+    remind: boolean,
+    replay = false,
+    progress = 0,
+    replayed: Route | null = null,
+  ) {
+    route = replayed ?? deps.route();
     if (!route) return;
     plannedIndex = indexTrack(route.segments);
     plannedProgress = progress;
@@ -1052,11 +1112,13 @@ export function setupNavigation(deps: {
     switches.hideAutoChip();
     voice = createVoiceSchedule();
     // Start and Continue are taps: iOS lets speech begin only from one.
-    say('Navigation started.');
+    if (!activity) say('Navigation started.');
     travelledBusy = false;
     travelledNext = null;
     replaying = replay;
     screen.classList.toggle('replaying', replay);
+    // An activity has no turns ahead: its replay shows no list of them.
+    screen.classList.toggle('activity-replay', !!activity);
     $('nav-replay').hidden = !replay;
     if (remind && !replay) switches.remindAutoReroute();
     schedule = createRerouteSchedule();
@@ -1110,7 +1172,8 @@ export function setupNavigation(deps: {
     layout();
     mapNotice();
     render();
-    if (replay) replayAt(replayDistance);
+    if (activity) activityAt(activityTime);
+    else if (replay) replayAt(replayDistance);
     else {
       startWatching();
       deviceCompass.watch();
@@ -1136,6 +1199,8 @@ export function setupNavigation(deps: {
       screen.classList.remove('replaying');
       $('nav-replay').hidden = true;
     }
+    const back = activity ? activityBack : null;
+    if (activity) endActivity();
     clearTimeout(reroutedTimer);
     $('nav-rerouted').hidden = true;
     switches.hideAutoChip();
@@ -1158,7 +1223,7 @@ export function setupNavigation(deps: {
     readout = null;
     tracker = null;
     route = null;
-    (wasReplay ? travel : button).focus();
+    (back ?? (wasReplay ? travel : button)).focus();
     replayIndex = null;
   }
   screen.addEventListener('close', cleanup);
@@ -1283,7 +1348,9 @@ export function setupNavigation(deps: {
     let down: { x: number; y: number } | null = null,
       lastTap: { x: number; y: number; time: number } | null = null;
     const control = (target: EventTarget | null) =>
-      !!(target as Element | null)?.closest?.('button, a, .credits-dialog');
+      !!(target as Element | null)?.closest?.(
+        'button, a, input, label, select, .credits-dialog',
+      );
     stage.addEventListener(
       'touchstart',
       (event) => {
@@ -1368,6 +1435,119 @@ export function setupNavigation(deps: {
       timestamp: fix.time,
     } as GeolocationPosition);
   }
+  /**
+   * The activity replay (#156) at a recorded time: the position the
+   * recording had then, its speed and the time, fed to the same screen.
+   */
+  function activityAt(time: number) {
+    if (!activity || !replayIndex) return;
+    activityTime = Math.max(activity.start, Math.min(activity.end, time));
+    replayDistance = distanceAt(activity, activityTime);
+    replayRange.value = String(
+      Math.round(
+        (playedAt(activity, activityTime) / (playedLength(activity) || 1)) *
+          REPLAY_STEPS,
+      ),
+    );
+    replayRange.setAttribute(
+      'aria-valuetext',
+      `${activityClock(activityTime)} · ${t(
+        `${distanceLabel(replayDistance, units(), deps.locale())} of ${distanceLabel(replayIndex.total, units(), deps.locale())}`,
+      )}`,
+    );
+    const fix = replayFix(replayIndex, replayDistance, 1, 0);
+    if (!fix) return;
+    replayBearing = fix.bearing;
+    onFix({
+      coords: {
+        latitude: fix.coord[0],
+        longitude: fix.coord[1],
+        accuracy: 5,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: fix.heading,
+        speed: valuesAt(activity, activityTime).speed ?? 0,
+      },
+      timestamp: activityTime,
+    } as GeolocationPosition);
+  }
+  const activityClock = (time: number) =>
+    new Date(time).toLocaleTimeString(deps.locale(), {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  /** Elapsed replay time as h:mm:ss, or m:ss under an hour. */
+  function elapsedLabel(ms: number): string {
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600),
+      m = Math.floor((total % 3600) / 60),
+      sec = String(total % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+  }
+  /** The recorded time, the place and the values at that moment. */
+  /**
+   * The activity's data page in the bottom card: time ridden, distance and
+   * the recorded fields. The map stays clear; navigation's banner, chips and
+   * speed badge are not used.
+   */
+  function renderActivity(a: Activity) {
+    screen.classList.remove('off-route');
+    $('nav-time').textContent = elapsedLabel(playedAt(a, activityTime));
+    $('nav-rest').textContent = t(
+      `${distanceLabel(replayDistance, units(), deps.locale())} of ${distanceLabel(a.distance, units(), deps.locale())}`,
+    );
+    values.render(a, activityTime);
+    if (tracker)
+      drawTravelled(Math.min(tracker.total, replayDistance + replayLead()));
+  }
+  /** The recorded values panel and its Values shown menu (#156). */
+  const values = activityValues(deps.locale, () => {
+    if (activity) render();
+  });
+  /**
+   * A short notice over the map for a few seconds: a stop the replay
+   * skipped, or a highest value it has just passed.
+   */
+  function activityNotice(name: IconName, message: string) {
+    const chip = $('nav-activity-notice');
+    chip.replaceChildren(icon(name), text('span', message));
+    chip.hidden = false;
+    clearTimeout(skippedTimer);
+    skippedTimer = window.setTimeout(() => (chip.hidden = true), 4000);
+  }
+  const showSkipped = (stop: Stop) =>
+    activityNotice(
+      'pause',
+      `Stop of ${Math.max(1, Math.round((stop.to - stop.from) / 60_000))} min skipped`,
+    );
+  /** Announces the highest value the replay passed between two times. */
+  function passPeaks(a: Activity, from: number, to: number) {
+    const peak = a.peaks.find((p) => p.time > from && p.time <= to);
+    if (!peak) return;
+    const shown = `${valueLabel(peak.kind, peak.value)} ${unitOf(peak.kind)}`;
+    activityNotice(PEAK_ICONS[peak.kind], `${PEAK_TEXT[peak.kind]}: ${shown}`);
+  }
+  /** Playback speeds: a route replay's, or real time × for an activity. */
+  function setRates(rates: number[], chosen: number) {
+    replayRate.replaceChildren(
+      ...rates.map((rate) => {
+        const option = document.createElement('option');
+        option.value = String(rate);
+        option.textContent = `${rate}×`;
+        option.selected = rate === chosen;
+        return option;
+      }),
+    );
+  }
+  function endActivity() {
+    activity = null;
+    activityBack = null;
+    clearTimeout(skippedTimer);
+    $('nav-activity-notice').hidden = true;
+    values.end();
+    setRates(ROUTE_RATES, 1);
+  }
   function setReplayPlaying(playing: boolean) {
     cancelAnimationFrame(replayFrame);
     replayFrame = 0;
@@ -1377,12 +1557,30 @@ export function setupNavigation(deps: {
     replayToggle.title = name;
     replayToggle.setAttribute('aria-pressed', String(playing));
     if (!playing || !replayIndex) return;
-    if (replayDistance >= replayIndex.total) replayDistance = 0;
+    if (activity) {
+      if (activityTime >= activity.end) activityTime = activity.start;
+    } else if (replayDistance >= replayIndex.total) replayDistance = 0;
     replayLast = performance.now();
     replayFrame = requestAnimationFrame(replayTick);
   }
   function replayTick(time: number) {
     if (!replayIndex || !replaying) return;
+    if (activity) {
+      const step = activityAdvance(
+        activity,
+        activityTime,
+        time - replayLast,
+        Number(replayRate.value),
+      );
+      replayLast = time;
+      replayFrame = requestAnimationFrame(replayTick);
+      const from = activityTime;
+      activityAt(step.time);
+      passPeaks(activity, from, step.time);
+      if (step.skipped) showSkipped(step.skipped);
+      if (step.time >= activity.end) setReplayPlaying(false);
+      return;
+    }
     const next = replayAdvance(
       replayDistance,
       time - replayLast,
@@ -1398,7 +1596,10 @@ export function setupNavigation(deps: {
   replayRange.oninput = () => {
     if (!replayIndex) return;
     setReplayPlaying(false);
-    replayAt((Number(replayRange.value) / REPLAY_STEPS) * replayIndex.total);
+    const share = Number(replayRange.value) / REPLAY_STEPS;
+    if (activity)
+      activityAt(timeAtPlayed(activity, share * playedLength(activity)));
+    else replayAt(share * replayIndex.total);
   };
   setReplayPlaying(false);
   /** Replays the route on this screen, paused at the start. */
@@ -1418,6 +1619,29 @@ export function setupNavigation(deps: {
   };
 
   return {
+    /**
+     * Replays a recorded activity at its own pace (#156): its track, times
+     * and values, paused at the start; `back` gets the focus at the end.
+     */
+    replayActivity(recorded: Activity, back: HTMLElement) {
+      const index = indexTrack(recorded.segments);
+      if (!index.edges.length) return;
+      replayIndex = index;
+      activity = recorded;
+      activityBack = back;
+      activityTime = recorded.start;
+      replayDistance = 0;
+      setRates(ACTIVITY_RATES, 60);
+      values.build(recorded);
+      start(false, true, 0, {
+        segments: recorded.segments,
+        steps: [],
+        distance: recorded.distance,
+        duration: null,
+        provider: 'Recorded activity',
+      });
+      setReplayPlaying(false);
+    },
     /** Offers to continue the navigation a reload interrupted (#138). */
     offerResume(progress: number) {
       resumeAt = progress;

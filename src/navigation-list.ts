@@ -136,11 +136,13 @@ export function upcomingList(deps: {
   // the list; End, the replay controls and the list itself keep their own
   // taps. A tap toggles; a drag up opens and a drag down closes.
   const bar = toggle.closest<HTMLElement>('.nav-bar')!;
+  // A recorded activity's replay has no turns: its bar is a data page.
   const ownTap = (target: EventTarget | null) =>
-    target instanceof Element &&
-    !!target.closest(
-      'button:not(#nav-list-toggle), input, select, a, #nav-list',
-    );
+    screen.classList.contains('activity-replay') ||
+    (target instanceof Element &&
+      !!target.closest(
+        'button:not(#nav-list-toggle), input, select, a, #nav-list',
+      ));
   let dragFrom: number | null = null,
     dragged = false;
   bar.addEventListener('pointerdown', (e) => {

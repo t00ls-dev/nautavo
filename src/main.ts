@@ -46,7 +46,8 @@ import {
   filename,
   generateGpx,
   highways,
-  importTrackFile,
+  importParsed,
+  readTrackFile,
   linkServerOverrides,
   localSections,
   meters,
@@ -56,6 +57,7 @@ import {
   trackStops,
   validateState,
   type Coord,
+  type ParsedTrack,
   type Point,
   type Route,
   type ServerUrls,
@@ -104,7 +106,7 @@ import { routeDaylight } from './daylight';
 import { addressAutocomplete, placeOption } from './autocomplete';
 import { setupMapView } from './map-view';
 import { defaultView } from './default-view';
-import { setupMapLayers } from './map-layers';
+import { routeLineColor, setupMapLayers } from './map-layers';
 import { moveItem, setupPointOrder } from './point-order';
 import { gpsPoint, getPosition, locationError, positionView } from './location';
 import {
@@ -116,6 +118,8 @@ import {
 } from './point-placement';
 import { setupMapControls } from './map-controls';
 import { compactLayout, placeLibrary, setupPanel } from './panel';
+import { activityOf } from './activity';
+import { setupActivityView } from './activity-ui';
 import { icon, iconControl } from './icons';
 import { coordText, FAVORITE_ICONS } from './favorite-dialog';
 import { byId as $, optionalById, text } from './dom';
@@ -149,7 +153,11 @@ function status(message: string, error = false) {
  * `editBlocked()`; viewing, export and sharing stay available.
  */
 let locked = false;
+/** The open activity's track, set once the activity view exists (#156). */
+let activityCoords = (): Coord[] | null => null;
 function editBlocked(): boolean {
+  // An open activity leaves the planned route as it is (#156).
+  if (activityCoords()) return true;
   if (!locked) return false;
   status('Route locked. Unlock editing to change it.', true);
   return true;
@@ -268,11 +276,6 @@ const setOffTrack = map.overlay('rg-unfollowable', RANK.highlight, () =>
   highlightLayers('rg-unfollowable-line'),
 );
 /** The route line: a white casing under the route color, per base map. */
-const ROUTE_COLORS: Record<string, string> = {
-  standard: '#12796e',
-  topographic: '#174cbd',
-  satellite: '#b61f64',
-};
 const setRouteLine = map.overlay('rg-route', RANK.route, () => {
   // Out-and-back stretches are thinner lines offset to the right of travel.
   const pass = (repeated: number, normal: number) =>
@@ -294,9 +297,7 @@ const setRouteLine = map.overlay('rg-route', RANK.route, () => {
       type: 'line',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color':
-          ROUTE_COLORS[document.body.dataset.mapLayer ?? 'standard'] ??
-          ROUTE_COLORS.standard,
+        'line-color': routeLineColor(),
         'line-width': pass(3, 4),
         'line-offset': pass(PASS_OFFSET, 0),
       },
@@ -507,6 +508,7 @@ $('departure').addEventListener('change', () => {
 const routeFit = createRouteFit(
   map,
   () =>
+    activityCoords() ??
     current?.segments.flat() ??
     state.points.flatMap((p) => (p.coord ? [p.coord] : [])),
 );
@@ -1679,6 +1681,7 @@ $<HTMLSelectElement>('distance-units').onchange = () => {
   rememberSpeedKmh(speedKmh);
   settings();
   if (current) renderRoute(current);
+  activityView.refresh();
   void library.refreshSavedRoutes();
 };
 $<HTMLSelectElement>('temperature-units').onchange = () => {
@@ -1686,6 +1689,7 @@ $<HTMLSelectElement>('temperature-units').onchange = () => {
     $<HTMLSelectElement>('temperature-units').value as TemperatureChoice,
   );
   if (current) renderRoute(current);
+  activityView.refresh();
 };
 
 $<HTMLInputElement>('prefer').onchange = () => {
@@ -1775,6 +1779,35 @@ $('share').onclick = () => {
     )
     .catch(() => status('Copy the link from your address bar.'));
 };
+/**
+ * A file read by Import, used as the route: its geometry, names and recorded
+ * elevation; times and sensor values are not kept.
+ */
+function adoptImport(parsed: ParsedTrack) {
+  const imported = importParsed(parsed);
+  revision++;
+  clearTimeout(timer);
+  dirty.clear();
+  drafts = new WeakMap();
+  state.points = imported.points;
+  // A file without a name gets one in the current interface language.
+  state.name = imported.name || t('Imported route');
+  selected = 0;
+  weather.invalidate();
+  current = imported.route;
+  if (imported.elevations) recordedElevation.set(current, imported.elevations);
+  if (imported.indices)
+    rememberLegs(current, legsAt(current.segments, imported.indices));
+  syncUrl();
+  renderPoints();
+  settings();
+  renderRoute(current);
+  fit();
+  status('Route imported. Edits recalculate only the changed sections.');
+  void checkImported(current, imported.indices !== undefined);
+}
+/** The file the open activity came from, for Use as route. */
+let activityFile: ParsedTrack | null = null;
 $<HTMLInputElement>('import').onchange = () => {
   const file = $<HTMLInputElement>('import').files?.[0];
   if (!file) return;
@@ -1789,28 +1822,19 @@ $<HTMLInputElement>('import').onchange = () => {
   void file
     .arrayBuffer()
     .then((buffer) => {
-      const imported = importTrackFile(new Uint8Array(buffer));
-      revision++;
-      clearTimeout(timer);
-      dirty.clear();
-      drafts = new WeakMap();
-      state.points = imported.points;
-      // A file without a name gets one in the current interface language.
-      state.name = imported.name || t('Imported route');
-      selected = 0;
-      weather.invalidate();
-      current = imported.route;
-      if (imported.elevations)
-        recordedElevation.set(current, imported.elevations);
-      if (imported.indices)
-        rememberLegs(current, legsAt(current.segments, imported.indices));
-      syncUrl();
-      renderPoints();
-      settings();
-      renderRoute(current);
-      fit();
-      status('Route imported. Edits recalculate only the changed sections.');
-      void checkImported(current, imported.indices !== undefined);
+      const parsed = readTrackFile(new Uint8Array(buffer));
+      // A recording with times opens as an activity (#156), apart from the
+      // planned route; any other file becomes the route, as before.
+      const activity = activityOf(parsed);
+      if (!activity) {
+        adoptImport(parsed);
+        return;
+      }
+      activityFile = parsed;
+      activityView.show(
+        activity,
+        file.name.replace(/\.(gpx|fit|tcx)(\.gz)?$/i, ''),
+      );
     })
     .catch((e: unknown) => status((e as Error).message, true))
     .finally(() => {
@@ -1896,6 +1920,7 @@ $<HTMLSelectElement>('language').onchange = () => {
   pageLinks(lang, encodeState(state));
   renderPoints();
   if (current) renderRoute(current);
+  activityView.refresh();
   syncUrl();
   void library.refreshSavedRoutes();
 };
@@ -1969,6 +1994,25 @@ const navigation = setupNavigation({
   status,
 });
 if (resumable) navigation.offerResume(resumable.progress);
+const activityView = setupActivityView({
+  map,
+  locale: () => (state.language === 'pt' ? 'pt-BR' : 'en'),
+  fit,
+  replay: (activity, back) => navigation.replayActivity(activity, back),
+  useAsRoute: () => {
+    const parsed = activityFile;
+    activityFile = null;
+    if (parsed) adoptImport(parsed);
+  },
+  restore: () => {
+    activityFile = null;
+    if (current) renderSummary(current);
+    else $('peek-main').textContent = '';
+    status('Activity closed. The planned route is as you left it.');
+  },
+  status,
+});
+activityCoords = activityView.coords;
 // Settings always open with the values in use; unapplied edits are dropped.
 $('open-settings').addEventListener('click', () => {
   settings();

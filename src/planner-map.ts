@@ -157,6 +157,8 @@ export interface MarkerOptions {
   z?: number;
   /** Kept whole inside the view when the route is fitted (`markerReach`). */
   framed?: boolean;
+  /** Shown while `solo` keeps this group (the activity view, #156). */
+  group?: string;
 }
 
 /** A DOM marker on the map, kept while the map loads. */
@@ -299,6 +301,8 @@ export class PlannerMap {
   private styleReady = false;
   /** A fit asked before the map existed, done exactly once it does. */
   private pendingFit: { coords: Coord[]; options: FitOptions } | null = null;
+  /** While set, only these overlays and marker groups show (`solo`). */
+  private soloIds: Set<string> | null = null;
 
   constructor(container: HTMLElement, center: Coord, zoom: number) {
     this.container = container;
@@ -396,7 +400,13 @@ export class PlannerMap {
     for (const layer of overlay.layers())
       if (!map.getLayer(layer.id))
         map.addLayer(
-          { ...layer, source: overlay.id } as LayerSpecification,
+          {
+            ...layer,
+            source: overlay.id,
+            ...(this.hidden(overlay.id)
+              ? { layout: { ...layer.layout, visibility: 'none' } }
+              : {}),
+          } as LayerSpecification,
           above,
         );
   }
@@ -451,9 +461,40 @@ export class PlannerMap {
       map.addImage(id, make(), { pixelRatio: 2 });
   }
 
+  /**
+   * Shows only the overlays and marker groups named, hiding the rest without
+   * changing their data; null shows everything again. The activity view uses
+   * it so the planned route, its points and weather step aside (#156).
+   */
+  solo(ids: string[] | null) {
+    this.soloIds = ids && new Set(ids);
+    for (const marker of this.markers) this.showMarker(marker);
+    const map = this.map;
+    if (map && this.styleReady)
+      for (const overlay of this.overlays)
+        for (const layer of overlay.layers())
+          if (map.getLayer(layer.id))
+            map.setLayoutProperty(
+              layer.id,
+              'visibility',
+              this.hidden(overlay.id) ? 'none' : 'visible',
+            );
+    this.framedChanged();
+  }
+  private hidden(id: string | undefined): boolean {
+    return !!this.soloIds && !(id && this.soloIds.has(id));
+  }
+  private showMarker(marker: MapMarker) {
+    marker.element.classList.toggle(
+      'solo-hidden',
+      this.hidden(marker.options.group),
+    );
+  }
+
   marker(coord: Coord, options: MarkerOptions): MapMarker {
     const marker = new MapMarker(this, coord, options);
     this.markers.add(marker);
+    this.showMarker(marker);
     if (this.ml && this.map) marker.attach(this.ml, this.map);
     if (options.framed) this.framedChanged();
     return marker;
