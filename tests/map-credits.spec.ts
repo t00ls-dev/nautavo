@@ -26,17 +26,25 @@ for (const [width, height] of [
       await page.setViewportSize({ width, height });
       await page.goto(base);
       const toggle = page.locator('.map-credits-toggle');
-      if (width < 760) {
-        // The half-height sheet keeps the credits on the map above it, beside
-        // the tool column.
+      // Phones, upright or sideways (#252), where the panel lies on the map:
+      // a bottom sheet upright, a panel on the left sideways.
+      const phone = width < 760 || height <= 500,
+        sideways = height <= 500;
+      if (phone) {
         await expect(toggle).toBeVisible();
-        const open = (await toggle.boundingBox())!;
-        expect(open.y + open.height).toBeLessThanOrEqual(
-          (await page.locator('#sheet').boundingBox())!.y,
-        );
-        expect(open.x + open.width).toBeLessThan(
-          (await page.locator('#undo').boundingBox())!.x,
-        );
+        const open = (await toggle.boundingBox())!,
+          sheet = (await page.locator('#sheet').boundingBox())!;
+        if (sideways)
+          // Beside the panel, at the bottom of the map.
+          expect(open.x).toBeGreaterThanOrEqual(sheet.x + sheet.width);
+        else {
+          // The half-height sheet keeps the credits on the map above it,
+          // beside the tool column.
+          expect(open.y + open.height).toBeLessThanOrEqual(sheet.y);
+          expect(open.x + open.width).toBeLessThan(
+            (await page.locator('#undo').boundingBox())!.x,
+          );
+        }
         await page.locator('#panel-toggle').tap();
       }
       await page.locator('#layers-toggle').tap();
@@ -47,7 +55,7 @@ for (const [width, height] of [
       const map = (await page.locator('#map').boundingBox())!;
       // Phones hide the zoom buttons; the credits sit below the map tools instead.
       const zoom = (await page
-        .locator(width < 760 ? '#undo' : '.map-zoom-out')
+        .locator(phone ? '#undo' : '.map-zoom-out')
         .boundingBox())!;
       expect(button.width).toBeGreaterThanOrEqual(44);
       expect(button.height).toBeGreaterThanOrEqual(44);
@@ -56,13 +64,13 @@ for (const [width, height] of [
       ).toBeLessThanOrEqual(1);
       expect(button.y).toBeGreaterThanOrEqual(zoom.y + zoom.height);
       expect(map.x + map.width - button.x - button.width).toBe(10);
-      // Phones keep the credits above the closed bottom sheet.
+      // Upright phones keep the credits above the closed bottom sheet.
       expect(map.y + map.height - button.y - button.height).toBe(
-        width < 760
+        phone && !sideways
           ? (await page.locator('#sheet').boundingBox())!.height + 10
           : 10,
       );
-      if (width < 760)
+      if (phone && !sideways)
         expect(button.y + button.height).toBeLessThanOrEqual(
           (await page.locator('#panel-toggle').boundingBox())!.y - 8,
         );

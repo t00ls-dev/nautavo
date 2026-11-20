@@ -1,6 +1,7 @@
 import { onlineAttempt } from './offline';
 import { speedFromKmh } from './travel-time';
 import { byId as $ } from './dom';
+import { sheetCoversMap } from './panel';
 import { isolate, type MapMarker, type PlannerMap } from './planner-map';
 import { type Route, type State, serverUrl, settingsServerUrl } from './core';
 import { t, weatherDescription } from './i18n';
@@ -708,10 +709,7 @@ export function setupWeather(
       );
       detail.setAttribute('aria-controls', 'map');
       detail.onclick = () => {
-        if (
-          !$('route-panel').hidden &&
-          matchMedia('(max-width: 759px)').matches
-        )
+        if (!$('route-panel').hidden && sheetCoversMap())
           $('panel-toggle').click();
         map.stop();
         map.setView(m.point.coord, Math.max(map.getZoom(), 11));

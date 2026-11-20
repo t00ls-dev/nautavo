@@ -258,15 +258,17 @@
           The route panel is a side panel on wide screens, with a button in its
           header to hide it, and a bottom sheet on phones. Tap the handle of the
           sheet to open or close it, or drag it to half or full height (with a
-          keyboard, the Up and Down arrow keys on the handle); its header always
-          shows the route distance and time and the latest status, and closed,
-          the sheet still shows the export buttons. On phones, the route's
-          distance, time and arrival come first in the sheet, above the points,
-          and tapping a point's field raises the sheet to full height with the
-          field and its menu in view, then lowers it again when you leave the
-          field. More actions next to Copy link holds the route name, Save route
-          and Import. The panel state is remembered in this tab session. Full
-          screen expands the map; press it again or Escape to leave.
+          keyboard, the Up and Down arrow keys on the handle); with the phone
+          sideways, the sheet is a panel on the left of the map instead, and
+          closed it keeps only its header and buttons. Its header always shows
+          the route distance and time and the latest status, and closed, the
+          sheet still shows the export buttons. On phones, the route's distance,
+          time and arrival come first in the sheet, above the points, and
+          tapping a point's field raises the sheet to full height with the field
+          and its menu in view, then lowers it again when you leave the field.
+          More actions next to Copy link holds the route name, Save route and
+          Import. The panel state is remembered in this tab session. Full screen
+          expands the map; press it again or Escape to leave.
         </p>
         <p>
           Use my location requests your position directly. The browser asks for
@@ -611,28 +613,31 @@
           screen. The top of the screen shows the next turn, the distance to it
           and its road, with the turn after it below; the bottom shows the time
           and distance left and the arrival time, using your average speed, and
-          End. The map turns with you and keeps you in its lower part: while you
-          move it follows your direction of travel, and when you stop it follows
-          the compass, turning as you point the phone (iOS asks for permission
-          to use motion and orientation). Phone compasses point to magnetic
-          north, so the app turns their reading to true north, the north of the
-          map, with the World Magnetic Model calculated on your phone. If the
-          compass is imprecise, iPhones say so and the app asks you to move the
-          phone in a figure 8; metal and magnets nearby, such as car mounts,
-          also throw it off. Pinch, double tap, or double tap and hold and drag
-          up or down to zoom; the map keeps following you around your position.
-          Drag the map with one finger to look around, or turn it with two
-          fingers. The route button shows the whole route, where you can zoom
-          and drag too. Whenever the map is not following you as usual,
-          Re-center at the bottom left goes back to it. On a turned map, the
-          compass shows where north is; tap it to put north up (while following,
-          the map then keeps north up until Re-center). A chip on the map says
-          when the GPS is awaited or its signal is weak. The navigation map is
-          drawn by your browser from OpenFreeMap vector data, so street names
-          stay upright however the map turns; its credits are behind the i
-          button at the bottom right. Without the map data the route and your
-          position still show over a plain background, and a browser that cannot
-          draw maps (no WebGL) shows only the directions.
+          End. With the phone sideways, the map fills the screen and these show
+          as two cards on its left, with the map in view between them; the
+          bottom card's handle opens the list of turns ahead. The map turns with
+          you and keeps you in its lower part: while you move it follows your
+          direction of travel, and when you stop it follows the compass, turning
+          as you point the phone (iOS asks for permission to use motion and
+          orientation). Phone compasses point to magnetic north, so the app
+          turns their reading to true north, the north of the map, with the
+          World Magnetic Model calculated on your phone. If the compass is
+          imprecise, iPhones say so and the app asks you to move the phone in a
+          figure 8; metal and magnets nearby, such as car mounts, also throw it
+          off. Pinch, double tap, or double tap and hold and drag up or down to
+          zoom; the map keeps following you around your position. Drag the map
+          with one finger to look around, or turn it with two fingers. The route
+          button shows the whole route, where you can zoom and drag too.
+          Whenever the map is not following you as usual, Re-center at the
+          bottom left goes back to it. On a turned map, the compass shows where
+          north is; tap it to put north up (while following, the map then keeps
+          north up until Re-center). A chip on the map says when the GPS is
+          awaited or its signal is weak. The navigation map is drawn by your
+          browser from OpenFreeMap vector data, so street names stay upright
+          however the map turns; its credits are behind the i button at the
+          bottom right. Without the map data the route and your position still
+          show over a plain background, and a browser that cannot draw maps (no
+          WebGL) shows only the directions.
         </p>
         <p>
           A short safety notice shows each time navigation starts: avoid
@@ -661,32 +666,33 @@
           without the notice; Recalculate route still asks when you tap it. Tap
           or drag up the bottom bar (a sheet with a handle, like the route
           panel) to list the turns and route points ahead, with their distance
-          and, for route points, the arrival time; drag it down, tap it again or
-          press Escape to close it, while navigation goes on underneath. To hear
-          the directions, check Speak the directions in the start notice or in
-          Settings, or tap the speaker button on the navigation screen: the
-          phone's own voice says each turn ahead, the arrival, leaving the route
-          and a recalculated route, in the interface language, with no request
-          and without a connection; it is off by default and stays quiet while
-          the page is hidden. On an iPhone, the browser's voice follows the
-          ring/silent switch, so turn silent mode off to hear it, and it pauses
-          music or podcasts playing in other apps; only native apps can mix
-          their voice with them. A round badge at the bottom left shows your
-          current speed (0 when stopped, hidden with a weak signal). The time
-          left and the arrival start from your average speed and, over the first
-          10 minutes, move to the trip's own average with stops, measured on
-          your device. Weather is shown in the planner, where it is current, not
-          while navigating. When the sun sets or rises before you arrive, within
-          the hour, a chip at the top left says so (Sunset in 40 min); it is
-          worked out on your device from the route and your speed, with no
-          request. With the voice on, the sunset is said once, 30 minutes
-          before. There is no live traffic. Your location is watched only from
-          Start navigation until End, pauses while the page is hidden and is
-          never stored; if the page reloads during navigation, it offers
-          Continue navigation, on the same route and even without a connection,
-          because this tab keeps the route and the distance travelled until you
-          end, arrive or 30 minutes pass; a recalculation sends only your
-          current position to the routing server.
+          and, for route points, the arrival time; the road you are on comes
+          first, highlighted, with its stage of the route (Step 2 of 6). Drag it
+          down, tap it again or press Escape to close it, while navigation goes
+          on underneath. To hear the directions, check Speak the directions in
+          the start notice or in Settings, or tap the speaker button on the
+          navigation screen: the phone's own voice says each turn ahead, the
+          arrival, leaving the route and a recalculated route, in the interface
+          language, with no request and without a connection; it is off by
+          default and stays quiet while the page is hidden. On an iPhone, the
+          browser's voice follows the ring/silent switch, so turn silent mode
+          off to hear it, and it pauses music or podcasts playing in other apps;
+          only native apps can mix their voice with them. A round badge at the
+          bottom left shows your current speed (0 when stopped, hidden with a
+          weak signal). The time left and the arrival start from your average
+          speed and, over the first 10 minutes, move to the trip's own average
+          with stops, measured on your device. Weather is shown in the planner,
+          where it is current, not while navigating. When the sun sets or rises
+          before you arrive, within the hour, a chip at the top left says so
+          (Sunset in 40 min); it is worked out on your device from the route and
+          your speed, with no request. With the voice on, the sunset is said
+          once, 30 minutes before. There is no live traffic. Your location is
+          watched only from Start navigation until End, pauses while the page is
+          hidden and is never stored; if the page reloads during navigation, it
+          offers Continue navigation, on the same route and even without a
+          connection, because this tab keeps the route and the distance
+          travelled until you end, arrive or 30 minutes pass; a recalculation
+          sends only your current position to the routing server.
         </p>
         <h2>Travel the route</h2>
         <p>
@@ -694,13 +700,13 @@
           navigation to replay the route on the navigation screen before you
           leave, as it will look on the way: the next turn and the one after it,
           the distance to them, the time and distance left and the arrival. It
-          always opens paused at the start. A Replay label with the trip's clock
-          stays at the top. Press play and choose 1×, 2×, 5× or 10× (1× moves
-          250 m per second, 10× 2.5 km per second), or drag the slider at the
-          bottom; the clock follows your departure at your average speed, or the
-          current time without one. On a wide window it keeps a phone's 9:16
-          shape. It uses no location and sends no request besides the map; End
-          returns to the planner.
+          always opens paused at the start. Press play and choose 1×, 2×, 5× or
+          10× (1× moves 250 m per second, 10× 2.5 km per second), or drag the
+          slider at the bottom; the arrival follows your departure at your
+          average speed, or the current time without one. It has the same layout
+          as navigation, with the guidance in cards over the map on a screen
+          held sideways. It uses no location and sends no request besides the
+          map; End returns to the planner.
         </p>
         <h2>Daylight</h2>
         <p>
@@ -1067,16 +1073,17 @@
           O painel da rota é um painel lateral em telas largas, com um botão no
           cabeçalho para ocultá-lo, e uma folha inferior no celular. Toque na
           alça da folha para abrir ou fechar, ou arraste para meia altura ou
-          altura cheia (no teclado, as setas para cima e para baixo na alça); o
-          topo dela sempre mostra a distância e o tempo da rota e o último
-          status, e, fechada, ela ainda mostra os botões de exportação. No
-          celular, a distância, o tempo e a chegada da rota vêm primeiro na
-          folha, acima dos pontos, e tocar no campo de um ponto sobe a folha
-          para altura cheia com o campo e o menu à vista, e ela volta a descer
-          quando você sai do campo. Mais ações, ao lado de Copiar link, reúne
-          Nome da rota, Salvar rota e Importar. O estado do painel é lembrado
-          durante a sessão desta aba. Tela cheia expande o mapa; toque novamente
-          ou pressione Escape para sair.
+          altura cheia (no teclado, as setas para cima e para baixo na alça);
+          com o celular deitado, a folha vira um painel à esquerda do mapa e,
+          fechada, mantém só o topo e os botões. O topo dela sempre mostra a
+          distância e o tempo da rota e o último status, e, fechada, ela ainda
+          mostra os botões de exportação. No celular, a distância, o tempo e a
+          chegada da rota vêm primeiro na folha, acima dos pontos, e tocar no
+          campo de um ponto sobe a folha para altura cheia com o campo e o menu
+          à vista, e ela volta a descer quando você sai do campo. Mais ações, ao
+          lado de Copiar link, reúne Nome da rota, Salvar rota e Importar. O
+          estado do painel é lembrado durante a sessão desta aba. Tela cheia
+          expande o mapa; toque novamente ou pressione Escape para sair.
         </p>
         <p>
           Usar minha localização solicita a posição diretamente. O navegador
@@ -1439,31 +1446,34 @@
           tela. No alto aparecem a próxima conversão, a distância até ela e a
           via, com a conversão seguinte logo abaixo; embaixo ficam o tempo e a
           distância restantes e o horário de chegada, pela sua velocidade média,
-          e o botão Sair. O mapa gira com você e o mantém na parte de baixo: em
-          movimento, segue a direção do deslocamento e, parado, segue a bússola,
-          girando conforme você aponta o celular (no iOS, o navegador pede
-          permissão para movimento e orientação). A bússola do celular aponta
-          para o norte magnético; o app converte a leitura para o norte
-          verdadeiro, o norte do mapa, com o World Magnetic Model calculado no
-          seu celular. Se a bússola estiver imprecisa, o iPhone avisa e o app
-          pede que você movimente o celular em forma de 8; metal e ímãs por
-          perto, como os de suportes de carro, também a desviam. Faça pinça,
-          toque duas vezes, ou toque duas vezes, segure e arraste para cima ou
-          para baixo para ampliar ou afastar; o mapa continua seguindo você, em
-          volta da sua posição. Arraste o mapa com um dedo para olhar em volta,
-          ou gire-o com dois dedos. O botão da rota mostra a rota inteira, onde
-          também dá para ampliar e arrastar. Sempre que o mapa não estiver
-          seguindo você como de costume, Centralizar, no canto inferior
-          esquerdo, volta ao normal. Com o mapa girado, a bússola mostra onde
-          fica o norte; toque nela para pôr o norte para cima (seguindo você, o
-          mapa fica com o norte para cima até Centralizar). Um aviso no mapa diz
-          quando o GPS está sendo aguardado ou o sinal está fraco. O mapa da
-          navegação é desenhado pelo navegador a partir dos dados vetoriais do
-          OpenFreeMap, então os nomes das ruas ficam na posição de leitura, por
-          mais que o mapa gire; os créditos ficam no botão i, no canto inferior
-          direito. Sem os dados do mapa, a rota e a sua posição continuam na
-          tela sobre um fundo neutro, e um navegador que não consegue desenhar
-          mapas (sem WebGL) mostra só as indicações.
+          e o botão Sair. Com o celular deitado, o mapa ocupa a tela toda e
+          essas informações ficam em dois cards à esquerda, com o mapa à vista
+          entre eles; a alça do card de baixo abre a lista das próximas curvas.
+          O mapa gira com você e o mantém na parte de baixo: em movimento, segue
+          a direção do deslocamento e, parado, segue a bússola, girando conforme
+          você aponta o celular (no iOS, o navegador pede permissão para
+          movimento e orientação). A bússola do celular aponta para o norte
+          magnético; o app converte a leitura para o norte verdadeiro, o norte
+          do mapa, com o World Magnetic Model calculado no seu celular. Se a
+          bússola estiver imprecisa, o iPhone avisa e o app pede que você
+          movimente o celular em forma de 8; metal e ímãs por perto, como os de
+          suportes de carro, também a desviam. Faça pinça, toque duas vezes, ou
+          toque duas vezes, segure e arraste para cima ou para baixo para
+          ampliar ou afastar; o mapa continua seguindo você, em volta da sua
+          posição. Arraste o mapa com um dedo para olhar em volta, ou gire-o com
+          dois dedos. O botão da rota mostra a rota inteira, onde também dá para
+          ampliar e arrastar. Sempre que o mapa não estiver seguindo você como
+          de costume, Centralizar, no canto inferior esquerdo, volta ao normal.
+          Com o mapa girado, a bússola mostra onde fica o norte; toque nela para
+          pôr o norte para cima (seguindo você, o mapa fica com o norte para
+          cima até Centralizar). Um aviso no mapa diz quando o GPS está sendo
+          aguardado ou o sinal está fraco. O mapa da navegação é desenhado pelo
+          navegador a partir dos dados vetoriais do OpenFreeMap, então os nomes
+          das ruas ficam na posição de leitura, por mais que o mapa gire; os
+          créditos ficam no botão i, no canto inferior direito. Sem os dados do
+          mapa, a rota e a sua posição continuam na tela sobre um fundo neutro,
+          e um navegador que não consegue desenhar mapas (sem WebGL) mostra só
+          as indicações.
         </p>
         <p>
           Um aviso curto de segurança aparece sempre que a navegação começa:
@@ -1493,32 +1503,34 @@
           pedindo quando você toca. Toque ou arraste para cima a barra inferior
           (uma folha com alça, como o painel da rota) para ver as próximas
           curvas e os pontos da rota, com a distância e, nos pontos, o horário
-          de chegada; arraste para baixo, toque de novo ou pressione Esc para
-          fechar, com a navegação continuando por baixo. Para ouvir as
-          instruções, marque Falar as instruções no aviso inicial ou nas
-          Configurações, ou toque no botão de alto-falante na tela de navegação:
-          a própria voz do celular fala cada curva adiante, a chegada, quando
-          você sai da rota e um recálculo, no idioma da interface, sem nenhuma
-          consulta e sem conexão; vem desligada e fica em silêncio com a página
-          oculta. No iPhone, a voz do navegador obedece à chave do modo
-          silencioso, então desligue o modo silencioso para ouvir, e ela pausa a
-          música ou o podcast tocando em outros apps; só apps nativos conseguem
-          misturar a voz com eles. Um selo redondo no canto inferior esquerdo
-          mostra a sua velocidade atual (0 parado, escondido com sinal fraco). O
-          tempo restante e a chegada começam pela sua velocidade média e, nos
-          primeiros 10 minutos, passam a seguir a média da própria viagem, com
-          as paradas, medida no seu aparelho. O clima aparece no planejador,
-          onde está atualizado, e não durante a navegação. Quando o sol se põe
-          ou nasce antes da sua chegada, dentro de uma hora, um chip no topo à
-          esquerda avisa (Sol se põe em 40 min); ele é calculado no seu aparelho
-          a partir da rota e da sua velocidade, sem nenhum pedido. Com a voz
-          ligada, o pôr do sol é falado uma vez, 30 minutos antes. Não há
-          trânsito ao vivo. Sua localização é acompanhada só de Iniciar
-          navegação até Sair, pausa com a página oculta e nunca é guardada; se a
-          página recarregar durante a navegação, ela oferece Continuar
-          navegação, na mesma rota e mesmo sem conexão, porque esta aba guarda a
-          rota e a distância percorrida até você encerrar, chegar ou passarem 30
-          minutos; um recálculo envia ao roteador só a sua posição atual.
+          de chegada; a via em que você está vem primeiro, destacada, com a
+          etapa do trajeto (Etapa 2 de 6). Arraste para baixo, toque de novo ou
+          pressione Esc para fechar, com a navegação continuando por baixo. Para
+          ouvir as instruções, marque Falar as instruções no aviso inicial ou
+          nas Configurações, ou toque no botão de alto-falante na tela de
+          navegação: a própria voz do celular fala cada curva adiante, a
+          chegada, quando você sai da rota e um recálculo, no idioma da
+          interface, sem nenhuma consulta e sem conexão; vem desligada e fica em
+          silêncio com a página oculta. No iPhone, a voz do navegador obedece à
+          chave do modo silencioso, então desligue o modo silencioso para ouvir,
+          e ela pausa a música ou o podcast tocando em outros apps; só apps
+          nativos conseguem misturar a voz com eles. Um selo redondo no canto
+          inferior esquerdo mostra a sua velocidade atual (0 parado, escondido
+          com sinal fraco). O tempo restante e a chegada começam pela sua
+          velocidade média e, nos primeiros 10 minutos, passam a seguir a média
+          da própria viagem, com as paradas, medida no seu aparelho. O clima
+          aparece no planejador, onde está atualizado, e não durante a
+          navegação. Quando o sol se põe ou nasce antes da sua chegada, dentro
+          de uma hora, um chip no topo à esquerda avisa (Sol se põe em 40 min);
+          ele é calculado no seu aparelho a partir da rota e da sua velocidade,
+          sem nenhum pedido. Com a voz ligada, o pôr do sol é falado uma vez, 30
+          minutos antes. Não há trânsito ao vivo. Sua localização é acompanhada
+          só de Iniciar navegação até Sair, pausa com a página oculta e nunca é
+          guardada; se a página recarregar durante a navegação, ela oferece
+          Continuar navegação, na mesma rota e mesmo sem conexão, porque esta
+          aba guarda a rota e a distância percorrida até você encerrar, chegar
+          ou passarem 30 minutos; um recálculo envia ao roteador só a sua
+          posição atual.
         </p>
         <h2>Percorrer a rota</h2>
         <p>
@@ -1526,13 +1538,12 @@
           reproduzir a rota na tela de navegação antes de sair, como ela vai
           aparecer no caminho: a próxima conversão e a seguinte, a distância até
           elas, o tempo e a distância restantes e a chegada. Ela sempre abre
-          pausada no início. O rótulo Reprodução, com o relógio da viagem, fica
-          no topo. Toque em reproduzir e escolha 1×, 2×, 5× ou 10× (1× anda 250
-          m por segundo, 10× anda 2,5 km por segundo), ou arraste o controle
-          embaixo; o relógio segue a sua partida na sua velocidade média, ou o
-          horário atual sem ela. Numa janela larga, a tela mantém a proporção
-          9:16 de um celular. Não usa a localização e não faz pedidos além do
-          mapa; Sair volta ao planejador.
+          pausada no início. Toque em reproduzir e escolha 1×, 2×, 5× ou 10× (1×
+          anda 250 m por segundo, 10× anda 2,5 km por segundo), ou arraste o
+          controle embaixo; a chegada segue a sua partida na sua velocidade
+          média, ou o horário atual sem ela. Tem o mesmo layout da navegação,
+          com as instruções em cards sobre o mapa com a tela deitada. Não usa a
+          localização e não faz pedidos além do mapa; Sair volta ao planejador.
         </p>
         <h2>Luz do dia</h2>
         <p>

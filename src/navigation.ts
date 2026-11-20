@@ -212,6 +212,26 @@ export function upcomingItems(
 }
 
 /**
+ * The stretch of road the traveler is on (#252): the step of the latest
+ * maneuver passed, or the departure before the first, numbered among the
+ * route's stretches; an arrival starts none.
+ */
+export function currentStretch(
+  maneuvers: NavigationManeuver[],
+  progress: number,
+  departure: Step | null,
+): { step: Step; index: number; total: number } | null {
+  const stretches = [
+    ...(departure ? [{ step: departure, at: 0 }] : []),
+    ...maneuvers.filter((m) => m.step.kind !== 'arrive'),
+  ];
+  if (!stretches.length) return null;
+  const passed = stretches.filter((m) => m.at <= progress + PASSED).length;
+  const index = Math.max(1, passed);
+  return { step: stretches[index - 1].step, index, total: stretches.length };
+}
+
+/**
  * The intermediate stop an arrive maneuver reaches (#212): the nearest one
  * within `STOP_MATCH` of it, never the destination, so the banner and voice
  * name the stop instead of saying Arrive.
@@ -271,6 +291,8 @@ export function createNavigationTracker(
     total: index.total,
     hasManeuvers: maneuvers.length > 0,
     maneuvers,
+    /** The route's departure step, the first stretch, if it has one. */
+    departure: route.steps.find((s) => s.kind === 'depart') ?? null,
     /** Track from the start to an along-track distance, split at segment gaps. */
     travelled: (distance: number) => trackSlice(index, 0, distance),
     /**

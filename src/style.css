@@ -1222,7 +1222,7 @@ div.step-item {
   flex: 0 0 16px;
 }
 /* Phones center the links under the sheet's sections. */
-@media (max-width: 759px) {
+@media (max-width: 759px), (max-height: 500px) {
   .planner footer {
     justify-content: center;
   }
@@ -1277,7 +1277,7 @@ div.step-item {
   display: none;
 }
 /* Wide screens: name and save on one line, every export action on the next. */
-@media (min-width: 760px) {
+@media (min-width: 760px) and (min-height: 501px) {
   .action-bar {
     flex-flow: row wrap;
   }
@@ -1325,7 +1325,7 @@ div.step-item {
 #add-home {
   flex-basis: 100%;
 }
-@media (min-width: 760px) {
+@media (min-width: 760px) and (min-height: 501px) {
   #add-home {
     display: none;
   }
@@ -1689,7 +1689,7 @@ dialog.settings::backdrop {
 }
 
 /* Phones: the panel is a bottom sheet over a full-screen map. */
-@media (max-width: 759px) {
+@media (max-width: 759px), (max-height: 500px) {
   body {
     font-size: 16px;
     line-height: 1.5;
@@ -1960,7 +1960,7 @@ dialog.settings::backdrop {
   }
 }
 /* Touch rows keep a 44px target. */
-@media (max-width: 759px), (pointer: coarse) {
+@media (max-width: 759px), (max-height: 500px), (pointer: coarse) {
   .step-item,
   .planner .climb {
     min-height: 44px;
@@ -1989,15 +1989,75 @@ dialog.settings::backdrop {
     right: 0;
   }
 }
-/* Beside the sidebar the row can reach the hint; it moves below the row. */
-@media (min-width: 760px) and (max-height: 500px) {
-  .map-note {
-    top: 64px;
-    max-width: calc(100% - 76px);
+/* Phones in landscape (#252): the sheet becomes a panel on the left, under
+   the floating header, with the map beside it; closed, only its handle and
+   actions stay, at the bottom left. Its size follows the screen, not drags. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .planner {
+    --side-panel: calc(
+      clamp(300px, 46vw, 400px) + env(safe-area-inset-left, 0px)
+    );
   }
-  .map-notice {
-    top: 110px;
-    max-width: calc(100% - 76px);
+  .sheet,
+  .planner.panel-closed .sheet,
+  .planner.sheet-full .sheet {
+    top: 0;
+    right: auto;
+    width: var(--side-panel);
+    height: auto;
+    padding-top: calc(60px + var(--safe-top));
+    padding-left: env(safe-area-inset-left, 0px);
+    border-right: 1px solid var(--color-border);
+    border-radius: 0;
+    box-shadow: 4px 0 16px #1b29341f;
+  }
+  .planner.panel-closed .sheet {
+    top: auto;
+    padding-top: 0;
+    border-radius: 0 16px 0 0;
+  }
+  .planner:not(.sheet-dragging) .sheet {
+    transition: none;
+  }
+  /* The handle opens and closes the panel; it is not dragged here. */
+  #panel-toggle .sheet-handle {
+    display: none;
+  }
+  /* Map notices, corners and credits sit beside the open panel. */
+  .planner:not(.panel-closed):not(.map-fullscreen) .map-note,
+  .planner:not(.panel-closed):not(.map-fullscreen) .map-notice,
+  .planner:not(.panel-closed):not(.map-fullscreen) .map-bottom-left {
+    left: calc(var(--side-panel) + 8px);
+    max-width: calc(100% - var(--side-panel) - 20px);
+  }
+  .planner:not(.panel-closed) .map-bottom-left,
+  .planner .map-credits {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .planner:not(.panel-closed) .map-credits {
+    right: calc(10px + env(safe-area-inset-right, 0px));
+  }
+  .planner.sheet-full:not(.map-fullscreen) .map-credits,
+  .planner:not(.panel-closed):not(.map-fullscreen) .route-legend {
+    visibility: visible;
+  }
+  #layers-menu {
+    max-height: calc(100dvh - 76px);
+  }
+}
+/* The narrowest of them (568 px) leaves the map too little width for the
+   tools in one row beside the open panel: the second group goes below the
+   first, and the notices below both. */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 619px) {
+  .planner:not(.panel-closed):not(.map-fullscreen) .map-action-control {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .planner:not(.panel-closed):not(.map-fullscreen) .map-note {
+    top: calc(110px + var(--safe-top));
+  }
+  .planner:not(.panel-closed):not(.map-fullscreen) .map-notice {
+    top: calc(154px + var(--safe-top));
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2607,7 +2667,7 @@ input[type='range'].range-input:disabled {
   margin-top: 8px;
 }
 
-@media (max-width: 759px) {
+@media (max-width: 759px), (max-height: 500px) {
   .departure-field > #departure {
     width: calc(100% - 4px);
     max-width: calc(100% - 4px);
@@ -2671,7 +2731,7 @@ input[type='range'].range-input:disabled {
 }
 
 /* Readable controls avoid focus zoom on iOS without disabling pinch zoom. */
-@media (max-width: 759px), (pointer: coarse) {
+@media (max-width: 759px), (max-height: 500px), (pointer: coarse) {
   .planner
     input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
   .planner textarea,
@@ -2831,7 +2891,7 @@ input[type='range'].range-input:disabled {
   background: currentColor;
   content: '';
 }
-@media (max-width: 759px) {
+@media (max-width: 759px), (max-height: 500px) {
   .planner:not(.panel-closed):not(.map-fullscreen) .route-legend {
     visibility: hidden;
   }
@@ -3352,18 +3412,6 @@ dialog.nav-screen[open] {
   display: flex;
   flex-direction: column;
 }
-/* Replay on a wide window (#154): the screen keeps a phone's 9:16 shape,
-   centered at the window's height, with the rest dimmed. */
-@media (min-width: 600px) and (min-aspect-ratio: 9/16) {
-  dialog.nav-screen.replaying {
-    width: calc(100dvh * 9 / 16);
-    margin: 0 auto;
-    box-shadow: 0 0 40px #0006;
-  }
-  dialog.nav-screen.replaying::backdrop {
-    background: #1b2934;
-  }
-}
 dialog.nav-screen::backdrop {
   background: #e9ece9;
 }
@@ -3430,7 +3478,8 @@ dialog:modal:not(.nav-screen) {
   stroke-width: 2.4;
 }
 .nav-banner .mirror,
-.nav-then .mirror {
+.nav-then .mirror,
+.nav-list .mirror {
   transform: scaleX(-1);
 }
 .nav-banner-text {
@@ -3847,6 +3896,26 @@ dialog:modal:not(.nav-screen) {
 .nav-list-stop .nav-list-text {
   font-weight: 700;
 }
+/* The stretch the traveler is on (#252): highlighted across the list, with
+   its number among the route's stretches below the road. */
+.nav-list li.nav-list-current {
+  margin: 0 -16px;
+  padding: 6px 16px 6px 12px;
+  border-left: 4px solid var(--color-primary);
+  background: var(--color-soft);
+}
+.nav-list-current .nav-list-text > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-list-current .nav-list-text > :first-child {
+  font-weight: 700;
+}
+.nav-list-step {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
 .nav-list-distance {
   flex: none;
   font-variant-numeric: tabular-nums;
@@ -3931,6 +4000,162 @@ dialog:modal:not(.nav-screen) {
   flex: none;
   min-height: 44px;
   font-size: 16px;
+}
+/* Landscape (#252), real and simulated navigation alike: the map fills the
+   screen, and the guidance is two cards on its left, the maneuver at the top
+   and the time with End (or the replay controls) at the bottom, with the map
+   in view between them; the upcoming list opens in the bottom card. The
+   map's buttons and notices sit beside the cards. */
+@media (orientation: landscape) and (min-width: 560px) {
+  dialog.nav-screen[open] {
+    --nav-cards: calc(
+      clamp(260px, 40vw, 340px) + env(safe-area-inset-left, 0px)
+    );
+    display: grid;
+    grid-template-columns: var(--nav-cards) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .nav-stage {
+    grid-area: 1 / 1 / 3 / 3;
+  }
+  .nav-banner {
+    position: relative;
+    grid-area: 1 / 1;
+    top: auto;
+    right: auto;
+    left: auto;
+    margin: calc(var(--safe-top) + 8px) 8px 0
+      calc(8px + env(safe-area-inset-left, 0px));
+  }
+  .nav-map-tools,
+  .nav-chips {
+    top: calc(var(--safe-top) + 12px);
+  }
+  .nav-chips {
+    left: calc(var(--nav-cards) + 4px);
+    max-width: calc(100% - var(--nav-cards) - 84px);
+  }
+  .nav-reroute,
+  .nav-resume {
+    left: calc(var(--nav-cards) + 4px);
+  }
+  .nav-map-tools,
+  .nav-credits {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+  }
+  .nav-credits {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  /* The speed badge sits above the credits, clear of the cards. */
+  .nav-speed,
+  .nav-stage:has(.nav-resume:not([hidden])) .nav-speed,
+  .nav-stage:has(.nav-reroute:not([hidden])) .nav-speed,
+  .nav-stage:has(.nav-reroute:not([hidden])):has(.nav-resume:not([hidden]))
+    .nav-speed {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    left: auto;
+  }
+  /* The bottom card: its height follows what it holds, up to the banner;
+     an open list takes the room the card has left and scrolls. */
+  .nav-bar,
+  .nav-bar:has(.nav-list:not([hidden])) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    grid-area: 2 / 1;
+    z-index: 4;
+    align-self: end;
+    max-height: calc(100% - 16px);
+    /* As far from the bottom edge as the banner is from the top one, over
+       the home indicator's inset, which leaves the card's left side free. */
+    margin: 8px 8px 8px calc(8px + env(safe-area-inset-left, 0px));
+    padding-bottom: 12px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-raised);
+  }
+  .nav-list {
+    position: static;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0 -16px;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: none;
+  }
+  /* The time and End share a row when the card is wide enough for both,
+     End otherwise on its own row below. */
+  .nav-bar-row {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 12px;
+  }
+  .nav-list-toggle {
+    flex: 0 0 100%;
+  }
+  .nav-eta {
+    flex: 1 0 auto;
+  }
+  .nav-stop {
+    margin-left: auto;
+  }
+  .nav-replay {
+    flex: none;
+  }
+}
+/* Short landscape screens (phones): smaller guidance text, so the cards
+   leave the map in view between them. */
+@media (orientation: landscape) and (min-width: 560px) and (max-height: 500px) {
+  .nav-banner-main {
+    gap: 10px;
+    padding: 10px 12px 8px;
+  }
+  .nav-turn .button-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .nav-distance {
+    font-size: 28px;
+  }
+  .nav-road {
+    font-size: 17px;
+  }
+  .nav-then,
+  .nav-hint {
+    padding: 4px 12px;
+    font-size: 14px;
+  }
+  .nav-list-toggle {
+    height: 16px;
+  }
+  .nav-time {
+    font-size: 24px;
+  }
+  .nav-rest {
+    font-size: 15px;
+  }
+  .nav-stop {
+    min-height: 44px;
+  }
+  /* End keeps its word only, so it fits beside the time. */
+  .nav-stop .button-icon {
+    display: none;
+  }
+  .nav-replay {
+    margin-top: 6px;
+  }
+  .nav-replay button {
+    width: 44px;
+    height: 44px;
+  }
+  .nav-resume {
+    min-height: 44px;
+    padding: 0 14px 0 12px;
+    font-size: 15px;
+  }
 }
 /* Moving a point precisely (src/point-placement.ts): the loupe shown while
    a marker is dragged by touch, and the crosshair's fixed marker and bar. */

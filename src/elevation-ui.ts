@@ -10,6 +10,7 @@ import { detectClimbs, hardestClimb, type Climb } from './climbs';
 import type { Coord, Route, State } from './core';
 import { departureOf } from './departure';
 import { byId as $ } from './dom';
+import { sheetCoversMap } from './panel';
 import { icon, iconControl } from './icons';
 import { t } from './i18n';
 import {
@@ -678,8 +679,7 @@ export function setupElevation(
       climb.end,
     );
     if (!parts.length) return;
-    if (!$('route-panel').hidden && matchMedia('(max-width: 759px)').matches)
-      $('panel-toggle').click();
+    if (!$('route-panel').hidden && sheetCoversMap()) $('panel-toggle').click();
     map.fit(parts.flat(), { padding: 40 });
   }
 

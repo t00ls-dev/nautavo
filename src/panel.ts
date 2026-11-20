@@ -4,9 +4,18 @@ import { byId as $ } from './dom';
 import { sharesFirst } from './share-file';
 import { readSession, SESSION, writeSession } from './preferences';
 
-/** Width below which the route panel is a bottom sheet over the map. */
-const COMPACT = '(max-width: 759px)';
+/**
+ * The phone layout: a narrow screen, or a short one (a phone in landscape),
+ * where the route panel is a sheet over the map; the same queries are in
+ * `style.css`.
+ */
+const COMPACT = '(max-width: 759px), (max-height: 500px)';
 export const compactLayout = (): boolean => matchMedia(COMPACT).matches;
+/** A phone in landscape: the sheet is a panel on the left, never dragged (#252). */
+const SIDE_SHEET = '(orientation: landscape) and (max-height: 500px)';
+/** The open sheet covers the map: showing a place there closes it first. */
+export const sheetCoversMap = (): boolean =>
+  compactLayout() && !matchMedia(SIDE_SHEET).matches;
 
 /**
  * With no point set, Saved routes and Favorite places come right below the
@@ -102,7 +111,8 @@ export function setupPanel(map: PlannerMap): void {
     null;
   let pointerToggle = -Infinity;
   handle.addEventListener('pointerdown', (event) => {
-    if (!compactLayout() || event.button > 0) return;
+    if (!compactLayout() || matchMedia(SIDE_SHEET).matches) return;
+    if (event.button > 0) return;
     drag = {
       id: event.pointerId,
       y: event.clientY,
