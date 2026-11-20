@@ -20,6 +20,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- On a phone, tapping an address suggestion sets that point only; before, the tap could also press the button that ended up under the finger as the list closed, such as Reverse, which moved the address to the other end of the route.
 - In the list of turns ahead while navigating, right turns show a right arrow; they showed a left one.
 - Map areas that failed to load while the connection was down, such as after moving the map offline, load when it returns, on the route planner and while navigating, instead of staying blank; a navigation started offline also gets its map when the connection returns.
 - In Settings, a server address over plain HTTP is refused when you apply it on nautavo.com, which connects only to HTTPS servers, instead of being accepted and then failing on every request; Nautavo run on your own computer still accepts a server there.

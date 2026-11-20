@@ -177,4 +177,37 @@ test.describe('phone', () => {
       'Move the map to place point 2',
     );
   });
+  test('a tapped suggestion sets its point and presses nothing under the finger (#256)', async ({
+    page,
+  }) => {
+    await setup(page);
+    // A new route: Start is empty and the sheet starts low, as on a first visit.
+    await page.goto(base);
+    await page.locator('#language').selectOption('en');
+    const field = page.locator('#location-0');
+    await field.tap();
+    await field.pressSequentially('posto');
+    const place = page
+      .locator('#suggestions-0')
+      .getByRole('option', { name: /Posto Shell/ });
+    await expect(place).toBeVisible();
+    await boxSettled(page, '#suggestions-0');
+    const box = (await place.boundingBox())!;
+    const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    // The list closes as the finger lifts; the click the browser sends after
+    // the touch then lands on whatever moved under it.
+    await page.touchscreen.tap(point.x, point.y);
+    await expect(field).toHaveValue(/^Posto Shell/);
+    // The case only means something while a control sits under the finger.
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.id,
+        point,
+      ),
+    ).toBeTruthy();
+    // A click that slipped through would land right after the tap.
+    await page.waitForTimeout(300);
+    await expect(field).toHaveValue(/^Posto Shell/);
+    await expect(page.locator('#location-1')).toHaveValue('');
+  });
 });
