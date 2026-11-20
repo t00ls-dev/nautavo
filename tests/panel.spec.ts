@@ -219,6 +219,42 @@ test.describe('bottom sheet', () => {
     await expect(page.locator('#route-panel')).toBeHidden();
   });
 
+  test('a tap on the handle presses nothing that moved under the finger (#256)', async ({
+    page,
+  }) => {
+    await page.goto(base);
+    // Clicks that reach the page outside the handle: the one a touch sends
+    // after its release, aimed at what is under the finger once the sheet moved.
+    await page.evaluate(() => {
+      const stray: string[] = [];
+      (window as unknown as { stray: string[] }).stray = stray;
+      addEventListener('click', (event) => {
+        const target = event.target as Element;
+        if (!target.closest('#panel-toggle'))
+          stray.push(target.id || target.tagName);
+      });
+    });
+    const handle = page.locator('#panel-toggle');
+    const tap = async () => {
+      const box = (await handle.boundingBox())!;
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    };
+    // Closing moves the handle down, leaving the map under the finger;
+    // opening moves it up, leaving the panel there.
+    await tap();
+    await expect(page.locator('#route-panel')).toBeHidden();
+    await page.waitForTimeout(300);
+    await tap();
+    await expect(page.locator('#route-panel')).toBeVisible();
+    // A click that slipped through would land right after the tap.
+    await page.waitForTimeout(300);
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { stray: string[] }).stray,
+      ),
+    ).toEqual([]);
+  });
+
   test('arrow keys on the handle change the sheet height', async ({ page }) => {
     await page.goto(base);
     const handle = page.locator('#panel-toggle');

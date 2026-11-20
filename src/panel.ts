@@ -3,6 +3,7 @@ import { icon, iconControl } from './icons';
 import { byId as $ } from './dom';
 import { sharesFirst } from './share-file';
 import { readSession, SESSION, writeSession } from './preferences';
+import { swallowNextClick } from './touch-click';
 
 /**
  * The phone layout: a narrow screen, or a short one (a phone in landscape),
@@ -144,7 +145,12 @@ export function setupPanel(map: PlannerMap): void {
     // Any click that follows this press belongs to it.
     pointerToggle = event.timeStamp;
     if (!moved) {
-      if (event.type === 'pointerup') toggle();
+      if (event.type === 'pointerup') {
+        toggle();
+        // The sheet just moved: the click that follows would land on the
+        // map or the panel now under the finger.
+        swallowNextClick();
+      }
       return;
     }
     const height = sheet.getBoundingClientRect().height;

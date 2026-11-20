@@ -1,6 +1,7 @@
 import { photonSearch, type SearchResult } from './search';
 import { parseCoordinates, type Coord } from './core';
 import { icon, type IconName } from './icons';
+import { swallowNextClick } from './touch-click';
 
 /** A choice listed above the suggestions: My location, Choose on map. */
 export interface SearchAction {
@@ -18,28 +19,6 @@ export interface SearchAction {
 export function splitPlace(name: string): [string, string] {
   const parts = name.split(',').map((part) => part.trim());
   return [parts[0], parts.slice(1).filter(Boolean).join(', ')];
-}
-
-/**
- * Drops the click that follows a touch which already chose: browsers send it
- * after the finger lifts, aimed at whatever is at that point by then. The next
- * press, or a second without any click, ends the wait, so a deliberate tap or
- * a later keyboard click is never lost.
- */
-function swallowClick() {
-  const stop = () => {
-    clearTimeout(timer);
-    document.removeEventListener('click', swallow, true);
-    document.removeEventListener('pointerdown', stop, true);
-  };
-  const swallow = (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    stop();
-  };
-  const timer = setTimeout(stop, 1000);
-  document.addEventListener('click', swallow, true);
-  document.addEventListener('pointerdown', stop, true);
 }
 
 export function addressAutocomplete(
@@ -111,7 +90,7 @@ export function addressAutocomplete(
       choose();
       // The list is gone and the panel may move, so the click the browser
       // sends after this touch would press what is now under the finger (#256).
-      swallowClick();
+      swallowNextClick();
     };
     button.onclick = choose;
     list.append(button);
