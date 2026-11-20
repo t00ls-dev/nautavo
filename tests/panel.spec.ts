@@ -2,9 +2,11 @@ import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
 import {
   base,
+  coveredControls,
   mockRouting,
   openAdvancedSettings,
   mockRegion,
+  overlapping,
 } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -234,6 +236,86 @@ test.describe('bottom sheet', () => {
     await expect(page.locator('#route-panel')).toBeVisible();
     await expect(page.locator('body')).not.toHaveClass(/sheet-full/);
   });
+});
+
+/** What a phone in landscape shows over the planner map. */
+const PLANNER_OVERLAYS = [
+  '#sheet',
+  '.planner header',
+  '.map-top-right',
+  '#map-note',
+  '.map-notice',
+  '.map-credits-toggle',
+];
+test.describe('phones in landscape (#252)', () => {
+  test.use({ hasTouch: true, isMobile: true });
+  for (const [width, height] of [
+    [568, 320],
+    [667, 375],
+    [852, 393],
+    [932, 430],
+  ] as const)
+    for (const language of ['en', 'pt'] as const)
+      test(`the panel is beside the map, with the summary and Navigate, at ${width}x${height} in ${language}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height });
+        await mockRouting(page);
+        await page.goto(language === 'pt' ? `${base}?lang=pt` : base);
+        await page.locator('#location-0').fill('-22.93, -43.24');
+        await page.locator('#location-0').press('Tab');
+        await page.locator('#location-1').fill('-22.93, -43.22');
+        await page.locator('#location-1').press('Tab');
+        const navigate = page.locator('#navigate');
+        await expect(navigate).toBeEnabled({ timeout: 15000 });
+        const layout = () =>
+          page.evaluate(() => {
+            const box = (selector: string) =>
+              document.querySelector(selector)!.getBoundingClientRect();
+            const sheet = box('#sheet'),
+              peek = box('#peek-main'),
+              bar = box('#action-bar'),
+              tools = box('.map-top-right'),
+              go = document.querySelector('#navigate')!;
+            return {
+              left: sheet.left,
+              top: Math.round(sheet.top),
+              bottom: Math.round(sheet.bottom - innerHeight),
+              narrow: sheet.right <= innerWidth * 0.55,
+              toolsBeside: tools.left >= sheet.right,
+              summaryShown: peek.height > 0 && peek.bottom <= bar.top,
+              navigateOneLine: go.scrollWidth <= go.clientWidth,
+              barInside: bar.right <= sheet.right + 0.5,
+            };
+          });
+        // Open: a full-height panel on the left, the map tools beside it.
+        await expect.poll(layout).toEqual({
+          left: 0,
+          top: 0,
+          bottom: 0,
+          narrow: true,
+          toolsBeside: true,
+          summaryShown: true,
+          navigateOneLine: true,
+          barInside: true,
+        });
+        expect(await overlapping(page, PLANNER_OVERLAYS)).toEqual([]);
+        expect(await coveredControls(page, '#action-bar')).toEqual([]);
+        // Closed: only the summary and the actions, at the bottom left.
+        await page.locator('#panel-toggle').click();
+        await expect(page.locator('#route-panel')).toBeHidden();
+        const closed = await layout();
+        expect(closed).toMatchObject({
+          left: 0,
+          bottom: 0,
+          narrow: true,
+          summaryShown: true,
+          navigateOneLine: true,
+        });
+        expect(closed.top).toBeGreaterThan(height / 3);
+        expect(await overlapping(page, PLANNER_OVERLAYS)).toEqual([]);
+        expect(await coveredControls(page, '#action-bar')).toEqual([]);
+      });
 });
 
 test.describe('phone summary', () => {

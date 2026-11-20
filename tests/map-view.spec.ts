@@ -367,9 +367,13 @@ for (const mobile of [false, true]) {
     await expect(page.locator('#locate')).toHaveAccessibleName(
       'Use my location',
     );
-    const zoom = await page.locator('.map-zoom-in').boundingBox();
-    expect(zoom!.width).toBeGreaterThanOrEqual(44);
-    expect(zoom!.height).toBeGreaterThanOrEqual(44);
+    // Phones zoom with pinch and double tap, sideways too (#252).
+    if (mobile) await expect(page.locator('.map-zoom-in')).toBeHidden();
+    else {
+      const zoom = await page.locator('.map-zoom-in').boundingBox();
+      expect(zoom!.width).toBeGreaterThanOrEqual(44);
+      expect(zoom!.height).toBeGreaterThanOrEqual(44);
+    }
   });
 }
 
@@ -460,7 +464,10 @@ async function coveredMarkers(page: Page) {
     const covers = [
       '#map-corner-top-right',
       '.map-credits',
-      ...(innerWidth < 900 ? ['#sheet', '#sheet > header'] : []),
+      // The panel lies on the map on phones, upright or sideways.
+      ...(innerWidth < 900 || innerHeight <= 500
+        ? ['#sheet', '#sheet > header']
+        : []),
     ]
       .flatMap((s) => [...document.querySelectorAll(s)])
       .filter((e) => e.getClientRects().length)
@@ -511,15 +518,18 @@ for (const [width, height] of [
   [360, 740],
   [390, 844],
   [430, 932],
+  // Phones in landscape, with the panel on the left (#252).
+  [667, 375],
+  [932, 430],
   [1280, 800],
 ])
-  test(`the fitted route stays clear of the map tools, header and sheet at ${width}px`, async ({
+  test(`the fitted route stays clear of the map tools, header and sheet at ${width}x${height}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height });
     await fittedRoute(page);
     await expect.poll(() => coveredMarkers(page)).toEqual([]);
-    if (width >= 900) return;
+    if (width >= 760 && height > 500) return;
     // Closed, the sheet leaves more map, and the route is fitted to it.
     await closePanel(page);
     expect(await coveredMarkers(page)).toEqual([]);

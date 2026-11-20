@@ -9,6 +9,7 @@ import {
   stepRoad,
 } from './maneuvers';
 import {
+  currentStretch,
   navigationDistanceLabel,
   upcomingItems,
   type NavigationManeuver,
@@ -42,6 +43,7 @@ export function upcomingList(deps: {
     maneuvers: NavigationManeuver[];
     stops: { at: number | null; name: string }[];
     progress: number;
+    departure: Step | null;
   } | null;
   arrivalSpeed: () => number;
   /** The traveler's clock, simulated while replaying. */
@@ -49,21 +51,44 @@ export function upcomingList(deps: {
   locale: () => string;
 }) {
   const { screen, toggle, list } = deps;
-  let open = false;
+  let open = false,
+    /** The stretch last shown first, so the list scrolls back to it when it changes. */
+    shownStretch = 0;
   function set(next: boolean) {
     open = next;
+    shownStretch = 0;
     list.hidden = !next;
     toggle.setAttribute('aria-expanded', String(next));
-    if (next) {
-      render();
-      list.scrollTop = 0;
-    }
+    if (next) render();
+  }
+  /** The stretch the traveler is on, highlighted at the top of the list. */
+  function currentRow(stretch: { step: Step; index: number; total: number }) {
+    const li = document.createElement('li');
+    li.className = 'nav-list-current';
+    li.setAttribute('aria-current', 'step');
+    const road = stepRoad(stretch.step);
+    const name = road
+      ? shortRoadName(road)
+      : t(maneuverText(stretch.step) ?? 'Continue');
+    const count = t(`Step ${stretch.index} of ${stretch.total}`);
+    const glyph = icon('navigate');
+    glyph.classList.add('nav-list-icon');
+    const label = document.createElement('span');
+    label.className = 'nav-list-text';
+    label.append(
+      text('span', `${t('Now')} · ${name}`),
+      text('span', count, 'nav-list-step'),
+    );
+    li.title = `${t('Now')} · ${road ?? name} · ${count}`;
+    li.append(glyph, label);
+    return li;
   }
   function render() {
     const ahead = open ? deps.ahead() : null;
     if (!ahead) return;
     const { progress } = ahead;
     const locale = deps.locale();
+    const stretch = currentStretch(ahead.maneuvers, progress, ahead.departure);
     const rows = upcomingItems(ahead.maneuvers, ahead.stops, progress).map(
       (item) => {
         const li = document.createElement('li');
@@ -103,7 +128,9 @@ export function upcomingList(deps: {
         return li;
       },
     );
-    list.replaceChildren(...rows);
+    list.replaceChildren(...(stretch ? [currentRow(stretch)] : []), ...rows);
+    if (stretch?.index !== shownStretch) list.scrollTop = 0;
+    shownStretch = stretch?.index ?? 0;
   }
   // The bottom bar is a sheet: its handle, and the whole bar around it, open
   // the list; End, the replay controls and the list itself keep their own

@@ -196,3 +196,53 @@ export async function openAdvancedSettings(page: Page) {
   if ((await advanced.getAttribute('open')) === null)
     await advanced.locator('> summary').click();
 }
+
+/**
+ * Pairs of shown elements, among those the selectors match, whose boxes
+ * overlap; an element inside another does not count.
+ */
+export function overlapping(page: Page, selectors: string[]) {
+  return page.evaluate((selectors) => {
+    const name = (e: Element) => e.id || e.className.toString();
+    const shown = [...document.querySelectorAll(selectors.join(','))].filter(
+      (e) => e.checkVisibility() && e.getBoundingClientRect().width > 0,
+    );
+    const hits: string[] = [];
+    shown.forEach((a, i) => {
+      const p = a.getBoundingClientRect();
+      for (const b of shown.slice(i + 1)) {
+        const q = b.getBoundingClientRect();
+        if (
+          !a.contains(b) &&
+          !b.contains(a) &&
+          p.left < q.right &&
+          q.left < p.right &&
+          p.top < q.bottom &&
+          q.top < p.bottom
+        )
+          hits.push(`${name(a)} over ${name(b)}`);
+      }
+    });
+    return hits;
+  }, selectors);
+}
+
+/** Shown controls inside `scope` that something else covers at their center. */
+export function coveredControls(page: Page, scope: string) {
+  return page.evaluate((scope) => {
+    const covered: string[] = [];
+    for (const control of document.querySelectorAll(
+      `${scope} button, ${scope} input, ${scope} select`,
+    )) {
+      const r = control.getBoundingClientRect();
+      if (!control.checkVisibility() || !r.width) continue;
+      const hit = document.elementFromPoint(
+        r.left + r.width / 2,
+        r.top + r.height / 2,
+      );
+      if (!hit || !control.contains(hit))
+        covered.push(control.id || control.className.toString());
+    }
+    return covered;
+  }, scope);
+}

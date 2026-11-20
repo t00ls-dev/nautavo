@@ -6,8 +6,13 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ## [Unreleased]
 
+### Added
+
+- The list of turns ahead while navigating starts with the road you are on, highlighted, with its stage of the route (Step 2 of 6).
+
 ### Changed
 
+- With a phone held sideways, navigation and Travel the route fill the screen with the map and show the guidance as two cards on its left, the next turns at the top and the time with End (or the replay controls) at the bottom, with the map in view between them; the bottom card's handle opens the list of turns ahead. The route planner's panel moves to the left of the map instead of covering its lower half, with the route's distance and time and Navigate always in view. Travel the route no longer keeps a phone's narrow shape on a wide window, and its Replay label no longer covers the map: the play button, slider and arrival show the replay.
 - The name is written Nautavo, with a capital N, in page titles and every text; the logo is unchanged. A value that is not known shows a hyphen.
 - When the connection returns, weather, elevation, surface and the Itinerary's directions that could not load without it load once on their own, saying so meanwhile, instead of showing an error with Try again.
 - On a computer without a graphics processor, or one the browser does not use, the map draws at standard resolution so it stays responsive; screens with a graphics processor are unchanged.
@@ -15,6 +20,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- In the list of turns ahead while navigating, right turns show a right arrow; they showed a left one.
 - Map areas that failed to load while the connection was down, such as after moving the map offline, load when it returns, on the route planner and while navigating, instead of staying blank; a navigation started offline also gets its map when the connection returns.
 - In Settings, a server address over plain HTTP is refused when you apply it on nautavo.com, which connects only to HTTPS servers, instead of being accepted and then failing on every request; Nautavo run on your own computer still accepts a server there.
 - For part of November 18, Cloudflare, which hosts the site, added its visitor analytics script to nautavo.com's pages through a hosting setting, against the site's no-analytics promise; the setting was turned off the same day, and the site's security policy now blocks such scripts.

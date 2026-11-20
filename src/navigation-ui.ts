@@ -107,6 +107,11 @@ async function loadStyle(): Promise<StyleSpecification | null> {
 /** Where the traveler sits on the map while following, as a share of its height. */
 const PIVOT = 0.7;
 /**
+ * Screens where the guidance is two cards on the left of the map (#252);
+ * the same query is in `style.css`.
+ */
+const LANDSCAPE = '(orientation: landscape) and (min-width: 560px)';
+/**
  * The map view: following the traveler (heading-up, any zoom the traveler
  * chooses), the whole route (north-up), or free after the traveler moved or
  * zoomed it there. Anything but following at the default zoom offers Resume.
@@ -355,17 +360,21 @@ export function setupNavigation(deps: {
     active: () => screen.open,
   });
 
-  /** The traveler sits at `pivotRatio` of the height through the map's padding. */
+  /**
+   * The traveler sits at `pivotRatio` of the height through the map's
+   * padding, centered in the map left free beside the cards in landscape.
+   */
   function layout() {
     const w = stage.clientWidth,
-      h = stage.clientHeight;
-    pivot = { x: w / 2, y: h * pivotRatio };
+      h = stage.clientHeight,
+      left = cardsRight();
+    pivot = { x: left + (w - left) / 2, y: h * pivotRatio };
     if (!map) return;
     map.resize();
     map.setPadding({
       top: Math.max(0, 2 * pivot.y - h),
       bottom: Math.max(0, h - 2 * pivot.y),
-      left: 0,
+      left,
       right: 0,
     });
     place();
@@ -488,10 +497,10 @@ export function setupNavigation(deps: {
   function zoomToRejoin(coord: Coord): number {
     const rejoin = readout?.rejoin;
     if (!rejoin) return followZoom;
-    const w = stage.clientWidth;
+    const w = stage.clientWidth - cardsRight();
     const room = Math.max(
       60,
-      Math.min(pivot.y - bannerBottom(), w / 2, stage.clientHeight - pivot.y) -
+      Math.min(pivot.y - bannerAbove(), w / 2, stage.clientHeight - pivot.y) -
         REJOIN_MARGIN,
     );
     // Meters per CSS pixel at the follow zoom (512 px vector tiles).
@@ -524,11 +533,12 @@ export function setupNavigation(deps: {
         {
           animate: false,
           bearing: 0,
-          // The floating banner covers the top of the map.
+          // The floating banner covers the top of the map, or the cards
+          // its left side in landscape.
           padding: {
-            top: 24 + bannerBottom(),
+            top: 24 + bannerAbove(),
             bottom: 24,
-            left: 24,
+            left: 24 + cardsRight(),
             right: 24,
           },
         },
@@ -593,7 +603,6 @@ export function setupNavigation(deps: {
     renderBar(r);
     upcoming.render();
     renderSpeed();
-    renderReplayClock();
   }
   /**
    * The speed the arrival follows: the trip's own average once it has lasted
@@ -627,20 +636,6 @@ export function setupNavigation(deps: {
       $('nav-speed-value').textContent = value;
       $('nav-speed-unit').textContent = unit;
       badge.setAttribute('aria-label', `${value} ${unit}`);
-    }
-  }
-  /** The replay label with the trip's clock: "Replay · 14:32". */
-  function renderReplayClock() {
-    if (!replaying) return;
-    const text = `Replay · ${new Date(now()).toLocaleTimeString(deps.locale(), {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-    const label = $('nav-replay-chip').querySelector('span')!;
-    // English text: the page translator turns it into the chosen language.
-    if (label.dataset.text !== text) {
-      label.dataset.text = text;
-      label.textContent = text;
     }
   }
   /**
@@ -896,6 +891,7 @@ export function setupNavigation(deps: {
         maneuvers: tracker.maneuvers,
         stops: stopPlaces,
         progress: readout?.progress ?? plannedProgress,
+        departure: tracker.departure,
       },
     arrivalSpeed,
     now,
@@ -1030,9 +1026,12 @@ export function setupNavigation(deps: {
       void keepScreenOn();
     }
   }
-  const onResize = () => {
+  // The map follows its area's size, not the window's resize events: turning
+  // an iPhone fires them while the screen is still rotating, and the map then
+  // kept an in-between width (#252).
+  new ResizeObserver(() => {
     if (screen.open) layout();
-  };
+  }).observe(stage);
   const onNetwork = () => mapNotice();
 
   /**
@@ -1059,7 +1058,6 @@ export function setupNavigation(deps: {
     replaying = replay;
     screen.classList.toggle('replaying', replay);
     $('nav-replay').hidden = !replay;
-    $('nav-replay-chip').hidden = !replay;
     if (remind && !replay) switches.remindAutoReroute();
     schedule = createRerouteSchedule();
     rerouting = 'idle';
@@ -1119,7 +1117,6 @@ export function setupNavigation(deps: {
       void keepScreenOn();
     }
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('resize', onResize);
     window.addEventListener('online', onNetwork);
     window.addEventListener('offline', onNetwork);
   }
@@ -1138,7 +1135,6 @@ export function setupNavigation(deps: {
       replaying = false;
       screen.classList.remove('replaying');
       $('nav-replay').hidden = true;
-      $('nav-replay-chip').hidden = true;
     }
     clearTimeout(reroutedTimer);
     $('nav-rerouted').hidden = true;
@@ -1153,7 +1149,6 @@ export function setupNavigation(deps: {
     lock = null;
     void sentinel?.release().catch(() => undefined);
     document.removeEventListener('visibilitychange', onVisibility);
-    window.removeEventListener('resize', onResize);
     window.removeEventListener('online', onNetwork);
     window.removeEventListener('offline', onNetwork);
     marker?.remove();
@@ -1245,14 +1240,35 @@ export function setupNavigation(deps: {
     setViewButtons();
     moveFocus(event, resume);
   };
-  // Notices and buttons stay below the floating banner, whatever its height.
+  // Notices and buttons stay below the floating banner, whatever its height;
+  // in landscape they sit beside the cards instead (#252).
   const banner = screen.querySelector<HTMLElement>('.nav-banner')!;
+  const landscape = matchMedia(LANDSCAPE);
+  /** How far down the banner covers the map, px. */
   function bannerBottom() {
-    return banner.offsetTop + banner.offsetHeight;
+    const b = banner.getBoundingClientRect(),
+      s = stage.getBoundingClientRect();
+    return b.left < s.right && b.right > s.left
+      ? Math.max(0, b.bottom - s.top)
+      : 0;
   }
-  new ResizeObserver(() =>
+  /** The banner across the top of the map (portrait), else 0. */
+  const bannerAbove = () => (cardsRight() ? 0 : bannerBottom());
+  /**
+   * How far the cards on the left reach into the map in landscape (#252),
+   * px; 0 when the banner spans the map's width.
+   */
+  function cardsRight() {
+    if (!landscape.matches) return 0;
+    const b = banner.getBoundingClientRect(),
+      s = stage.getBoundingClientRect();
+    return Math.max(0, b.right - s.left);
+  }
+  const bannerObserver = new ResizeObserver(() =>
     screen.style.setProperty('--nav-top', `${bannerBottom()}px`),
-  ).observe(banner);
+  );
+  bannerObserver.observe(banner);
+  bannerObserver.observe(stage);
   // The browser's own long-press menu, loupe, callout and text selection
   // never open on the map; MapLibre handles pan, pinch, turn and zoom.
   stage.addEventListener('contextmenu', (event) => event.preventDefault());
@@ -1323,12 +1339,18 @@ export function setupNavigation(deps: {
     replayRange.value = String(
       Math.round((replayDistance / (replayIndex.total || 1)) * REPLAY_STEPS),
     );
-    // Attribute text is not observed by the DOM translator.
+    // The trip's clock and the distance travelled, for screen readers: the
+    // screen shows them as the arrival and the slider (#252). Attribute
+    // text is not observed by the DOM translator.
+    const clock = new Date(now()).toLocaleTimeString(deps.locale(), {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
     replayRange.setAttribute(
       'aria-valuetext',
-      t(
+      `${clock} · ${t(
         `${distanceLabel(replayDistance, units(), deps.locale())} of ${distanceLabel(replayIndex.total, units(), deps.locale())}`,
-      ),
+      )}`,
     );
     if (!fix) return;
     replayBearing = fix.bearing;

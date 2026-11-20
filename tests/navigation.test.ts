@@ -16,6 +16,7 @@ import {
   navigationDurationLabel,
   navigationManeuvers,
   upcomingItems,
+  currentStretch,
   stopAt,
 } from '../src/navigation';
 import { legPositions } from '../src/track-position';
@@ -469,6 +470,20 @@ describe('upcoming list', () => {
     expect(stopAt(stops, 12 * M + 150)).toBe('Café');
     expect(stopAt(stops, 12 * M + 400)).toBeNull();
     expect(stopAt(stops, 20 * M)).toBeNull();
+  });
+
+  it('names the stretch the traveler is on, numbered among the stretches', () => {
+    const departure = route().steps[0];
+    const at = (progress: number) => {
+      const s = currentStretch(turns, progress, departure);
+      return s && [s.step.name, s.index, s.total];
+    };
+    expect(at(0)).toEqual(['Start road', 1, 3]);
+    expect(at(6 * M)).toEqual(['Second road', 2, 3]);
+    expect(at(19 * M)).toEqual(['Third road', 3, 3]);
+    // Without a departure step the stretches start at the first maneuver.
+    expect(currentStretch(turns, 0, null)?.index).toBe(1);
+    expect(currentStretch([], 0, null)).toBeNull();
   });
 
   it('drops what has been passed', () => {

@@ -72,7 +72,6 @@ const pt: Record<string, string> = {
     'Recalcular a rota automaticamente ao navegar',
   'Automatic recalculation on': 'Recálculo automático ativo',
   'Turn off': 'Desativar',
-  Replay: 'Reprodução',
   'See the route on the navigation screen before you leave: each turn, the distances and the arrival.':
     'Veja a rota na tela de navegação antes de sair: cada conversão, as distâncias e a chegada.',
   'Simulate navigation': 'Simular navegação',
@@ -112,6 +111,7 @@ const pt: Record<string, string> = {
   'Voice on': 'Voz ligada',
   'Voice off': 'Voz desligada',
   'Upcoming turns': 'Próximas curvas',
+  Now: 'Agora',
   'Save as favorite': 'Salvar como favorito',
   Backup: 'Cópia de segurança',
   'Your saved routes and favorite places in one file, to keep or to move to another device.':
@@ -685,7 +685,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     /^Sunset in (\d+) minutes?\.$/,
     (n) => `O sol se põe em ${n} ${n === '1' ? 'minuto' : 'minutos'}.`,
   ],
-  [/^Replay · (.+)$/, (clock) => `Reprodução · ${clock}`],
   [/^About (-?[\d.,]+ (?:m|ft))$/, (value) => `Cerca de ${value}`],
   [
     /^Min (.+) · Max (.+) · Avg (.+)$/,
@@ -710,6 +709,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
       `Limite de uso ${kind === 'Weather' ? 'do clima' : 'da elevação'} atingido. Tente em ${n}${unit}.`,
   ],
   [/^Recalculate in (\d+) s$/, (n) => `Recalcular em ${n} s`],
+  [/^Step (\d+) of (\d+)$/, (a, b) => `Etapa ${a} de ${b}`],
   [/^Climbs \((\d+)\)$/, (n) => `Subidas (${n})`],
   [/^Unpaved stretches \((\d+)\)$/, (n) => `Trechos sem asfalto (${n})`],
   [

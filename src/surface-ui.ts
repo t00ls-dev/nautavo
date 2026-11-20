@@ -6,6 +6,7 @@ import {
 } from './planner-map';
 import type { Coord, Route, State } from './core';
 import { byId as $ } from './dom';
+import { sheetCoversMap } from './panel';
 import {
   attributePlan,
   edgeRanges,
@@ -257,8 +258,7 @@ export function setupSurface(
       section.to,
     );
     if (!parts.length) return;
-    if (!$('route-panel').hidden && matchMedia('(max-width: 759px)').matches)
-      $('panel-toggle').click();
+    if (!$('route-panel').hidden && sheetCoversMap()) $('panel-toggle').click();
     map.fit(parts.flat(), { padding: 40 });
   }
 

@@ -2,7 +2,13 @@ import { test, expect, type Page } from '@playwright/test';
 import { chooseUnits } from './unit-settings';
 import { sunTimes } from '../src/daylight';
 import { decimalYear, magneticDeclination } from '../src/declination';
-import { base, boxSettled, osrmFirst } from './app-helpers';
+import {
+  base,
+  boxSettled,
+  coveredControls,
+  osrmFirst,
+  overlapping,
+} from './app-helpers';
 import { BASEMAP_STYLE } from './map-helpers';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
@@ -111,9 +117,101 @@ async function fits(page: Page) {
     }
     const eta = document.querySelector('.nav-eta')!.getBoundingClientRect(),
       stop = document.querySelector('.nav-stop')!.getBoundingClientRect();
-    if (eta.width && eta.right > stop.left) problems.push('time under Stop');
+    if (
+      eta.width &&
+      eta.right > stop.left &&
+      eta.top < stop.bottom &&
+      stop.top < eta.bottom
+    )
+      problems.push('time under Stop');
     return problems;
   });
+}
+/** Buttons and notices drawn over the navigation map. */
+const MAP_OVERLAYS =
+  '.nav-chip, .nav-map-button, #nav-speed, #nav-reroute, #nav-resume, .nav-credits-toggle';
+/** Phone screens in landscape the layout is checked at (#252). */
+const LANDSCAPE = [
+  [568, 320],
+  [667, 375],
+  [852, 393],
+  [932, 430],
+] as const;
+/**
+ * The landscape layout (#252): the map fills the screen, the guidance is two
+ * cards on its left with the map in view between them, the traveler in the
+ * map beside the cards, the map's buttons and notices clear of the cards and
+ * of one another, and every control answering at its center, uncovered.
+ */
+async function landscapeProblems(page: Page) {
+  const layout = await page.evaluate((overlays) => {
+    const problems: string[] = [];
+    const box = (selector: string) =>
+      document.querySelector(selector)!.getBoundingClientRect();
+    const screen = box('#nav-screen'),
+      stage = box('#nav-stage');
+    if (screen.width < innerWidth - 1 || screen.height < innerHeight - 1)
+      problems.push('the screen does not fill the window');
+    if (stage.height < innerHeight - 1 || stage.width < innerWidth - 1)
+      problems.push('the map does not fill the screen');
+    // The map's drawing follows its area after turning the screen.
+    const canvas = document
+      .querySelector('#nav-map canvas')
+      ?.getBoundingClientRect();
+    if (
+      canvas &&
+      (Math.abs(canvas.width - stage.width) > 1 ||
+        Math.abs(canvas.height - stage.height) > 1)
+    )
+      problems.push('the map is not drawn over its whole area');
+    const banner = box('.nav-banner'),
+      card = box('.nav-bar');
+    for (const [name, e] of [
+      ['banner', banner],
+      ['bottom card', card],
+    ] as const) {
+      if (e.right > innerWidth / 2) problems.push(`the ${name} is too wide`);
+      if (e.bottom > innerHeight + 0.5 || e.top < -0.5)
+        problems.push(`the ${name} is cut off`);
+    }
+    if (card.top < banner.bottom) problems.push('the cards overlap');
+    const bar = document.querySelector<HTMLElement>('.nav-bar')!;
+    if (bar.scrollHeight > bar.clientHeight + 1)
+      problems.push('the bottom card overflows');
+    const hits = (p: DOMRect, q: DOMRect) =>
+      p.left < q.right &&
+      q.left < p.right &&
+      p.top < q.bottom &&
+      q.top < p.bottom;
+    for (const e of document.querySelectorAll(overlays)) {
+      const p = e.getBoundingClientRect();
+      if (!e.checkVisibility()) continue;
+      if (
+        p.left < stage.left - 0.5 ||
+        p.right > stage.right + 0.5 ||
+        p.top < stage.top - 0.5 ||
+        p.bottom > stage.bottom + 0.5
+      )
+        problems.push(`${e.id || e.className} leaves the map`);
+      if (hits(p, banner) || hits(p, card))
+        problems.push(`${e.id || e.className} under a card`);
+    }
+    // The traveler stays in the map beside the cards.
+    const position = document.querySelector('.nav-position');
+    if (position?.checkVisibility()) {
+      const p = position.getBoundingClientRect();
+      if (p.left < Math.max(banner.right, card.right))
+        problems.push('the traveler is under the cards');
+    }
+    return problems;
+  }, MAP_OVERLAYS);
+  return [
+    ...layout,
+    ...(await overlapping(page, [MAP_OVERLAYS])),
+    ...(await coveredControls(page, '#nav-screen')).map(
+      (control) => `${control} is covered`,
+    ),
+  ];
 }
 /** The fixed clock of the tests that send their own fixes. */
 const t0 = Date.parse('2026-11-14T12:00:00Z');
@@ -967,37 +1065,6 @@ test.describe('phone navigation', () => {
     expect(await fits(page)).toEqual([]);
   });
 
-  /** Visible boxes of the map's overlays that overlap one another. */
-  async function overlaps(page: Page) {
-    return page.evaluate(() => {
-      const boxes = [
-        '#nav-speed',
-        '#nav-reroute',
-        '#nav-resume',
-        '.nav-credits-toggle',
-        '#nav-list-toggle',
-      ].flatMap((selector) => {
-        const element = document.querySelector(selector);
-        const box = element?.getBoundingClientRect();
-        return box && box.width && element!.checkVisibility()
-          ? [[selector, box] as const]
-          : [];
-      });
-      const hits: string[] = [];
-      boxes.forEach(([a, p], i) =>
-        boxes.slice(i + 1).forEach(([b, q]) => {
-          if (
-            p.left < q.right &&
-            q.left < p.right &&
-            p.top < q.bottom &&
-            q.top < p.bottom
-          )
-            hits.push(`${a} over ${b}`);
-        }),
-      );
-      return hits;
-    });
-  }
   for (const width of [320, 360, 390, 430])
     for (const language of ['en', 'pt'] as const)
       test(`off the route and with the list open, nothing covers anything at ${width}px in ${language}`, async ({
@@ -1016,7 +1083,15 @@ test.describe('phone navigation', () => {
         await sendFix(page, offRoute(0.00001), t0 + 7500, 5, 8);
         await expect(page.locator('#nav-reroute')).toBeVisible();
         await expect(page.locator('#nav-speed')).toBeVisible();
-        expect(await overlaps(page)).toEqual([]);
+        expect(
+          await overlapping(page, [
+            '#nav-speed',
+            '#nav-reroute',
+            '#nav-resume',
+            '.nav-credits-toggle',
+            '#nav-list-toggle',
+          ]),
+        ).toEqual([]);
         // A sheet like the route panel: rounded top, its handle across the
         // top and End well apart from it.
         await expect(page.locator('.nav-bar')).toHaveCSS(
@@ -1047,6 +1122,69 @@ test.describe('phone navigation', () => {
               ),
             ).toBe(true);
         }
+      });
+
+  for (const [width, height] of LANDSCAPE)
+    for (const language of ['en', 'pt'] as const)
+      test(`in landscape the guidance is two cards over the map at ${width}x${height} in ${language}`, async ({
+        page,
+      }) => {
+        // A slow average speed (a device preference) for a time over an hour.
+        await page.addInitScript(() =>
+          localStorage.setItem('average-speed', '1'),
+        );
+        await ownFixes(page);
+        await setup(page, longName);
+        await chooseUnits(page, { distance: 'imperial' });
+        await page.locator('#language').selectOption(language);
+        await mockReroute(page, false);
+        await page.locator('#navigate').click();
+        await page.locator('#nav-notice-start').click();
+        await sendFix(page, onRoute, t0 + 1000);
+        await expect(page.locator('#nav-road')).toHaveText(longName);
+        // Off the route for 5.5 s, moving: the hint, the speed badge and
+        // Recalculate show; the whole route adds Re-center.
+        await sendFix(page, offRoute(), t0 + 2000, 5, 8);
+        await sendFix(page, offRoute(0.00001), t0 + 7500, 5, 8);
+        await expect(page.locator('#nav-reroute')).toBeVisible();
+        await page.locator('#nav-overview').click();
+        await expect(page.locator('#nav-resume')).toBeVisible();
+        // Turned sideways while navigating.
+        await page.setViewportSize({ width, height });
+        await expect(page.locator('#nav-speed')).toBeVisible();
+        await expect(page.locator('#nav-hint')).toBeVisible();
+        await expect.poll(() => landscapeProblems(page)).toEqual([]);
+        expect(await fits(page)).toEqual([]);
+        // The upcoming list is closed; its handle opens it in the bottom
+        // card, between the banner and the time, the current stretch first.
+        await expect(page.locator('#nav-list')).toBeHidden();
+        await page.locator('#nav-list-toggle').click();
+        await expect(page.locator('#nav-list li').first()).toHaveAttribute(
+          'aria-current',
+          'step',
+        );
+        const banner = (await page.locator('.nav-banner').boundingBox())!,
+          list = (await page.locator('#nav-list').boundingBox())!,
+          time = (await page.locator('#nav-time').boundingBox())!,
+          card = (await page.locator('.nav-bar').boundingBox())!;
+        expect(list.y).toBeGreaterThanOrEqual(banner.y + banner.height - 0.5);
+        expect(list.y + list.height).toBeLessThanOrEqual(time.y + 0.5);
+        expect(list.x).toBeGreaterThanOrEqual(card.x - 0.5);
+        expect(list.x + list.width).toBeLessThanOrEqual(
+          card.x + card.width + 0.5,
+        );
+        expect(await landscapeProblems(page)).toEqual([]);
+        // The handle closes it again.
+        await page.locator('#nav-list-toggle').click();
+        await expect(page.locator('#nav-list')).toBeHidden();
+        // Back upright, the portrait layout returns.
+        await page.setViewportSize({ width: 390, height: 844 });
+        await expect
+          .poll(
+            async () =>
+              (await page.locator('.nav-banner').boundingBox())!.width,
+          )
+          .toBeGreaterThan(360);
       });
 
   for (const [width, height] of [
@@ -1286,7 +1424,12 @@ test.describe('phone navigation', () => {
     await expect(list).toBeHidden();
     await handle.click();
     await expect(handle).toHaveAttribute('aria-expanded', 'true');
-    const rows = list.locator('li');
+    // The stretch the traveler is on comes first, highlighted, with its
+    // number among the route's stretches (#252).
+    const current = list.locator('li[aria-current="step"]');
+    await expect(current).toHaveText(/^Now · R\. UruguaiStep 1 of 3$/);
+    await expect(current).toHaveCSS('border-left-width', '4px');
+    const rows = list.locator('li:not([aria-current])');
     await expect(rows).toHaveCount(3);
     // Road names shortened as in the Itinerary; the full text in the title.
     await expect(rows.nth(0)).toContainText('Estr. das Furnas');
@@ -1296,6 +1439,7 @@ test.describe('phone navigation', () => {
     // Past the first turn, it leaves the list.
     await context.setGeolocation({ latitude: lat, longitude: lon(12) });
     await expect(rows).toHaveCount(2);
+    await expect(current).toHaveText(/^Now · Estr\. das FurnasStep 2 of 3$/);
     await expect(rows.nth(0)).toHaveAttribute('title', /Estrada do Joá/);
     // Escape closes the list, not navigation; a second one ends it.
     await page.keyboard.press('Escape');
@@ -1414,7 +1558,7 @@ test.describe('phone navigation', () => {
       await page.locator('#nav-notice-start').click();
       await page.locator('#nav-list-toggle').click();
       const list = page.locator('#nav-list');
-      await expect(list.locator('li')).toHaveCount(3);
+      await expect(list.locator('li')).toHaveCount(4);
       const problems = await list.evaluate((ol) => {
         const out: string[] = [];
         const banner = document
@@ -1425,9 +1569,15 @@ test.describe('phone navigation', () => {
         for (const li of ol.querySelectorAll('li')) {
           const r = li.getBoundingClientRect();
           if (r.right > innerWidth + 0.5) out.push('row leaves the screen');
-          if (r.height > 60) out.push(`row wraps: ${li.textContent}`);
-          const distance = li.querySelector('.nav-list-distance')!;
-          if (distance.scrollWidth > distance.clientWidth + 1)
+          // The current stretch has two lines: the road and its number.
+          const lines = li.matches('[aria-current]') ? 2 : 1;
+          for (const line of li.querySelectorAll('.nav-list-text > span'))
+            if (line.getBoundingClientRect().height > 30)
+              out.push(`line wraps: ${line.textContent}`);
+          if (r.height > 30 * lines + 30)
+            out.push(`row wraps: ${li.textContent}`);
+          const distance = li.querySelector('.nav-list-distance');
+          if (distance && distance.scrollWidth > distance.clientWidth + 1)
             out.push('distance clipped');
         }
         return out;
@@ -1691,9 +1841,12 @@ test.describe('replay on the navigation screen', () => {
     await expect(screen.getByRole('button', { name: 'Play' })).toBeVisible();
     await page.locator('#nav-replay-position').fill('300');
     await expect(page.locator('#nav-notice')).toBeHidden();
-    // The label carries the trip's clock.
-    await expect(page.locator('#nav-replay-chip')).toHaveText(
-      /Replay · \d\d:\d\d/,
+    // No label over the map (#252): the slider says the trip's clock and
+    // the distance to screen readers.
+    await expect(page.locator('#nav-replay-chip')).toHaveCount(0);
+    await expect(page.locator('#nav-replay-position')).toHaveAttribute(
+      'aria-valuetext',
+      /^\d\d:\d\d( [AP]M)? · \S+ (km|m) of \S+ (km|m)$/,
     );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
@@ -1761,11 +1914,40 @@ test.describe('replay on the navigation screen', () => {
         ),
       ).toBe(true);
       await label.click();
-      await expect(page.locator('#nav-replay-chip')).toBeVisible();
+      await expect(page.locator('#nav-replay')).toBeVisible();
       await page.locator('#nav-replay-position').fill('400');
       expect(await fits(page)).toEqual([]);
     });
 });
+
+for (const [width, height] of LANDSCAPE)
+  test(`a replay in landscape has the same cards as navigation at ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setup(page, longName);
+    // A drawn map, to see it follow the screen as it turns.
+    await page.route('**/styles/**', (r) => r.fulfill({ json: BASEMAP_STYLE }));
+    await page.locator('#language').selectOption('pt');
+    await page.locator('#travel-details > summary').click();
+    await page.locator('#travel-route').click();
+    await expect(page.locator('#nav-map canvas')).toBeVisible();
+    await page.setViewportSize({ width, height });
+    await page.locator('#nav-replay-position').fill('300');
+    await expect(page.locator('#nav-road')).toHaveText(longName);
+    // No phone frame: the replay fills the window like navigation.
+    await expect.poll(() => landscapeProblems(page)).toEqual([]);
+    expect(await fits(page)).toEqual([]);
+    // The replay's controls are in the bottom card, below the time.
+    const time = (await page.locator('#nav-time').boundingBox())!,
+      controls = (await page.locator('#nav-replay').boundingBox())!,
+      card = (await page.locator('.nav-bar').boundingBox())!;
+    expect(controls.y).toBeGreaterThanOrEqual(time.y + time.height - 0.5);
+    expect(controls.x).toBeGreaterThanOrEqual(card.x - 0.5);
+    expect(controls.x + controls.width).toBeLessThanOrEqual(
+      card.x + card.width + 0.5,
+    );
+  });
 
 test('a playing replay turns the map smoothly on a road with small bends', async ({
   page,
@@ -2245,8 +2427,15 @@ test.describe('speed while navigating', () => {
       .getByRole('button', { name: 'Play' })
       .click();
     await expect(page.locator('#nav-speed-value')).toHaveText('20');
-    await expect(page.locator('#nav-replay-chip')).toHaveText(
-      /Replay · \d\d:\d\d/,
-    );
+    // The trip's clock moves with the replay, read out with the position.
+    const clock = () =>
+      page
+        .locator('#nav-replay-position')
+        .getAttribute('aria-valuetext')
+        .then((text) => text?.slice(0, 5));
+    const first = await clock();
+    expect(first).toMatch(/^\d\d:\d\d$/);
+    await page.locator('#nav-replay-position').fill('900');
+    await expect.poll(clock).not.toBe(first);
   });
 });
