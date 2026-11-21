@@ -335,9 +335,9 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
   // About 300 samples in chunks of 100, plus the failed first attempt.
   expect(requests.length).toBeLessThanOrEqual(5);
   const count = requests.length;
-  const chart = (await page.locator('.elevation-frame').boundingBox())!;
+  const chart = (await page.locator('#elevation .chart-frame').boundingBox())!;
   await page.mouse.move(chart.x + chart.width / 2, chart.y + chart.height / 2);
-  await expect(page.locator('div.elevation-cursor')).toHaveCount(1);
+  await expect(page.locator('div.chart-cursor')).toHaveCount(1);
   // Halfway along a steady climb from 0 to 1,000 m: about 500 m gained so far.
   await expect(page.locator('.elevation-readout')).toContainText(
     /Gain so far (4|5)\d\d m · Loss so far 0 m/,
@@ -855,7 +855,7 @@ test('climbs are listed, shaded in the chart and shown on the map', async ({
   // The climb's summit is the route's highest point: one mark there, the
   // label below the route, so route point pins above it never cover it.
   await expect(page.locator('.climb-summit')).toHaveCount(0);
-  const label = page.locator('.elevation-extreme.highest');
+  const label = page.locator('.map-extreme.highest');
   await expect(label.locator('svg.icon-summit')).toHaveCount(1);
   // Measured in one frame against its own anchor, the route point, so the
   // map's zoom animation cannot skew it.
@@ -904,7 +904,7 @@ test('a climb whose summit is not the highest point keeps its summit mark', asyn
   await expect(page.locator('.climb-summit svg')).toHaveCount(1);
   await page.locator('.climbs .climb').nth(1).click();
   await expect(page.locator('.climb-summit')).toHaveCount(0);
-  await expect(page.locator('.elevation-extreme.highest')).toHaveCount(1);
+  await expect(page.locator('.map-extreme.highest')).toHaveCount(1);
 });
 test('the highest and lowest points are marked on the map while Elevation is open', async ({
   page,
@@ -928,8 +928,8 @@ test('the highest and lowest points are marked on the map while Elevation is ope
   await expect(page.locator('#elevation-stats')).toContainText(
     /Min (4\d|5\d) m · Max (8[89]\d|900) m/,
   );
-  const highest = page.locator('.elevation-extreme.highest');
-  const lowest = page.locator('.elevation-extreme.lowest');
+  const highest = page.locator('.map-extreme.highest');
+  const lowest = page.locator('.map-extreme.lowest');
   await expect(highest).toHaveText(/^(8[89]\d|900) m$/);
   await expect(lowest).toHaveText(/^(4\d|5\d) m$/);
   await expect(highest.locator('svg.icon-summit')).toHaveCount(1);
@@ -941,7 +941,7 @@ test('the highest and lowest points are marked on the map while Elevation is ope
   await chooseUnits(page, { distance: 'imperial' });
   await expect(highest).toHaveText(/ ft$/);
   await page.locator('#elevation > summary').click();
-  await expect(page.locator('.elevation-extreme')).toHaveCount(0);
+  await expect(page.locator('.map-extreme')).toHaveCount(0);
 });
 for (const mobile of [false, true])
   test(`the point menu asks the elevation of one map point: ${mobile ? 'mobile' : 'desktop'}`, async ({

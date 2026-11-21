@@ -1,10 +1,15 @@
-import { valuesAt, type Activity, type ActivityValue } from './activity';
+import {
+  valuesAt,
+  type Activity,
+  type ActivityValue,
+  type Peak,
+} from './activity';
 import { byId as $, text } from './dom';
-import { iconControl } from './icons';
+import { iconControl, type IconName } from './icons';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 import { speedFromKmh } from './travel-time';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
-import { MISSING } from './units';
+import { elevationLabel, MISSING, speedLabel } from './units';
 
 /**
  * The data page of the activity replay (#156), as bike computers show a
@@ -34,6 +39,9 @@ const KINDS: Kind[] = [
   { field: 'clock', short: 'Clock', label: 'Time of day' },
 ];
 const NAMES = new Set<string>(KINDS.map((k) => k.field));
+/** A value's short label and full name, as the data page shows them. */
+export const valueKind = (field: Field): Kind =>
+  KINDS.find((k) => k.field === field)!;
 /** Narrowest field, and below what width fields get tighter, CSS px. */
 const FIELD_WIDTH = 80,
   DENSE_WIDTH = 110;
@@ -50,7 +58,7 @@ function hiddenFields(): Set<Field> {
 }
 
 /** The unit a value is shown in, with the device's units. */
-export function unitOf(value: ActivityValue): string {
+function unitOf(value: ActivityValue): string {
   const imperial = distanceUnits() === 'imperial';
   switch (value) {
     case 'speed':
@@ -71,7 +79,7 @@ export function unitOf(value: ActivityValue): string {
   }
 }
 /** A recorded value (speed in m/s) in the device's units, as a number. */
-export function valueLabel(value: ActivityValue, raw: number): string {
+function valueLabel(value: ActivityValue, raw: number): string {
   const imperial = distanceUnits() === 'imperial';
   switch (value) {
     case 'speed':
@@ -97,6 +105,27 @@ export function valueLabel(value: ActivityValue, raw: number): string {
     default:
       return String(Math.round(raw));
   }
+}
+
+/** The icon of each highest value, on the map and in the replay's notices. */
+export const PEAK_ICONS: Record<Peak['kind'], IconName> = {
+  speed: 'speed',
+  hr: 'heart',
+  cadence: 'cadence',
+  power: 'power',
+  altitude: 'summit',
+};
+/**
+ * A highest value as its label on the map and its replay notice show it:
+ * speed with one decimal, altitude with digit grouping, in the device's
+ * units.
+ */
+export function peakLabel(peak: Peak, locale: string): string {
+  const units = distanceUnits();
+  if (peak.kind === 'speed') return speedLabel(peak.value, units, locale);
+  if (peak.kind === 'altitude')
+    return elevationLabel(peak.value, units, locale);
+  return `${valueLabel(peak.kind, peak.value)} ${unitOf(peak.kind)}`;
 }
 
 export function activityValues(locale: () => string, onChange: () => void) {

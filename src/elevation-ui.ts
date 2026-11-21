@@ -39,6 +39,13 @@ import { onlineAttempt } from './offline';
 import { travelTimeSeconds } from './travel-time';
 import { distanceLabel, elevationLabel, milepostLabel } from './units';
 import { distanceUnits } from './unit-preferences';
+import {
+  chartAxis,
+  chartFrame,
+  profileChart,
+  SVG_NS,
+  type ChartPoint,
+} from './profile-chart';
 
 /**
  * Elevation row in the route summary: profile chart and statistics. Recorded
@@ -48,10 +55,8 @@ import { distanceUnits } from './unit-preferences';
  * menu asks for the elevation of one point, one request per explicit choice.
  */
 
-const WIDTH = 300,
-  HEIGHT = 90,
+const HEIGHT = 90,
   PAD = 4;
-const SVG = 'http://www.w3.org/2000/svg';
 /** Quiet time before fetching elevation for a new route while the row is open. */
 const SETTLE_MS = 2000;
 /**
@@ -242,25 +247,26 @@ export function setupElevation(
       return;
     }
     const total = profile.at(-1)!.at || 1;
-    const span = Math.max(1, summary.max - summary.min);
-    const x = (at: number) => PAD + (at / total) * (WIDTH - 2 * PAD);
-    const y = (ele: number) =>
-      PAD + (1 - (ele - summary.min) / span) * (HEIGHT - 2 * PAD);
     // One filled area per GPX segment, so gaps stay as breaks.
-    const parts: ProfilePoint[][] = [];
+    const parts: ChartPoint[][] = [];
     for (const p of profile)
-      if (p.gap || !parts.length) parts.push([p]);
-      else parts.at(-1)!.push(p);
-    const svg = document.createElementNS(SVG, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${WIDTH} ${HEIGHT}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.classList.add('elevation-svg');
+      if (p.gap || !parts.length) parts.push([{ at: p.at, value: p.ele }]);
+      else parts.at(-1)!.push({ at: p.at, value: p.ele });
+    const { svg, x, guide, atPointer } = profileChart({
+      parts,
+      total,
+      min: summary.min,
+      max: Math.max(summary.max, summary.min + 1),
+      height: HEIGHT,
+      pad: PAD,
+      className: 'elevation-svg',
+    });
     const climbs = detectClimbs(profile, source);
     if (selected >= climbs.length) selected = -1;
     // Climb stretches shaded behind the profile; the chosen one stronger.
+    const behind = svg.firstChild;
     climbs.forEach((climb, i) => {
-      const band = document.createElementNS(SVG, 'rect');
+      const band = document.createElementNS(SVG_NS, 'rect');
       band.setAttribute('x', x(climb.start).toFixed(1));
       band.setAttribute('y', '0');
       band.setAttribute(
@@ -270,76 +276,37 @@ export function setupElevation(
       band.setAttribute('height', String(HEIGHT));
       band.classList.add('elevation-climb');
       if (i === selected) band.classList.add('selected');
-      svg.append(band);
+      svg.insertBefore(band, behind);
     });
-    for (const part of parts) {
-      const line = part.map(
-        (p) => `${x(p.at).toFixed(1)},${y(p.ele).toFixed(1)}`,
-      );
-      const area = document.createElementNS(SVG, 'path');
-      area.setAttribute(
-        'd',
-        `M${x(part[0].at).toFixed(1)},${HEIGHT} L${line.join(' L')} L${x(part.at(-1)!.at).toFixed(1)},${HEIGHT} Z`,
-      );
-      area.classList.add('elevation-area');
-      const stroke = document.createElementNS(SVG, 'path');
-      stroke.setAttribute('d', `M${line.join(' L')}`);
-      stroke.classList.add('elevation-line');
-      svg.append(area, stroke);
-    }
-    const guide = document.createElementNS(SVG, 'line');
-    guide.classList.add('elevation-guide');
-    guide.setAttribute('y1', '0');
-    guide.setAttribute('y2', String(HEIGHT));
-    guide.style.display = 'none';
-    svg.append(guide);
     const readout = document.createElement('p');
     readout.className = 'elevation-readout hint';
-    const labels = document.createElement('div');
-    labels.className = 'elevation-labels';
-    for (const text of [
+    const frame = chartFrame(
+      svg,
       elevationLabel(summary.max, units(), locale()),
       elevationLabel(summary.min, units(), locale()),
-    ]) {
-      const label = document.createElement('span');
-      label.textContent = text;
-      labels.append(label);
-    }
-    const axis = document.createElement('p');
-    axis.className = 'elevation-axis hint';
-    axis.append(
-      document.createTextNode(distanceLabel(0, units(), locale())),
-      document.createTextNode(' · '),
-      document.createTextNode(distanceLabel(total, units(), locale())),
     );
-    const frame = document.createElement('div');
-    frame.className = 'elevation-frame';
-    frame.append(svg, labels);
+    const axis = chartAxis(
+      distanceLabel(0, units(), locale()),
+      distanceLabel(total, units(), locale()),
+    );
     chart.append(frame, axis, readout);
 
     // Cursor: chart position → profile point and map marker.
     const index = indexTrack(route.segments);
     const climbed = cumulativeClimb(profile, source);
     const hide = () => {
-      guide.style.display = 'none';
+      guide(null);
       readout.textContent = '';
       cursorLayer.clearLayers();
     };
     frame.onpointermove = (event) => {
-      const box = svg.getBoundingClientRect();
-      const ratio = Math.min(
-        1,
-        Math.max(0, (event.clientX - box.left) / box.width),
-      );
-      const at = ratio * total;
+      const at = atPointer(event);
       let n = 0;
       profile!.forEach((p, i) => {
         if (Math.abs(p.at - at) < Math.abs(profile![n].at - at)) n = i;
       });
       const nearest = profile![n];
-      guide.setAttribute('x1', x(nearest.at).toFixed(1));
-      guide.setAttribute('x2', x(nearest.at).toFixed(1));
-      guide.style.display = '';
+      guide(nearest.at);
       // Gain so far along the route, with the same noise threshold as the totals.
       readout.textContent = `${distanceLabel(nearest.at, units(), locale())} · ${elevationLabel(nearest.ele, units(), locale())} · Gain so far ${elevationLabel(climbed[n].ascent, units(), locale())} · Loss so far ${elevationLabel(climbed[n].descent, units(), locale())}`;
       const point = pointAtDistance(index, nearest.at);
@@ -347,7 +314,7 @@ export function setupElevation(
       if (point)
         cursorLayer.add(
           map.marker(point.coord, {
-            className: 'elevation-cursor',
+            className: 'chart-cursor',
             size: [16, 16],
             anchor: [8, 8],
             z: 2,
@@ -407,13 +374,13 @@ export function setupElevation(
       const at = pointAtDistance(index, point.at);
       if (!at) continue;
       const chip = document.createElement('span');
-      chip.className = `elevation-extreme ${kind}`;
+      chip.className = `map-extreme ${kind}`;
       const text = document.createElement('span');
       text.textContent = elevationLabel(point.ele, units(), locale());
       chip.append(icon('summit'), text);
       extremesLayer.add(
         map.marker(at.coord, {
-          className: 'elevation-extreme-marker',
+          className: 'map-extreme-marker',
           html: chip,
           size: [0, 0],
           anchor: [0, 0],

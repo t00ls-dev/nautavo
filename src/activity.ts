@@ -11,6 +11,7 @@ import {
   GRADE_WINDOW,
   profileFromTrack,
   smoothProfile,
+  type ProfilePoint,
 } from './elevation';
 
 /**
@@ -443,8 +444,8 @@ export function activityAdvance(
   return { time: Math.min(activity.end, next), skipped };
 }
 
-/** The stops the replay skips, in order. */
-const skippedStops = (activity: Activity): Stop[] =>
+/** The stops the replay skips (a minute or more), in order. */
+export const skippedStops = (activity: Activity): Stop[] =>
   activity.stops.filter((stop) => stop.to - stop.from >= SKIPPED_STOP);
 
 /** Replay time of a recorded time: from the start, skipped stops left out. */
@@ -466,4 +467,135 @@ export function timeAtPlayed(activity: Activity, played: number): number {
   for (const stop of skippedStops(activity))
     if (time >= stop.from) time += stop.to - stop.from;
   return Math.min(activity.end, time);
+}
+
+/** Per recorded point: whether the recording was moving there (not in a stop). */
+export function movingPoints(activity: Activity): boolean[] {
+  let s = 0;
+  return activity.times.map((time) => {
+    const { stops } = activity;
+    while (s < stops.length && stops[s].to <= time) s++;
+    return !(s < stops.length && time >= stops[s].from && time < stops[s].to);
+  });
+}
+
+/**
+ * The recorded points that start a GPX segment after the first: nothing is
+ * drawn or measured across the gap before them.
+ */
+export function segmentStarts(activity: Activity): Set<number> {
+  const starts = new Set<number>();
+  let n = 0;
+  for (const segment of activity.segments) {
+    if (n) starts.add(n);
+    n += segment.length;
+  }
+  return starts;
+}
+
+/** The elevation profile of the recorded altitude, for the Grade coloring. */
+export function activityProfile(activity: Activity): ProfilePoint[] {
+  if (!activity.altitude) return [];
+  const starts = segmentStarts(activity);
+  const out: ProfilePoint[] = [];
+  let gap = false;
+  activity.altitude.forEach((ele, i) => {
+    if (starts.has(i)) gap = true;
+    if (ele === null) return;
+    out.push(
+      gap
+        ? { at: activity.distances[i], ele, gap }
+        : { at: activity.distances[i], ele },
+    );
+    gap = false;
+  });
+  return out;
+}
+
+/** Classes of a zone coloring: five, from lowest to highest. */
+export const ZONES = [
+  'zone-1',
+  'zone-2',
+  'zone-3',
+  'zone-4',
+  'zone-5',
+] as const;
+/** Share of moving readings left out below and above the zone scale. */
+const ZONE_TAIL = 0.05;
+
+/**
+ * Limits between the five zones of a series, relative to the activity
+ * itself: evenly spaced between its 5th and 95th percentiles over the moving
+ * points, rounded to whole units, or to tenths where whole units would
+ * merge zones (a slow walk), so the legend reads what is drawn. Null when
+ * the series has no spread to color.
+ */
+export function zoneLimits(
+  series: (number | null)[],
+  moving: boolean[],
+): number[] | null {
+  const sorted = series
+    .filter((v, i): v is number => v !== null && moving[i])
+    .sort((a, b) => a - b);
+  if (sorted.length < 2) return null;
+  const at = (share: number) =>
+    sorted[Math.min(sorted.length - 1, Math.floor(share * sorted.length))];
+  const low = at(ZONE_TAIL),
+    high = at(1 - ZONE_TAIL);
+  const increasing = (limits: number[]) =>
+    limits.every((limit, i) => !i || limit > limits[i - 1]);
+  for (const step of [1, 0.1]) {
+    const limits = [1, 2, 3, 4].map(
+      (k) => Math.round((low + ((high - low) * k) / 5) / step) * step,
+    );
+    if (increasing(limits)) return limits.map((v) => Number(v.toFixed(1)));
+  }
+  return null;
+}
+
+/** Along-track ranges of each zone; points without a reading are left out. */
+export function zoneRanges(
+  activity: Activity,
+  series: (number | null)[],
+  limits: number[],
+): { from: number; to: number; kind: string }[] {
+  const out: { from: number; to: number; kind: string }[] = [];
+  const { distances } = activity;
+  for (let i = 0; i + 1 < distances.length; i++) {
+    const value = series[i];
+    const from = distances[i],
+      to = distances[i + 1];
+    if (value === null || to <= from) continue;
+    const kind = ZONES[limits.filter((limit) => value >= limit).length];
+    const previous = out.at(-1);
+    if (previous && previous.kind === kind && previous.to === from)
+      previous.to = to;
+    else out.push({ from, to, kind });
+  }
+  return out;
+}
+
+/**
+ * A series averaged over the last `window` ms at each point (power is too
+ * noisy to color point by point); never across a pause.
+ */
+export function smoothedSeries(
+  activity: Activity,
+  series: (number | null)[],
+  window: number,
+): (number | null)[] {
+  const { times } = activity;
+  let k = 0;
+  return series.map((value, i) => {
+    if (i && times[i] - times[i - 1] > PAUSE_GAP) k = i;
+    while (k < i && times[i] - times[k] > window) k++;
+    let sum = 0,
+      count = 0;
+    for (let n = k; n <= i; n++)
+      if (series[n] !== null) {
+        sum += series[n]!;
+        count++;
+      }
+    return value === null && !count ? null : count ? sum / count : null;
+  });
 }

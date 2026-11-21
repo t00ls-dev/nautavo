@@ -12,7 +12,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 - **Weather** along the route for the departure time, with wind relative to the route and risk alerts.
 - **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints.
 - **Navigate** on a phone with turn directions, a heading-up map, a way back to the route and optional spoken directions.
-- **Replay** recorded activities at their own pace, with moving time, speeds, heart rate, cadence, power and temperature, apart from the route you are planning.
+- **Replay** recorded activities at their own pace, with moving time, speeds, heart rate, cadence, power and temperature, charts with a shared cursor and the track colored by speed, heart rate, power or grade, apart from the route you are planning.
 - **Map layers:** standard, topographic and satellite, with route coloring by daylight, grade or surface.
 - **Save and share:** route links, saved routes and favorite places in this browser, and backups.
 - Works offline after the first visit, in English and Portuguese.

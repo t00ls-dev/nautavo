@@ -118,8 +118,9 @@ import {
 } from './point-placement';
 import { setupMapControls } from './map-controls';
 import { compactLayout, placeLibrary, setupPanel } from './panel';
-import { activityOf } from './activity';
+import { activityOf, activityProfile, type Activity } from './activity';
 import { setupActivityView } from './activity-ui';
+import { activityColorings } from './activity-colorings';
 import { icon, iconControl } from './icons';
 import { coordText, FAVORITE_ICONS } from './favorite-dialog';
 import { byId as $, optionalById, text } from './dom';
@@ -155,6 +156,8 @@ function status(message: string, error = false) {
 let locked = false;
 /** The open activity's track, set once the activity view exists (#156). */
 let activityCoords = (): Coord[] | null => null;
+/** The open recorded activity, once the activity view exists. */
+let openActivity = (): Activity | null => null;
 function editBlocked(): boolean {
   // An open activity leaves the planned route as it is (#156).
   if (activityCoords()) return true;
@@ -443,6 +446,7 @@ const overlays = setupRouteOverlays(map, {
     of: repeatsFor,
     split: splitByRepeat,
   },
+  activity: () => openActivity(),
 });
 const marks = setupRouteMarks(map, {
   route: () => current,
@@ -471,6 +475,9 @@ overlays.register({
     const loaded = elevation.profile();
     return loaded ? gradeRanges(loaded.profile, loaded.source) : [];
   },
+  // An activity's own recorded altitude, with no request.
+  activityRanges: (activity) =>
+    gradeRanges(activityProfile(activity), 'recorded'),
   activate: () => elevation.want(),
 });
 overlays.register({
@@ -500,6 +507,11 @@ overlays.register({
     Number.isFinite(departureTime()) ? null : 'Choose a departure date',
   ranges: (route) => routeDaylight(route, departureTime(), speedKmh).ranges,
 });
+for (const coloring of activityColorings({
+  activity: () => openActivity(),
+  locale: () => (state.language === 'pt' ? 'pt-BR' : 'en'),
+}))
+  overlays.register(coloring);
 // Registered after the weather handler, which stores the new departure first.
 $('departure').addEventListener('change', () => {
   if (current) renderSummary(current);
@@ -1996,6 +2008,7 @@ const navigation = setupNavigation({
 if (resumable) navigation.offerResume(resumable.progress);
 const activityView = setupActivityView({
   map,
+  overlays,
   locale: () => (state.language === 'pt' ? 'pt-BR' : 'en'),
   fit,
   replay: (activity, back) => navigation.replayActivity(activity, back),
@@ -2013,6 +2026,7 @@ const activityView = setupActivityView({
   status,
 });
 activityCoords = activityView.coords;
+openActivity = activityView.current;
 // Settings always open with the values in use; unapplied edits are dropped.
 $('open-settings').addEventListener('click', () => {
   settings();

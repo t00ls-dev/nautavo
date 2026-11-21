@@ -157,6 +157,11 @@ export interface MarkerOptions {
   z?: number;
   /** Kept whole inside the view when the route is fitted (`markerReach`). */
   framed?: boolean;
+  /**
+   * How far a framed marker reaches past its coordinate, when its content
+   * draws outside its size and anchor (a label placed by CSS).
+   */
+  reach?: Insets;
   /** Shown while `solo` keeps this group (the activity view, #156). */
   group?: string;
 }
@@ -516,10 +521,16 @@ export class PlannerMap {
         continue;
       const [w, h] = options.size,
         [ax, ay] = options.anchor;
-      reach.top = Math.max(reach.top, ay);
-      reach.right = Math.max(reach.right, w - ax);
-      reach.bottom = Math.max(reach.bottom, h - ay);
-      reach.left = Math.max(reach.left, ax);
+      const own = options.reach ?? {
+        top: ay,
+        right: w - ax,
+        bottom: h - ay,
+        left: ax,
+      };
+      reach.top = Math.max(reach.top, own.top);
+      reach.right = Math.max(reach.right, own.right);
+      reach.bottom = Math.max(reach.bottom, own.bottom);
+      reach.left = Math.max(reach.left, own.left);
     }
     return reach;
   }

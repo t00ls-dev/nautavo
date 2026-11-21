@@ -3,7 +3,12 @@ import { importTrackFile, readTrackFile } from '../src/core';
 import {
   activityAdvance,
   activityOf,
+  activityProfile,
   distanceAt,
+  movingPoints,
+  smoothedSeries,
+  zoneLimits,
+  zoneRanges,
   playedAt,
   playedLength,
   timeAtPlayed,
@@ -205,5 +210,89 @@ describe('activity from a recording (#156)', () => {
     const imported = importTrackFile(gpx(ride()));
     expect(imported.route.provider).toBe('Imported GPX');
     expect(JSON.stringify(imported)).not.toMatch(/"(time|hr|cadence)"/);
+  });
+});
+
+describe('activity charts and colorings (#156)', () => {
+  it('marks the points inside a stop as not moving', () => {
+    const activity = open(gpx(ride()));
+    const moving = movingPoints(activity);
+    // Points 0-9 move; 10 starts the pause (100 s to 230 s); 11 is after it.
+    expect(moving.slice(0, 10).every(Boolean)).toBe(true);
+    expect(moving[10]).toBe(false);
+    expect(moving.slice(11).every(Boolean)).toBe(true);
+  });
+
+  it('builds the profile of the recorded altitude by distance', () => {
+    const activity = open(gpx(ride()));
+    const profile = activityProfile(activity);
+    expect(profile).toHaveLength(activity.times.length);
+    expect(profile[0].at).toBe(0);
+    expect(profile.at(-1)!.at).toBeCloseTo(activity.distance, 6);
+    expect(profile.some((p) => p.gap)).toBe(false);
+  });
+
+  it('spaces five zones evenly inside the activity, rounded', () => {
+    const series = Array.from({ length: 101 }, (_, i) => 100 + i);
+    const moving = series.map(() => true);
+    // 5th and 95th percentiles: 105 and 195; limits every 18.
+    expect(zoneLimits(series, moving)).toEqual([123, 141, 159, 177]);
+  });
+
+  it('leaves stops and missing readings out of the zones', () => {
+    const series = [10, null, 20, 30, 900, 40];
+    const moving = [true, true, true, true, false, true];
+    const limits = zoneLimits(series, moving)!;
+    expect(limits.every((l) => l < 40)).toBe(true);
+  });
+
+  it('has no zones without a spread to color', () => {
+    const flat = [140, 140, 140, 140];
+    expect(
+      zoneLimits(
+        flat,
+        flat.map(() => true),
+      ),
+    ).toBeNull();
+    expect(zoneLimits([null, null], [true, true])).toBeNull();
+  });
+
+  it('keeps tenths where whole units would merge zones (a slow walk)', () => {
+    // 3 to 6 km/h: whole units would repeat limits.
+    const walk = Array.from({ length: 101 }, (_, i) => 3 + (i * 3) / 100);
+    expect(
+      zoneLimits(
+        walk,
+        walk.map(() => true),
+      ),
+    ).toEqual([3.7, 4.2, 4.8, 5.3]);
+  });
+
+  it('colors each stretch by the reading at its start, merged by zone', () => {
+    const activity = open(gpx(ride()));
+    // Heart rate 120-130 on the way out, 140 after the pause.
+    const ranges = zoneRanges(
+      activity,
+      activity.values.hr!,
+      [124, 128, 132, 136],
+    );
+    expect(ranges[0]).toMatchObject({ from: 0, kind: 'zone-1' });
+    expect(ranges.at(-1)!.kind).toBe('zone-5');
+    expect(ranges.at(-1)!.to).toBeCloseTo(activity.distance, 6);
+    // Consecutive stretches of one zone are one range.
+    for (let i = 1; i < ranges.length; i++)
+      expect(
+        ranges[i].kind === ranges[i - 1].kind &&
+          ranges[i].from === ranges[i - 1].to,
+      ).toBe(false);
+  });
+
+  it('averages a series over a time window, never across a pause', () => {
+    const activity = open(gpx(ride()));
+    // Power 200 before the pause and 100 after it.
+    const smoothed = smoothedSeries(activity, activity.values.power!, 30_000);
+    expect(smoothed[5]).toBe(200);
+    // Right after the pause, only readings after it count.
+    expect(smoothed[11]).toBe(100);
   });
 });

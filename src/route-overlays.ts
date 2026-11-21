@@ -1,3 +1,4 @@
+import type { Activity } from './activity';
 import { meters, type Coord, type Route } from './core';
 import { byId as $, text } from './dom';
 import { mapCorner } from './map-controls';
@@ -26,7 +27,13 @@ export interface Coloring {
   legend: { kind: string; label: string }[];
   /** Why the coloring cannot be drawn now, or null when it can. */
   unavailable(): string | null;
-  ranges(route: Route): Range[];
+  /** The ranges on the planned route; without it, activities only. */
+  ranges?(route: Route): Range[];
+  /**
+   * The ranges on an open recorded activity (#156); without it, the
+   * coloring is unavailable while one is open.
+   */
+  activityRanges?(activity: Activity): Range[];
   /** Called when the coloring is chosen, or already chosen on load. */
   activate?(): void;
   /**
@@ -35,7 +42,13 @@ export interface Coloring {
    * limits between them, each centred on its boundary. The full labels are
    * still read out to screen readers.
    */
-  scale?: { start: IconName; end: IconName; limits: string[] };
+  scale?: {
+    start: IconName;
+    /** The icon at the high end, or `unit` there instead. */
+    end?: IconName;
+    unit?: string;
+    limits: string[];
+  };
 }
 
 const longitudeDelta = (from: number, to: number) =>
@@ -115,6 +128,8 @@ function coloringColor(kind: string): string {
   probe.remove();
   return color || '#7d8890';
 }
+/** The overlay that draws the active coloring. */
+export const COLORING_OVERLAY = 'rg-coloring';
 /** Right of the travel direction on stretches used both ways (as route-marks). */
 export const PASS_OFFSET = 4;
 
@@ -127,12 +142,14 @@ export function setupRouteOverlays(
       of: (route: Route) => Range[];
       split: (ranges: Range[], repeated: Range[]) => Range[];
     };
+    /** The recorded activity open in the activity view, if any. */
+    activity?: () => Activity | null;
   },
 ) {
   // Above the route line, below marks and highlighted stretches.
-  const setLines = map.overlay('rg-coloring', RANK.coloring, () => [
+  const setLines = map.overlay(COLORING_OVERLAY, RANK.coloring, () => [
     {
-      id: 'rg-coloring',
+      id: COLORING_OVERLAY,
       type: 'line',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
@@ -145,6 +162,21 @@ export function setupRouteOverlays(
   ]);
   const colorings: Coloring[] = [];
   let active = readPreference(PREFERENCE.routeColoring) ?? 'none';
+  /**
+   * The coloring of an open activity: not stored, it starts from the
+   * planner's when that one colors activities too, and the planner's choice
+   * is back once the activity closes.
+   */
+  let activityActive: string | null = null;
+  const activity = () => deps.activity?.() ?? null;
+  const chosen = () => (activity() ? (activityActive ?? 'none') : active);
+  /** Why a coloring cannot draw what is open now, or null. */
+  const reason = (coloring: Coloring): string | null =>
+    activity()
+      ? coloring.activityRanges
+        ? coloring.unavailable()
+        : 'Not for recorded activities'
+      : coloring.unavailable();
   const menu = $('layers-menu');
   const group = document.createElement('div');
   group.className = 'coloring-group';
@@ -182,10 +214,14 @@ export function setupRouteOverlays(
     button.append(name, reason);
     button.onclick = () => {
       if (button.getAttribute('aria-disabled') === 'true') return;
-      active = id;
-      writePreference(PREFERENCE.routeColoring, id);
+      if (activity()) activityActive = id;
+      else {
+        active = id;
+        writePreference(PREFERENCE.routeColoring, id);
+      }
       refresh();
-      colorings.find((c) => c.id === id)?.activate?.();
+      // The activity view sends no request: activate loads planner data.
+      if (!activity()) colorings.find((c) => c.id === id)?.activate?.();
     };
     group.append(button);
   }
@@ -193,18 +229,31 @@ export function setupRouteOverlays(
 
   function draw() {
     legendBox.hidden = true;
-    const route = deps.route();
-    const coloring = colorings.find((c) => c.id === active);
-    if (!route || !coloring || coloring.unavailable()) {
+    const route = deps.route(),
+      open = activity();
+    const coloring = colorings.find((c) => c.id === chosen());
+    // Null when nothing can be drawn; empty while its data still loads,
+    // with the legend already shown.
+    const slices =
+      !coloring || reason(coloring)
+        ? null
+        : open
+          ? sliceByRanges(open.segments, coloring.activityRanges!(open))
+          : route && coloring.ranges
+            ? sliceByRanges(
+                route.segments,
+                deps.repeats
+                  ? deps.repeats.split(
+                      coloring.ranges(route),
+                      deps.repeats.of(route),
+                    )
+                  : coloring.ranges(route),
+              )
+            : null;
+    if (!coloring || !slices) {
       setLines([]);
       return;
     }
-    const slices = sliceByRanges(
-      route.segments,
-      deps.repeats
-        ? deps.repeats.split(coloring.ranges(route), deps.repeats.of(route))
-        : coloring.ranges(route),
-    );
     const colors = new Map<string, string>();
     setLines(
       slices.map(({ kind, repeated, coords }) => {
@@ -224,7 +273,7 @@ export function setupRouteOverlays(
     };
     legendBox.classList.toggle('route-legend-scale', !!coloring.scale);
     if (coloring.scale) {
-      const { start, end, limits } = coloring.scale;
+      const { start, end, unit, limits } = coloring.scale;
       const bar = document.createElement('span');
       bar.className = 'route-legend-bar';
       bar.append(...coloring.legend.map(({ kind }) => swatch(kind)));
@@ -240,7 +289,12 @@ export function setupRouteOverlays(
       const scale = document.createElement('span');
       scale.className = 'route-legend-scale-body';
       scale.setAttribute('aria-hidden', 'true');
-      scale.append(icon(start), bar, icon(end), ticks);
+      scale.append(
+        icon(start),
+        bar,
+        end ? icon(end) : text('span', unit ?? '', 'route-legend-unit'),
+        ticks,
+      );
       // The full labels, one per class, for screen readers (translated like
       // any other text); the drawn scale is hidden from them.
       legendBox.replaceChildren(
@@ -266,13 +320,15 @@ export function setupRouteOverlays(
         const coloring = colorings.find(
           (c) => c.id === button.dataset.coloring,
         );
-        const reason = coloring?.unavailable() ?? null;
+        // Activity-only colorings show only while an activity is open.
+        button.hidden = !!coloring && !coloring.ranges && !activity();
+        const why = coloring ? reason(coloring) : null;
         button.setAttribute(
           'aria-checked',
-          String(button.dataset.coloring === active),
+          String(button.dataset.coloring === chosen()),
         );
-        button.setAttribute('aria-disabled', String(!!reason));
-        button.querySelector('.coloring-reason')!.textContent = reason ?? '';
+        button.setAttribute('aria-disabled', String(!!why));
+        button.querySelector('.coloring-reason')!.textContent = why ?? '';
       });
     draw();
   }
@@ -285,7 +341,19 @@ export function setupRouteOverlays(
       if (coloring.id === active) coloring.activate?.();
     },
     refresh,
-    /** The id of the chosen coloring ('none' when off). */
+    /**
+     * An activity opened or closed: an opened one starts with the planner's
+     * coloring when it colors activities too.
+     */
+    activityChanged() {
+      const planner = colorings.find((c) => c.id === active);
+      activityActive =
+        activity() && planner?.activityRanges && !planner.unavailable()
+          ? active
+          : null;
+      refresh();
+    },
+    /** The id of the planner's coloring ('none' when off). */
     active: () => active,
   };
 }

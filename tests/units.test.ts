@@ -3,6 +3,7 @@ import {
   distanceLabel,
   precipitationLabel,
   shortDistanceLabel,
+  speedLabel,
   temperatureLabel,
 } from '../src/units';
 it('converts metric to miles with consistent precision and locale', () => {
@@ -20,4 +21,9 @@ it('converts weather temperature and precipitation with the temperature units', 
   expect(precipitationLabel(12.7, 'fahrenheit')).toBe('0.5 in');
   expect(precipitationLabel(0.2, 'fahrenheit', 'pt-BR')).toBe('0,01 in');
   expect(precipitationLabel(null)).toBe('- mm');
+});
+it('shows a recorded speed with one decimal in the distance units', () => {
+  expect(speedLabel(41.2 / 3.6, 'metric', 'pt-BR')).toBe('41,2 km/h');
+  expect(speedLabel(5)).toBe('18 km/h');
+  expect(speedLabel(20, 'imperial')).toBe('44.7 mph');
 });
