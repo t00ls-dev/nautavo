@@ -4337,6 +4337,11 @@ body.activity-open #undo,
 body.activity-open #lock {
   display: none;
 }
+/* Fit route is then alone in its group: rounded all round, since the hidden
+   tools after it still take the group's last corners. */
+body.activity-open #fit {
+  border-radius: 10px;
+}
 .activity h2 {
   margin: 0;
   font-size: 18px;

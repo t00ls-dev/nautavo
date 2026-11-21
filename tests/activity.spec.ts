@@ -45,6 +45,10 @@ test('a recording opens as an activity, apart from the planned route (#156)', as
   await expect(page.locator('#points')).toBeHidden();
   await expect(page.locator('#download')).toBeHidden();
   await expect(page.locator('#activity-replay')).toBeVisible();
+  // Fit route, alone in its group once Lock and Undo step aside, keeps
+  // every corner rounded.
+  await expect(page.locator('#undo')).toBeHidden();
+  await expect(page.locator('#fit')).toHaveCSS('border-radius', '10px');
   expect(page.url()).toBe(before);
   await expect(page.locator('.activity-marker')).toHaveCount(2);
   // Nothing about the activity is sent anywhere.
@@ -304,11 +308,10 @@ test('the recorded track is colored by its own zones while it is open (#156)', a
   await expect(option('activity-speed')).toBeVisible();
   await expect(option('activity-power')).toBeVisible();
   await expect(option('grade')).toHaveAttribute('aria-disabled', 'false');
-  // Planner data the view would have to request.
-  for (const id of ['surface', 'daylight']) {
-    await expect(option(id)).toHaveAttribute('aria-disabled', 'true');
-    await expect(option(id)).toContainText('Not for recorded activities');
-  }
+  // Only what the activity can draw is listed, not planner data the view
+  // would have to request.
+  for (const id of ['surface', 'daylight'])
+    await expect(option(id)).toBeHidden();
   await option('activity-hr').click();
   await expect(option('activity-hr')).toHaveAttribute('aria-checked', 'true');
   const legend = page.locator('.route-legend');
@@ -325,6 +328,25 @@ test('the recorded track is colored by its own zones while it is open (#156)', a
   await page.locator('#layers-toggle').click();
   await expect(option('none')).toHaveAttribute('aria-checked', 'true');
   await expect(option('activity-hr')).toBeHidden();
+});
+
+test('a value the activity did not record is not offered as a coloring (#156)', async ({
+  page,
+}) => {
+  await setup(page);
+  await importActivity(
+    page,
+    ride().map((sample) => {
+      delete sample.power;
+      return sample;
+    }),
+  );
+  await page.locator('#layers-toggle').click();
+  await expect(page.locator('[data-coloring="activity-hr"]')).toBeVisible();
+  await expect(page.locator('[data-coloring="activity-power"]')).toBeHidden();
+  await expect(
+    page.locator('.coloring-reason:not(:empty):visible'),
+  ).toHaveCount(0);
 });
 
 test('the fastest point, highest heart rate and highest point are marked (#156)', async ({

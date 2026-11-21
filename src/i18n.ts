@@ -624,7 +624,6 @@ const pt: Record<string, string> = {
   'Max. power': 'Pot. máx.',
   Speed: 'Velocidade',
   Charts: 'Gráficos',
-  'Not for recorded activities': 'Não vale para atividades gravadas',
   'Not recorded in this activity': 'Não gravado nesta atividade',
   'Too little variation to color': 'Variação pequena demais para colorir',
   'Use as route': 'Usar como rota',
