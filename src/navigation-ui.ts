@@ -82,7 +82,7 @@ import {
 } from './activity';
 import { distanceLabel, MISSING } from './units';
 import { distanceUnits } from './unit-preferences';
-import { activityValues, unitOf, valueLabel } from './activity-values';
+import { activityValues, PEAK_ICONS, peakLabel } from './activity-values';
 
 /**
  * Guided navigation screen (#31, first delivery): follows the route on screen
@@ -94,21 +94,17 @@ import { activityValues, unitOf, valueLabel } from './activity-values';
  * them the route and position still draw over a neutral background.
  */
 
-/** The highest values the activity replay announces as it passes them. */
-const PEAK_ICONS: Record<Peak['kind'], IconName> = {
-  speed: 'navigate',
-  hr: 'heart',
-  cadence: 'cadence',
-  power: 'power',
-  altitude: 'summit',
-};
+/** Short, as the data page's labels, so the notice keeps to one line. */
 const PEAK_TEXT: Record<Peak['kind'], string> = {
-  speed: 'Top speed',
-  hr: 'Highest heart rate',
-  cadence: 'Highest cadence',
-  power: 'Highest power',
+  speed: 'Max. speed',
+  hr: 'Max. HR',
+  cadence: 'Max. cadence',
+  power: 'Max. power',
   altitude: 'Highest point',
 };
+/** How long a replay notice stays, ms, and how many show at once. */
+const NOTICE_MS = 5000,
+  NOTICE_STACK = 4;
 /** Replay speeds: a route's (× 250 m/s), a recorded activity's (× real time). */
 const ROUTE_RATES = [1, 2, 5, 10],
   ACTIVITY_RATES = [1, 10, 60, 300];
@@ -271,7 +267,6 @@ export function setupNavigation(deps: {
     activityTime = 0,
     /** What gets the focus back when the activity replay ends. */
     activityBack: HTMLElement | null = null,
-    skippedTimer = 0,
     /** A travelled-line redraw is under way; the latest progress waits. */
     travelledBusy = false,
     travelledNext: number | null = null,
@@ -1505,28 +1500,62 @@ export function setupNavigation(deps: {
   const values = activityValues(deps.locale, () => {
     if (activity) render();
   });
+  /** Timers of the notices on screen, cleared when the replay ends. */
+  const noticeTimers = new Set<number>();
   /**
    * A short notice over the map for a few seconds: a stop the replay
-   * skipped, or a highest value it has just passed.
+   * skipped, or a highest value it has just passed. Notices close together
+   * stack, each leaving on its own time; the oldest goes first when the
+   * stack is full.
    */
-  function activityNotice(name: IconName, message: string) {
-    const chip = $('nav-activity-notice');
-    chip.replaceChildren(icon(name), text('span', message));
-    chip.hidden = false;
-    clearTimeout(skippedTimer);
-    skippedTimer = window.setTimeout(() => (chip.hidden = true), 4000);
+  function activityNotice(
+    name: IconName,
+    message: string,
+    value = '',
+    kind?: Peak['kind'],
+  ) {
+    const stack = $('nav-activity-notices');
+    const chip = document.createElement('p');
+    // A peak takes its color, as its label on the planner map.
+    chip.className = `nav-chip nav-activity-notice${kind ? ` activity-peak-${kind}` : ''}`;
+    chip.append(
+      icon(name),
+      text('span', message),
+      ...(value ? [text('b', value)] : []),
+    );
+    while (stack.children.length >= NOTICE_STACK)
+      stack.firstElementChild!.remove();
+    stack.append(chip);
+    const timer = window.setTimeout(() => {
+      noticeTimers.delete(timer);
+      chip.remove();
+    }, NOTICE_MS);
+    noticeTimers.add(timer);
   }
   const showSkipped = (stop: Stop) =>
     activityNotice(
       'pause',
       `Stop of ${Math.max(1, Math.round((stop.to - stop.from) / 60_000))} min skipped`,
     );
-  /** Announces the highest value the replay passed between two times. */
+  /**
+   * Announces the highest values the replay passed between two times, in
+   * the order it passed them (several at once at a high rate).
+   */
   function passPeaks(a: Activity, from: number, to: number) {
-    const peak = a.peaks.find((p) => p.time > from && p.time <= to);
-    if (!peak) return;
-    const shown = `${valueLabel(peak.kind, peak.value)} ${unitOf(peak.kind)}`;
-    activityNotice(PEAK_ICONS[peak.kind], `${PEAK_TEXT[peak.kind]}: ${shown}`);
+    const passed = a.peaks
+      .filter((p) => p.time > from && p.time <= to)
+      .sort((x, y) => x.time - y.time);
+    for (const peak of passed) announcePeak(peak);
+  }
+  function announcePeak(peak: Peak) {
+    // As the peak's label on the planner map.
+    const shown = peakLabel(peak, deps.locale());
+    activityNotice(
+      PEAK_ICONS[peak.kind],
+      PEAK_TEXT[peak.kind],
+      shown,
+      peak.kind,
+    );
   }
   /** Playback speeds: a route replay's, or real time × for an activity. */
   function setRates(rates: number[], chosen: number) {
@@ -1543,8 +1572,9 @@ export function setupNavigation(deps: {
   function endActivity() {
     activity = null;
     activityBack = null;
-    clearTimeout(skippedTimer);
-    $('nav-activity-notice').hidden = true;
+    for (const timer of noticeTimers) clearTimeout(timer);
+    noticeTimers.clear();
+    $('nav-activity-notices').replaceChildren();
     values.end();
     setRates(ROUTE_RATES, 1);
   }

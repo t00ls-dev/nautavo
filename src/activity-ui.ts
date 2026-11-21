@@ -1,5 +1,8 @@
-import type { Activity } from './activity';
+import { distanceAt, type Activity } from './activity';
+import { setupActivityCharts } from './activity-charts';
+import { PEAK_ICONS, peakLabel } from './activity-values';
 import type { Coord } from './core';
+import { indexTrack, pointAtDistance } from './track-position';
 import { byId as $, text } from './dom';
 import { t } from './i18n';
 import { icon, type IconName } from './icons';
@@ -9,10 +12,15 @@ import {
   type MapMarker,
   type PlannerMap,
 } from './planner-map';
-import { distanceLabel, elevationLabel, temperatureLabel } from './units';
+import {
+  distanceLabel,
+  elevationLabel,
+  speedLabel,
+  temperatureLabel,
+} from './units';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
 import { routeLineColor } from './map-layers';
-import { speedFromKmh } from './travel-time';
+import { COLORING_OVERLAY } from './route-overlays';
 import { navigationDurationLabel } from './navigation';
 
 const durationLabel = (ms: number) => navigationDurationLabel(ms / 1000);
@@ -29,9 +37,25 @@ const durationLabel = (ms: number) => navigationDurationLabel(ms / 1000);
 /** Overlay and marker group of the recorded track. */
 const OVERLAY = 'rg-activity',
   GROUP = 'activity';
+/** The peaks marked on the map, in this order. */
+const PEAKS = ['speed', 'hr', 'altitude'] as const;
+/** Room between the track and a peak's label, px (as the CSS offset). */
+const PEAK_GAP = 12;
+/**
+ * How far a peak's label reaches from its point, below or above it: the
+ * gap and the 24 px label, and half its usual width to each side, px.
+ */
+const PEAK_REACH = {
+  top: PEAK_GAP + 24,
+  bottom: PEAK_GAP + 24,
+  left: 56,
+  right: 56,
+};
 
 export function setupActivityView(deps: {
   map: PlannerMap;
+  /** Route coloring, which colors the recorded track while it is open. */
+  overlays: { activityChanged(): void; refresh(): void };
   locale: () => string;
   /** Frames the map on the open activity (or the route once closed). */
   fit: () => void;
@@ -59,8 +83,14 @@ export function setupActivityView(deps: {
     },
   ]);
   let open: Activity | null = null,
-    markers: MapMarker[] = [];
+    markers: MapMarker[] = [],
+    peakLabels: { coord: Coord; chip: HTMLElement }[] = [];
   const play = $<HTMLButtonElement>('activity-replay');
+  const charts = setupActivityCharts({
+    map,
+    locale: deps.locale,
+    group: GROUP,
+  });
 
   // The start, a dot, draws above the end, a ring around it: a ride that
   // ends where it started shows both.
@@ -76,13 +106,88 @@ export function setupActivityView(deps: {
     });
   };
 
+  /**
+   * The fastest point, the highest heart rate and the highest point on the
+   * map, labeled with their value. The summary has them as text, so the
+   * labels are hidden from assistive technology. Two labels that would
+   * cover each other point from opposite sides of the track (`placePeaks`).
+   */
+  function peakMarkers(activity: Activity): MapMarker[] {
+    const index = indexTrack(activity.segments);
+    const shown = PEAKS.flatMap((kind) => {
+      const peak = activity.peaks.find((p) => p.kind === kind);
+      const point =
+        peak && pointAtDistance(index, distanceAt(activity, peak.time));
+      return peak && point ? [{ peak, coord: point.coord }] : [];
+    });
+    peakLabels = [];
+    return shown.map(({ peak, coord }) => {
+      const chip = document.createElement('span');
+      chip.className = `map-extreme activity-peak activity-peak-${peak.kind}`;
+      chip.append(
+        icon(PEAK_ICONS[peak.kind]),
+        text('span', peakLabel(peak, deps.locale())),
+      );
+      chip.setAttribute('aria-hidden', 'true');
+      peakLabels.push({ coord, chip });
+      return map.marker(coord, {
+        className: 'map-extreme-marker',
+        html: chip,
+        size: [0, 0],
+        anchor: [0, 0],
+        z: 4,
+        framed: true,
+        reach: PEAK_REACH,
+        group: GROUP,
+      });
+    });
+  }
+
+  /**
+   * Each peak label below its point, or above it where it would cover a
+   * label placed before; again after every zoom or turn of the map.
+   */
+  function placePeaks() {
+    const placed: {
+      left: number;
+      right: number;
+      top: number;
+      bottom: number;
+    }[] = [];
+    for (const { coord, chip } of peakLabels) {
+      const p = map.project(coord);
+      if (!p) return;
+      const w = chip.offsetWidth,
+        h = chip.offsetHeight;
+      const box = (top: number) => ({
+        left: p.x - w / 2,
+        right: p.x + w / 2,
+        top,
+        bottom: top + h,
+      });
+      const covers = (b: (typeof placed)[number]) =>
+        placed.some(
+          (o) =>
+            b.left < o.right &&
+            o.left < b.right &&
+            b.top < o.bottom &&
+            o.top < b.bottom,
+        );
+      const below = box(p.y + PEAK_GAP),
+        above = box(p.y - PEAK_GAP - h);
+      const up = covers(below) && !covers(above);
+      chip.classList.toggle('above', up);
+      placed.push(up ? above : below);
+    }
+  }
+  map.on('zoomend', placePeaks);
+  map.on('rotateend', placePeaks);
+
   function summary(activity: Activity) {
     const locale = deps.locale(),
       units = distanceUnits();
     const speed = (metersPerSecond: number) =>
-      `${speedFromKmh(metersPerSecond * 3.6, units).toLocaleString(locale, {
-        maximumFractionDigits: 1,
-      })} ${units === 'imperial' ? 'mph' : 'km/h'}`;
+      speedLabel(metersPerSecond, units, locale);
     const stat = (label: string, value: string, note?: string) => {
       const item = document.createElement('div');
       const term = document.createElement('dt');
@@ -174,8 +279,16 @@ export function setupActivityView(deps: {
     summary(open);
     setLine(activity.segments.map((segment) => lineFeature(segment)));
     const flat = activity.segments.flat();
-    markers = [endMarker(flat[0], 'start'), endMarker(flat.at(-1)!, 'end')];
-    map.solo([OVERLAY, GROUP]);
+    markers = [
+      endMarker(flat[0], 'start'),
+      endMarker(flat.at(-1)!, 'end'),
+      ...peakMarkers(open),
+    ];
+    // The route coloring colors the recorded track too.
+    map.solo([OVERLAY, GROUP, COLORING_OVERLAY]);
+    deps.overlays.activityChanged();
+    charts.open(open);
+    placePeaks();
     deps.status('Activity opened. Its times and values stay on this device.');
     deps.fit();
   }
@@ -188,7 +301,9 @@ export function setupActivityView(deps: {
     setLine([]);
     for (const marker of markers) marker.remove();
     markers = [];
+    charts.clear();
     map.solo(null);
+    deps.overlays.activityChanged();
     if (restore) {
       deps.restore();
       deps.fit();
@@ -212,7 +327,13 @@ export function setupActivityView(deps: {
     coords: (): Coord[] | null => open?.segments.flat() ?? null,
     /** The summary again, after a change of units or language. */
     refresh: () => {
-      if (open) summary(open);
+      if (!open) return;
+      summary(open);
+      for (const marker of markers.splice(2)) marker.remove();
+      markers.push(...peakMarkers(open));
+      placePeaks();
+      charts.refresh(open);
+      deps.overlays.refresh();
     },
   };
 }

@@ -1,3 +1,5 @@
+import { speedFromKmh } from './travel-time';
+
 export type DistanceUnits = 'metric' | 'imperial';
 export type TemperatureUnits = 'celsius' | 'fahrenheit';
 export function distanceLabel(
@@ -8,6 +10,14 @@ export function distanceLabel(
 ): string {
   const value = units === 'imperial' ? meters / 1609.344 : meters / 1000;
   return `${value.toLocaleString(locale, { minimumFractionDigits: precision === 2 ? 2 : 0, maximumFractionDigits: precision })} ${units === 'imperial' ? 'mi' : 'km'}`;
+}
+/** A recorded speed in km/h or mph with one decimal: 41.2 km/h. */
+export function speedLabel(
+  metersPerSecond: number,
+  units: DistanceUnits = 'metric',
+  locale = 'en',
+): string {
+  return `${speedFromKmh(metersPerSecond * 3.6, units).toLocaleString(locale, { maximumFractionDigits: 1 })} ${units === 'imperial' ? 'mph' : 'km/h'}`;
 }
 /** Compact step length: meters (or feet) for short steps, one decimal otherwise. */
 export function stepDistanceLabel(

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { base, coveredControls, overlapping } from './app-helpers';
 import { mapReady, mockBasemap } from './map-helpers';
-import { activityGpx, ride } from './activity-fixture';
+import { activityGpx, extremeRide, ride } from './activity-fixture';
 
 /** Requests to the routing, search, weather and elevation services. */
 async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
@@ -21,11 +21,11 @@ async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
   await mapReady(page);
   return services;
 }
-const importActivity = (page: Page) =>
+const importActivity = (page: Page, samples = ride()) =>
   page.locator('#import').setInputFiles({
     name: 'ride.gpx',
     mimeType: 'application/gpx+xml',
-    buffer: Buffer.from(activityGpx(ride())),
+    buffer: Buffer.from(activityGpx(samples)),
   });
 
 test('a recording opens as an activity, apart from the planned route (#156)', async ({
@@ -174,14 +174,24 @@ test.describe('activity replay on a phone', () => {
     await page.locator('#nav-replay-rate').selectOption('10');
     await page.locator('#nav-replay-toggle').click();
     await page.clock.runFor(2000);
-    await expect(page.locator('#nav-activity-notice')).toHaveText(
+    const notices = page.locator('#nav-activity-notices > .nav-chip');
+    // Records passed together stack: the heart rate reached its highest
+    // right after the pause.
+    await expect(notices).toHaveText([
+      'Max. HR140 bpm',
       'Stop of 2 min skipped',
-    );
-    // Passing the highest point says so.
+    ]);
+    // Passing the highest point says so, in the color of its map label.
     await page.clock.runFor(4000);
-    await expect(page.locator('#nav-activity-notice')).toHaveText(
-      'Highest point: 30 m',
-    );
+    const notice = notices.last();
+    await expect(notice.locator('span')).toHaveText('Highest point');
+    await expect(notice.locator('b')).toHaveText('30 m');
+    await expect(notice).toHaveClass(/activity-peak-altitude/);
+    await expect(notice).toHaveCSS('border-top-color', 'rgb(116, 66, 11)');
+    // The two before it have left; it leaves 5 s after it came.
+    await expect(notices).toHaveCount(1);
+    await page.clock.runFor(5000);
+    await expect(notices).toHaveCount(0);
     await page.locator('#nav-stop').click();
     await expect(screen).toBeHidden();
     await expect(page.locator('#activity-replay')).toBeFocused();
@@ -234,3 +244,197 @@ for (const [width, height] of [
       ).toEqual([]);
       expect(await coveredControls(page, '#nav-screen')).toEqual([]);
     });
+
+test('charts share one cursor that shows the point on the map (#156)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const services = await setup(page);
+  await importActivity(page);
+  // Open on a wide screen, one chart per channel recorded.
+  await expect(page.locator('#activity-charts-row')).toHaveAttribute('open');
+  await expect(page.locator('.activity-chart-head > .sr-only')).toHaveText([
+    'Altitude',
+    'Speed',
+    'Heart rate',
+    'Cadence',
+    'Power',
+  ]);
+  await expect(page.locator('.activity-chart-hr b')).toHaveText(
+    'avg. 132 · max. 140 bpm',
+  );
+  // The 2 min pause takes no distance: a tick at its place on every chart.
+  await expect(page.locator('.chart-tick')).toHaveCount(5);
+  const svg = page.locator('.activity-chart-hr .activity-chart-svg');
+  const box = (await svg.boundingBox())!;
+  // A fifth of the way: 200 m, before the pause, heart rate 124.
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2);
+  await expect(page.locator('.activity-chart-hr b')).toHaveText('124 bpm');
+  await expect(page.locator('.activity-chart-power b')).toHaveText('200 W');
+  // Every chart's guide at that point (a vertical line has no width to see).
+  expect(
+    await page
+      .locator('.activity-chart .chart-guide')
+      .evaluateAll((lines) =>
+        lines.map((l) => (l as SVGLineElement).style.display),
+      ),
+  ).toEqual(['', '', '', '', '']);
+  await expect(page.locator('.activity-chart-readout')).toContainText('0.2 km');
+  await expect(page.locator('div.chart-cursor')).toHaveCount(1);
+  await page.mouse.move(box.x + box.width / 2, box.y - 200);
+  await expect(page.locator('div.chart-cursor')).toHaveCount(0);
+  await expect(page.locator('.activity-chart-hr b')).toHaveText(
+    'avg. 132 · max. 140 bpm',
+  );
+  expect(services.filter((url) => !url.includes('tiles'))).toEqual([]);
+});
+
+test('the recorded track is colored by its own zones while it is open (#156)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await setup(page);
+  const option = (id: string) => page.locator(`[data-coloring="${id}"]`);
+  await page.locator('#layers-toggle').click();
+  // The activity colorings show only while an activity is open.
+  await expect(option('activity-hr')).toBeHidden();
+  await page.keyboard.press('Escape');
+  await importActivity(page);
+  await page.locator('#layers-toggle').click();
+  await expect(option('activity-speed')).toBeVisible();
+  await expect(option('activity-power')).toBeVisible();
+  await expect(option('grade')).toHaveAttribute('aria-disabled', 'false');
+  // Planner data the view would have to request.
+  for (const id of ['surface', 'daylight']) {
+    await expect(option(id)).toHaveAttribute('aria-disabled', 'true');
+    await expect(option(id)).toContainText('Not for recorded activities');
+  }
+  await option('activity-hr').click();
+  await expect(option('activity-hr')).toHaveAttribute('aria-checked', 'true');
+  const legend = page.locator('.route-legend');
+  await expect(legend).toBeVisible();
+  await expect(legend.locator('.route-legend-unit')).toHaveText('bpm');
+  await expect(legend.locator('.route-legend-tick')).toHaveCount(4);
+  await page.keyboard.press('Escape');
+  // Not a device preference: closing the activity brings the planner's back.
+  expect(
+    await page.evaluate(() => localStorage.getItem('route-coloring')),
+  ).toBeNull();
+  await page.locator('#activity-close').click();
+  await expect(legend).toBeHidden();
+  await page.locator('#layers-toggle').click();
+  await expect(option('none')).toHaveAttribute('aria-checked', 'true');
+  await expect(option('activity-hr')).toBeHidden();
+});
+
+test('the fastest point, highest heart rate and highest point are marked (#156)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await setup(page);
+  await importActivity(page, extremeRide());
+  const peaks = page.locator('.activity-peak');
+  await expect(peaks).toHaveCount(3);
+  await expect(page.locator('.activity-peak-hr')).toHaveText('190 bpm');
+  await expect(page.locator('.activity-peak-altitude')).toHaveText('2,400 m');
+  // Each label whole on the map and apart from the others.
+  expect(await overlapping(page, ['.activity-peak'])).toEqual([]);
+  const map = (await page.locator('#map').boundingBox())!;
+  for (const peak of await peaks.all()) {
+    const b = (await peak.boundingBox())!;
+    expect(b.x).toBeGreaterThanOrEqual(map.x);
+    expect(b.y).toBeGreaterThanOrEqual(map.y);
+    expect(b.x + b.width).toBeLessThanOrEqual(map.x + map.width);
+    expect(b.y + b.height).toBeLessThanOrEqual(map.y + map.height);
+  }
+  await page.locator('#activity-close').click();
+  await expect(peaks).toHaveCount(0);
+});
+
+for (const [width, height] of [
+  [320, 640],
+  [360, 740],
+  [390, 844],
+  [430, 932],
+  [667, 375],
+  [1440, 900],
+] as const)
+  for (const lang of ['en', 'pt'] as const)
+    test(`the charts of a long recording fit at ${width}x${height} in ${lang} (#156)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await setup(page, lang);
+      // Miles: the longest speed and distance labels.
+      await page.addInitScript(() =>
+        localStorage.setItem('distance-units', 'imperial'),
+      );
+      await page.reload();
+      await mapReady(page);
+      await importActivity(page, extremeRide());
+      const row = page.locator('#activity-charts-row');
+      // Closed on a phone, where the summary fills the half sheet; open on a
+      // wide screen.
+      if (width < 760 || height <= 500) {
+        await expect(row).not.toHaveAttribute('open');
+        await row.locator('summary').click();
+      } else await expect(row).toHaveAttribute('open');
+      await expect(page.locator('.activity-chart')).toHaveCount(5);
+      const clipped = await page.evaluate(() =>
+        [
+          ...document.querySelectorAll(
+            '.activity-chart-head, .chart-axis, .activity-chart-readout',
+          ),
+        ]
+          .filter((e) => e.scrollWidth > e.clientWidth + 1)
+          .map((e) => e.textContent),
+      );
+      expect(clipped).toEqual([]);
+      // Every header on one line.
+      const tall = await page
+        .locator('.activity-chart-head')
+        .evaluateAll(
+          (heads) =>
+            heads.filter((h) => h.getBoundingClientRect().height > 24).length,
+        );
+      expect(tall).toBe(0);
+    });
+
+test.describe('activity replay notices', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  test('records passed together stack and leave on their own (#156)', async ({
+    page,
+  }) => {
+    await page.clock.install({ time: new Date('2026-11-20T09:00:00-03:00') });
+    await setup(page);
+    // Heart rate, cadence and power all peak on the last point.
+    await importActivity(page, extremeRide());
+    const topSpeed = await page
+      .locator('.map-extreme.activity-peak-speed')
+      .textContent();
+    await page.locator('#activity-replay').click();
+    await page.locator('#nav-replay-rate').selectOption('300');
+    await page.locator('#nav-replay-toggle').click();
+    await page.clock.runFor(1000);
+    const notices = page.locator('#nav-activity-notices > .nav-chip');
+    await expect(notices.locator('span')).toHaveText([
+      'Max. speed',
+      'Max. HR',
+      'Max. cadence',
+      'Max. power',
+    ]);
+    // The same value as the peak's label on the planner map.
+    await expect(notices.first().locator('b')).toHaveText(topSpeed!);
+    // Each in its value's color, apart from the others.
+    await expect(notices.nth(1)).toHaveClass(/activity-peak-hr/);
+    expect(
+      await overlapping(page, ['#nav-activity-notices > .nav-chip']),
+    ).toEqual([]);
+    await page.clock.runFor(5000);
+    await expect(notices).toHaveCount(0);
+  });
+});

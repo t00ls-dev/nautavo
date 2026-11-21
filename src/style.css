@@ -28,6 +28,12 @@
   --color-warning: #74420b;
   --color-warning-bg: #fff5e1;
   --color-warning-border: #d9a85a;
+  /* Recorded values of an activity (#156): its charts, peaks on the map and
+     replay notices, one color each, 6:1 or more on white. */
+  --color-speed: #0b5ea8;
+  --color-hr: #b71c1c;
+  --color-cadence: #9a5000;
+  --color-power: #6b4bb8;
   --radius: 8px;
   --radius-large: 12px;
   --shadow-control: 0 1px 4px #1b29344d;
@@ -2763,6 +2769,21 @@ input[type='range'].range-input:disabled {
   --route-coloring: #b9c0c7;
 }
 /* Grade: blue descents, gray flat, orange and red climbs (route-overlays). */
+.route-coloring-zone-1 {
+  --route-coloring: #2f6db5;
+}
+.route-coloring-zone-2 {
+  --route-coloring: #2e9a5b;
+}
+.route-coloring-zone-3 {
+  --route-coloring: #d9a400;
+}
+.route-coloring-zone-4 {
+  --route-coloring: #e06a10;
+}
+.route-coloring-zone-5 {
+  --route-coloring: #b8261c;
+}
 .route-coloring-steep-down {
   --route-coloring: #1a4f8f;
 }
@@ -2843,7 +2864,7 @@ input[type='range'].range-input:disabled {
    centred on the tick itself. */
 .route-legend-scale-body {
   display: grid;
-  grid-template-columns: 18px 170px 18px;
+  grid-template-columns: 18px 170px auto;
   grid-template-rows: auto auto;
   align-items: center;
   column-gap: 6px;
@@ -2852,6 +2873,11 @@ input[type='range'].range-input:disabled {
   width: 18px;
   height: 18px;
   color: var(--color-text-muted);
+}
+.route-legend-unit {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 .route-legend-bar {
   display: flex;
@@ -2903,31 +2929,37 @@ input[type='range'].range-input:disabled {
   margin-top: 6px;
   padding-top: 6px;
 }
-/* Elevation profile (elevation-ui.ts). */
-.elevation-frame {
+/* Profile charts (profile-chart.ts): the Elevation row and the activity
+   view's charts. */
+.chart-frame {
   position: relative;
   touch-action: pan-y;
 }
-.elevation-svg {
+.chart-svg {
   display: block;
   width: 100%;
-  height: 96px;
 }
-.elevation-area {
-  fill: #12796e33;
+.chart-area {
+  fill: var(--chart-color);
+  fill-opacity: 0.2;
 }
-.elevation-line {
+.chart-line {
   fill: none;
-  stroke: #12796e;
+  stroke: var(--chart-color);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
-.elevation-guide {
-  stroke: #0b72c6;
+.chart-guide {
+  stroke: var(--chart-guide);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
-.elevation-labels {
+.chart-tick {
+  stroke: var(--color-text-muted);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.chart-labels {
   position: absolute;
   inset: 0 auto 0 0;
   display: flex;
@@ -2936,12 +2968,30 @@ input[type='range'].range-input:disabled {
   pointer-events: none;
   font-size: 11px;
   color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
-.elevation-labels span {
+.chart-labels span {
   background: #fffc;
   padding: 0 2px;
 }
-.elevation-axis,
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+/* The point under a chart's cursor, on the map. */
+.chart-cursor {
+  box-sizing: border-box;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #0b72c6;
+}
+/* Elevation profile (elevation-ui.ts). */
+.elevation-svg {
+  --chart-color: #12796e;
+  --chart-guide: #0b72c6;
+  height: 96px;
+}
 .elevation-readout {
   margin: 2px 0;
 }
@@ -3025,12 +3075,14 @@ input[type='range'].range-input:disabled {
   width: 16px;
   height: 16px;
 }
-/* Highest and lowest points: a label below the route point, pointing at it;
-   route point pins stand above the route, so they never cover it. */
-.elevation-extreme-marker {
+/* Highest and lowest points of the Elevation row and the peaks of a
+   recorded activity: a label below the point, pointing at it (above, with
+   `.above`, where it would cover another); route point pins stand above
+   the route, so they never cover it. */
+.map-extreme-marker {
   overflow: visible;
 }
-.elevation-extreme {
+.map-extreme {
   --extreme: #74420b;
   position: absolute;
   display: flex;
@@ -3051,11 +3103,11 @@ input[type='range'].range-input:disabled {
 }
 /* Trimmed to the digits' cap height, so they centre on the icon and the
    border whatever the font's ascent and descent. */
-.elevation-extreme > span {
+.map-extreme > span {
   text-box: trim-both cap alphabetic;
 }
 /* The pointer: a small triangle from the label up to the route point. */
-.elevation-extreme::before {
+.map-extreme::before {
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -3066,16 +3118,16 @@ input[type='range'].range-input:disabled {
   content: '';
   transform: translateX(-50%);
 }
-.elevation-extreme svg {
+.map-extreme svg {
   display: block;
   flex: none;
   width: 16px;
   height: 16px;
 }
-.elevation-extreme svg {
+.map-extreme svg {
   color: var(--extreme);
 }
-.elevation-extreme.lowest {
+.map-extreme.lowest {
   --extreme: #0b5ea8;
 }
 /* Elevation of one map point, asked from the point menu. */
@@ -3109,12 +3161,6 @@ input[type='range'].range-input:disabled {
 }
 #elevation-status:empty {
   display: none;
-}
-.elevation-cursor {
-  box-sizing: border-box;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  background: #0b72c6;
 }
 
 /* Adjustments to the feature rules above for the current layout. */
@@ -3637,6 +3683,35 @@ dialog:modal:not(.nav-screen) {
   flex: none;
   width: 18px;
   height: 18px;
+}
+/* The activity replay's notices (#156), stacked in arrival order. */
+.nav-activity-notices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.nav-activity-notices:empty {
+  display: none;
+}
+/* Each notice is drawn as the peak labels on the planner map, white with the value's color on its border and icon, the
+   value in bold; a skipped stop in neutral grey. */
+.nav-activity-notice {
+  --extreme: var(--color-border-strong);
+  gap: 6px;
+  padding: 6px 12px 6px 10px;
+  border: 2px solid var(--extreme);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.nav-activity-notice .button-icon {
+  color: var(--extreme);
+}
+.nav-activity-notice b {
+  white-space: nowrap;
 }
 /* Route overview and compass, a column at the top right of the map. */
 .nav-map-tools {
@@ -4293,6 +4368,88 @@ body.activity-open #lock {
 .activity-values b {
   margin-left: auto;
   white-space: nowrap;
+}
+.activity-charts-row {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.activity-charts-row[open] {
+  padding-bottom: 10px;
+}
+.activity-chart-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.activity-chart-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.activity-chart-head .button-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--chart-color);
+}
+.activity-chart-head b {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.activity-chart {
+  --chart-guide: var(--color-text);
+}
+.activity-chart-altitude {
+  --chart-color: #12796e;
+}
+.activity-chart-speed {
+  --chart-color: var(--color-speed);
+}
+.activity-chart-hr {
+  --chart-color: var(--color-hr);
+}
+.activity-chart-cadence {
+  --chart-color: var(--color-cadence);
+}
+.activity-chart-power {
+  --chart-color: var(--color-power);
+}
+.activity-chart-svg {
+  height: 56px;
+}
+.activity-chart-readout {
+  min-height: 1.4em;
+  margin: 0 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+/* A peak's color, on the map (`map-extreme`) and in the replay's notice;
+   the highest point keeps the elevation extremes' brown. */
+.activity-peak-speed {
+  --extreme: var(--color-speed);
+}
+.activity-peak-hr {
+  --extreme: var(--color-hr);
+}
+.activity-peak-cadence {
+  --extreme: var(--color-cadence);
+}
+.activity-peak-power {
+  --extreme: var(--color-power);
+}
+.activity-peak-altitude {
+  --extreme: #74420b;
+}
+.map-extreme.above {
+  transform: translate(-50%, calc(-100% - 12px));
+}
+.map-extreme.above::before {
+  top: 100%;
+  bottom: auto;
+  border-top-color: var(--extreme);
+  border-bottom-color: transparent;
 }
 .activity-actions {
   display: flex;

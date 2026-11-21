@@ -176,6 +176,10 @@
             <p id="activity-when" class="hint"></p>
             <dl id="activity-stats" class="stats"></dl>
             <ul id="activity-values" class="activity-values"></ul>
+            <details id="activity-charts-row" class="activity-charts-row">
+              <summary>Charts</summary>
+              <div id="activity-charts"></div>
+            </details>
             <p class="hint">
               Times and sensor values are read on this device only and are not
               saved.
@@ -786,7 +790,11 @@
       <div id="nav-stage" class="nav-stage">
         <div id="nav-rotor" class="nav-rotor"><div id="nav-map"></div></div>
         <div class="nav-chips">
-          <p id="nav-activity-notice" class="nav-chip" hidden role="status"></p>
+          <div
+            id="nav-activity-notices"
+            class="nav-activity-notices"
+            role="status"
+          ></div>
           <p id="nav-sun" class="nav-chip" hidden></p>
           <p id="nav-waiting" class="nav-chip" hidden>
             <span>Waiting for GPS</span>

@@ -18,6 +18,8 @@ export interface Sample {
   cad?: number;
   power?: number;
   temp?: number;
+  /** Meters; 10 m plus one per step when left out. */
+  ele?: number;
 }
 export const iso = (seconds: number) =>
   new Date(ACTIVITY_START + seconds * 1000).toISOString();
@@ -28,7 +30,7 @@ export function activityGpx(samples: Sample[], { times = true } = {}): string {
     const [lat, lon] = at(s.at * STEP, 0);
     const value = (tag: string, v: number | undefined) =>
       v === undefined ? '' : `<${tag}>${v}</${tag}>`;
-    return `<trkpt lat="${lat}" lon="${lon}"><ele>${10 + s.at}</ele>${
+    return `<trkpt lat="${lat}" lon="${lon}"><ele>${s.ele ?? 10 + s.at}</ele>${
       times ? `<time>${iso(s.t)}</time>` : ''
     }<extensions>${value('power', s.power)}<gpxtpx:TrackPointExtension>${value(
       'gpxtpx:atemp',
@@ -62,4 +64,21 @@ export function ride(): Sample[] {
       temp: 27,
     });
   return samples;
+}
+
+/**
+ * The longest values a recording gives: every channel, four-digit power and
+ * altitude, a negative temperature, a fast descent; 40 steps 5 s apart.
+ */
+export function extremeRide(): Sample[] {
+  return Array.from({ length: 41 }, (_, i) => ({
+    t: i * 5,
+    // 10 m/s, then 20 m/s (72 km/h) downhill.
+    at: i < 20 ? i : 20 + (i - 20) * 2,
+    hr: 150 + i,
+    cad: 60 + i,
+    power: 900 + i * 20,
+    temp: -12,
+    ele: 2400 - i * 5,
+  }));
 }
