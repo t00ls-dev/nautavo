@@ -170,12 +170,14 @@ export function setupRouteOverlays(
   let activityActive: string | null = null;
   const activity = () => deps.activity?.() ?? null;
   const chosen = () => (activity() ? (activityActive ?? 'none') : active);
-  /** Why a coloring cannot draw what is open now, or null. */
+  /**
+   * Why a coloring cannot draw what is open now, or null. While an activity
+   * is open, a coloring that cannot color it is left out of the menu
+   * instead of listed with its reason.
+   */
   const reason = (coloring: Coloring): string | null =>
-    activity()
-      ? coloring.activityRanges
-        ? coloring.unavailable()
-        : 'Not for recorded activities'
+    activity() && !coloring.activityRanges
+      ? 'planner only'
       : coloring.unavailable();
   const menu = $('layers-menu');
   const group = document.createElement('div');
@@ -320,9 +322,10 @@ export function setupRouteOverlays(
         const coloring = colorings.find(
           (c) => c.id === button.dataset.coloring,
         );
-        // Activity-only colorings show only while an activity is open.
-        button.hidden = !!coloring && !coloring.ranges && !activity();
         const why = coloring ? reason(coloring) : null;
+        // Activity-only colorings show only while an activity is open, and
+        // an activity's menu lists only the colorings it can draw.
+        button.hidden = !!coloring && (activity() ? !!why : !coloring.ranges);
         button.setAttribute(
           'aria-checked',
           String(button.dataset.coloring === chosen()),
