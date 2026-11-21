@@ -1,7 +1,7 @@
-// Optional regression with real recorded tracks kept only on this machine.
-// Default runs skip it: `npm run test:tracks` reads the GPX, FIT and TCX files
-// in the ignored `.audit.local/tracks/` folder, never committed since they
-// hold the traveler's locations.
+// Optional regression with real recorded tracks, which hold the traveler's
+// locations and are never committed. Default runs skip it:
+// `TRACKS=<folder> npm run test:tracks` reads the GPX, FIT and TCX files in the
+// folder that `TRACKS` names.
 // @vitest-environment node
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -10,8 +10,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { defaults, importTrackFile } from '../src/core';
 import { checkTrack } from '../src/track-check';
 
-const DIR = '.audit.local/tracks';
-const enabled = process.env.TRACKS === '1';
+const DIR = process.env.TRACKS ?? '';
+const enabled = DIR !== '';
 const files =
   enabled && existsSync(DIR)
     ? readdirSync(DIR).filter((f) => /\.(gpx|fit|tcx)(\.gz)?$|\.zip$/i.test(f))
@@ -39,8 +39,9 @@ function cachedFetch(name: string) {
   });
 }
 
-describe.skipIf(!enabled)('local tracks', () => {
-  if (!files.length) it.skip(`no tracks in ${DIR}`, () => {});
+describe('local tracks', () => {
+  if (!enabled) it.skip('set TRACKS to a folder of recorded tracks', () => {});
+  else if (!files.length) it.skip(`no tracks in ${DIR}`, () => {});
   for (const name of files)
     it(
       name,
