@@ -531,6 +531,11 @@ test('imports FIT and TCX files by content and reports damaged files', async ({
   });
   await expect(page.locator('#route-name')).toHaveValue('Costa');
   await expect(page.locator('#download')).toBeEnabled();
+  // The track check of this import ends first, so its message cannot
+  // replace the error below.
+  await expect(page.locator('#status')).toHaveText(
+    'Rota importada. Alterações recalculam só os trechos alterados.',
+  );
 
   const damaged = Buffer.from(bytes);
   damaged[30] ^= 0xff;
