@@ -4,15 +4,13 @@ import { t } from './i18n';
 import type { Coord } from './core';
 import { compactLayout } from './panel';
 import { byId as $ } from './dom';
+import { followsTap, isTap, type TouchAt } from './tap-hold';
 /**
  * Map point menu (right click, long press, ContextMenu key): the elevation of
  * that point, also while editing is locked, since viewing is not an edit.
  * Route points are set by typing, by a desktop click on the map (the selected
  * point) or by moving a marker; the menu no longer sets them.
  */
-const TAP_TIME = 250,
-  DOUBLE_TAP_TIME = 300,
-  DOUBLE_TAP_DISTANCE = 30;
 
 interface MapPointerEvent {
   point: Pixel;
@@ -54,8 +52,8 @@ export function setupPointMenu(
     pointerId: number | null = null,
     openingEvent: PointerEvent | null = null;
   let suppressClick = false;
-  let down: { x: number; y: number; time: number } | null = null,
-    lastTap: { x: number; y: number; time: number } | null = null;
+  let down: TouchAt | null = null,
+    lastTap: TouchAt | null = null;
   // A touch release may retarget its synthetic click to the menu just opened
   // under the finger. Consume that click, but allow the next deliberate tap.
   container.parentElement!.addEventListener(
@@ -152,10 +150,11 @@ export function setupPointMenu(
     }
     // A tap, then touch and hold: MapLibre's one-finger zoom, not a choice.
     if (
-      lastTap &&
-      event.timeStamp - lastTap.time < DOUBLE_TAP_TIME &&
-      Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) <
-        DOUBLE_TAP_DISTANCE
+      followsTap(lastTap, {
+        x: event.clientX,
+        y: event.clientY,
+        time: event.timeStamp,
+      })
     ) {
       lastTap = null;
       return;
@@ -176,13 +175,8 @@ export function setupPointMenu(
   };
   container.addEventListener('pointerup', (event) => {
     // A short touch that stayed in place may start a double tap.
-    lastTap =
-      down &&
-      event.timeStamp - down.time < TAP_TIME &&
-      Math.hypot(event.clientX - down.x, event.clientY - down.y) <
-        DOUBLE_TAP_DISTANCE
-        ? { x: event.clientX, y: event.clientY, time: event.timeStamp }
-        : null;
+    const up = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+    lastTap = down && isTap(down, up) ? up : null;
     down = null;
     end();
   });

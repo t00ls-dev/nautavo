@@ -458,15 +458,23 @@ test.describe('phone navigation', () => {
     const stage = (await page.locator('#nav-stage').boundingBox())!;
     const x = stage.x + 120,
       y = stage.y + 200;
-    // A double tap zooms in around the traveler and keeps following.
+    // A double tap zooms in as on the planner map, around the tapped point,
+    // then following slides the traveler back to its place.
     const before = (await marker.boundingBox())!;
+    const zoomBefore = Number(await rotor.getAttribute('data-zoom'));
     await page.touchscreen.tap(x, y);
     await page.touchscreen.tap(x, y);
     await expect(resume).toBeVisible();
     await expect(rotor).toHaveAttribute('data-turn', '-90');
-    const zoomed = (await marker.boundingBox())!;
-    expect(Math.abs(zoomed.x - before.x)).toBeLessThan(2);
-    expect(Math.abs(zoomed.y - before.y)).toBeLessThan(2);
+    await expect
+      .poll(async () => Number(await rotor.getAttribute('data-zoom')))
+      .toBeCloseTo(zoomBefore + 1, 1);
+    await expect
+      .poll(async () => {
+        const zoomed = (await marker.boundingBox())!;
+        return Math.hypot(zoomed.x - before.x, zoomed.y - before.y);
+      })
+      .toBeLessThan(2);
     await resume.click();
     await expect(resume).toBeHidden();
     // The browser's long-press menu never opens on the map: selection is
@@ -557,7 +565,7 @@ test.describe('phone navigation', () => {
     await expect(rotor).toHaveAttribute('data-turn', '0');
   });
 
-  test('one finger zooms: double tap and drag, around the traveler', async ({
+  test('one finger zooms in and a two-finger tap zooms out, then following comes back', async ({
     page,
     context,
   }) => {
@@ -595,9 +603,52 @@ test.describe('phone navigation', () => {
       'data-turn',
       '-90',
     );
-    const after = (await page.locator('.nav-arrow').boundingBox())!;
-    expect(Math.abs(after.x - marker.x)).toBeLessThan(2);
-    expect(Math.abs(after.y - marker.y)).toBeLessThan(2);
+    const back = async () => {
+      const after = (await page.locator('.nav-arrow').boundingBox())!;
+      return Math.hypot(after.x - marker.x, after.y - marker.y);
+    };
+    await expect.poll(back).toBeLessThan(2);
+    // A tap with two fingers zooms out, as on the planner map, and keeps
+    // following.
+    const zoomedIn = await zoom();
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        { x, y, id: 0 },
+        { x: x + 80, y, id: 1 },
+      ],
+    });
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await expect.poll(zoom).toBeLessThanOrEqual(zoomedIn - 0.9);
+    await expect.poll(back).toBeLessThan(2);
+    // A pinch whose fingers drift is a zoom, not a pan: following comes back.
+    const zoomedOut = await zoom();
+    const pinch = (spread: number, drift: number) => [
+      { x: x - spread + drift, y: y + drift, id: 0 },
+      { x: x + spread + drift, y: y + drift, id: 1 },
+    ];
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: pinch(40, 0),
+    });
+    for (let step = 1; step <= 10; step++)
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: pinch(40 + 8 * step, 6 * step),
+      });
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+    await expect.poll(zoom).toBeGreaterThan(zoomedOut + 0.5);
+    await expect.poll(back).toBeLessThan(2);
+    await expect(page.locator('#nav-rotor')).toHaveAttribute(
+      'data-turn',
+      '-90',
+    );
   });
 
   test('two fingers turning turn the map; Re-center turns it back', async ({

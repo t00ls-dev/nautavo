@@ -414,15 +414,87 @@ test('one-finger zoom: double tap and drag down zooms in, up zooms out, without 
   await page.waitForTimeout(800);
   await expect(page.locator('#point-menu')).toBeHidden();
   await touch('touchEnd');
-  // Released without dragging: one level in, like a double tap.
+  // Released without dragging: the view stays, as in phone map apps; the
+  // browser's double click no longer follows the cancelled second touch.
+  await page.waitForTimeout(500);
+  expect(await zoom()).toBe(start);
+  // A quick double tap zooms one level in.
+  await touch('touchStart');
+  await touch('touchEnd');
+  await page.waitForTimeout(80);
+  await touch('touchStart');
+  await touch('touchEnd');
   await expect
     .poll(async () => Math.round(await zoom()))
     .toBe(Math.round(start) + 1);
+  await page.waitForTimeout(600);
   // A single long press still opens it.
   await touch('touchStart');
   await page.waitForTimeout(700);
   await touch('touchEnd');
   await expect(page.locator('#point-menu')).toBeVisible();
+  await session.detach();
+  await context.close();
+});
+test('a tap then touch and hold is cancelled outside controls, so iOS opens no loupe', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await page.route('**/*', async (r) => {
+    if (r.request().url().startsWith('http://127.0.0.1')) await r.continue();
+    else await r.fulfill({ status: 204 });
+  });
+  await page.goto(base);
+  await page.evaluate(() => {
+    const record = window as unknown as { cancelled: boolean[] };
+    record.cancelled = [];
+    // After the app's own listener, before map controls stop the event.
+    document.addEventListener(
+      'touchstart',
+      (event) => record.cancelled.push(event.defaultPrevented),
+      true,
+    );
+  });
+  const session = await context.newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    session.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+    });
+  const tapThenHold = async (x: number, y: number) => {
+    await touch('touchStart', x, y);
+    await touch('touchEnd');
+    await page.waitForTimeout(80);
+    await touch('touchStart', x, y);
+    await page.waitForTimeout(100);
+    await touch('touchEnd');
+    await page.waitForTimeout(600);
+  };
+  const cancelled = () =>
+    page.evaluate(
+      () => (window as unknown as { cancelled: boolean[] }).cancelled,
+    );
+  const map = (await page.locator('#map').boundingBox())!;
+  const button = (await page
+    .locator('.map-control button:visible')
+    .first()
+    .boundingBox())!;
+  // On the map, the second touch is cancelled.
+  await tapThenHold(map.x + 150, map.y + 300);
+  // On a button, a quick second press still clicks.
+  await tapThenHold(button.x + 10, button.y + 10);
+  // A pan followed by a quick touch is not a tap, so it is never cancelled.
+  await touch('touchStart', map.x + 150, map.y + 300);
+  await touch('touchMove', map.x + 150, map.y + 380);
+  await touch('touchEnd');
+  await touch('touchStart', map.x + 150, map.y + 380);
+  await touch('touchEnd');
+  expect(await cancelled()).toEqual([false, true, false, false, false, false]);
   await session.detach();
   await context.close();
 });
