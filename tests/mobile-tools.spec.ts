@@ -45,8 +45,9 @@ test('on a phone, map taps and holds never set route points', async ({
   await expect(page.locator('#map-note')).toBeHidden();
   await page.touchscreen.tap(205, 245);
   await expect(page.locator('.route-marker')).toHaveCount(0);
-  // A separate gesture: a hold right after a tap is the one-finger zoom.
-  await page.waitForTimeout(400);
+  // A separate gesture: a hold within 500 ms of a tap (MapLibre's double
+  // tap) is the one-finger zoom.
+  await page.waitForTimeout(600);
   await holdMap(page);
   const menu = page.locator('#point-menu');
   await expect(menu).toBeVisible();
@@ -342,7 +343,8 @@ test('long press on the map cannot start a native text selection, but the panel 
   });
   await expect(page.locator('html')).not.toHaveClass(/map-touching/);
   await session.detach();
-  await page.waitForTimeout(400);
+  // Past the double tap's 500 ms, so the hold is not a one-finger zoom.
+  await page.waitForTimeout(600);
   // The Nautavo point menu still opens on hold.
   await holdMap(page);
   await expect(page.locator('#point-menu')).toBeVisible();
