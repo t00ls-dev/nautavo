@@ -126,6 +126,8 @@ const SUN_NOTICE_MINUTES = 60;
 const REJOIN_MARGIN = 40;
 /** Off the route, the map never zooms out farther than this. */
 const MIN_REJOIN_ZOOM = 12;
+/** How long following takes to slide back to the traveler after a zoom, ms. */
+const EASE_BACK = 300;
 async function loadStyle(): Promise<StyleSpecification | null> {
   const style = await fetchStyle(STYLE_URL);
   return style && navigationStyle(style);
@@ -229,6 +231,13 @@ export function setupNavigation(deps: {
     northUp = false,
     /** A zoom gesture is under way. */
     gestureZoom = false,
+    /**
+     * A gesture holds the camera, or the map eases back to the traveler
+     * after a zoom: fixes and the compass leave it alone meanwhile.
+     */
+    held = false,
+    /** A zoom gesture ended while following: ease back once it settles. */
+    easeBack = false,
     heading = 0,
     /** Direction of travel: the route ahead, or the GPS course off the route. */
     travelHeading = 0,
@@ -305,7 +314,12 @@ export function setupNavigation(deps: {
     const shown = Math.round(angle * 10) / 10 || 0;
     // The vector map turns itself, so its labels stay upright.
     report();
-    if (map && !fromGesture && Math.abs(map.getBearing() + shown) > 0.05)
+    if (
+      map &&
+      !fromGesture &&
+      !held &&
+      Math.abs(map.getBearing() + shown) > 0.05
+    )
       map.setBearing(-shown);
     // The compass shows only on a turned map and points to its north.
     compassButton.hidden = !shown;
@@ -432,10 +446,9 @@ export function setupNavigation(deps: {
       pitchWithRotate: false,
       dragRotate: false,
       touchPitch: false,
-      touchZoomRotate: { around: 'center' },
-      // A double tap zooms around the traveler (see `setupTouch`), not the
-      // tapped point; tap-and-drag zoom stays MapLibre's, around the center.
-      doubleClickZoom: false,
+      // Pinch, double tap, two-finger tap and one-finger zoom work as on the
+      // planner map, around the fingers; following then eases back to the
+      // traveler (see `zoomend`).
       boxZoom: false,
       keyboard: false,
       fadeDuration: 0,
@@ -448,8 +461,11 @@ export function setupNavigation(deps: {
     // Tiles that failed offline are asked again when the connection returns.
     refetchTilesOnline(m);
     // Gestures carry the event that caused them; the code's moves do not.
+    // One finger pans; two fingers pinch, and their drift is not a pan.
     m.on('dragstart', (e) => {
-      if (e.originalEvent) goFree();
+      if (!e.originalEvent) return;
+      held = true;
+      if (!((e.originalEvent as TouchEvent).touches?.length > 1)) goFree();
     });
     m.on('rotate', (e) => {
       if (!e.originalEvent) return;
@@ -457,13 +473,33 @@ export function setupNavigation(deps: {
       setRotor(-m.getBearing(), true);
     });
     m.on('zoomstart', (e) => {
-      if (e.originalEvent) gestureZoom = true;
+      if (!e.originalEvent) return;
+      gestureZoom = true;
+      held = true;
     });
     m.on('zoom', report);
     m.on('zoomend', () => {
       if (!gestureZoom) return;
       gestureZoom = false;
       userZoom();
+      easeBack = view === 'follow';
+    });
+    // The zoom was around the fingers: following slides the traveler back
+    // to its place, at the new zoom.
+    m.on('moveend', () => {
+      const coord = last?.coord ?? route?.segments[0]?.[0];
+      if (!easeBack || !coord) {
+        easeBack = false;
+        held = false;
+        return;
+      }
+      easeBack = false;
+      m.easeTo({
+        center: [coord[1], coord[0]],
+        zoom: zoomToRejoin(coord),
+        bearing: -Math.round(rotorAngle * 10) / 10 || 0,
+        duration: EASE_BACK,
+      });
     });
     m.on('error', () => {
       tileErrors++;
@@ -551,7 +587,7 @@ export function setupNavigation(deps: {
     if (!map || !route) return;
     const coord = last?.coord ?? route.segments[0]?.[0];
     if (!coord) return;
-    if (view === 'follow')
+    if (view === 'follow' && !held)
       map.jumpTo({ center: [coord[1], coord[0]], zoom: zoomToRejoin(coord) });
     else if (view === 'overview') {
       setRotor(0);
@@ -1333,55 +1369,20 @@ export function setupNavigation(deps: {
   // never open on the map; MapLibre handles pan, pinch, turn and zoom.
   stage.addEventListener('contextmenu', (event) => event.preventDefault());
   stage.addEventListener('selectstart', (event) => event.preventDefault());
-  setupTouch();
-  /**
-   * Cancelling the touch stops iOS from starting its loupe or callout; a
-   * double tap zooms in one level around the traveler (the map's center),
-   * so following keeps following.
-   */
-  function setupTouch() {
-    let down: { x: number; y: number } | null = null,
-      lastTap: { x: number; y: number; time: number } | null = null;
-    const control = (target: EventTarget | null) =>
-      !!(target as Element | null)?.closest?.(
-        'button, a, input, label, select, .credits-dialog',
-      );
-    stage.addEventListener(
-      'touchstart',
-      (event) => {
-        if (control(event.target)) return;
-        event.preventDefault();
-        const touch = event.touches[0];
-        down =
-          event.touches.length === 1
-            ? { x: touch.clientX, y: touch.clientY }
-            : null;
-      },
-      { passive: false },
-    );
-    stage.addEventListener('touchmove', (event) => {
-      const touch = event.touches[0];
+  // Cancelling the touch stops iOS from starting its loupe or callout;
+  // MapLibre still reads it.
+  stage.addEventListener(
+    'touchstart',
+    (event) => {
       if (
-        down &&
-        Math.hypot(touch.clientX - down.x, touch.clientY - down.y) > 10
+        !(event.target as Element | null)?.closest?.(
+          'button, a, input, label, select, .credits-dialog',
+        )
       )
-        down = null;
-    });
-    stage.addEventListener('touchend', (event) => {
-      if (!down || event.touches.length || !map) return;
-      const tap = { ...down, time: event.timeStamp };
-      down = null;
-      if (
-        lastTap &&
-        tap.time - lastTap.time < 350 &&
-        Math.hypot(tap.x - lastTap.x, tap.y - lastTap.y) < 40
-      ) {
-        lastTap = null;
-        map.zoomTo(map.getZoom() + 1, { duration: 0 });
-        userZoom();
-      } else lastTap = tap;
-    });
-  }
+        event.preventDefault();
+    },
+    { passive: false },
+  );
 
   // Replay (#154): the same screen fed with simulated positions.
   const replayToggle = $<HTMLButtonElement>('nav-replay-toggle'),

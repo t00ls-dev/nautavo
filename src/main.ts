@@ -118,6 +118,7 @@ import {
 } from './point-placement';
 import { setupMapControls } from './map-controls';
 import { compactLayout, placeLibrary, setupPanel } from './panel';
+import { stopTapHoldLoupe } from './tap-hold';
 import { activityOf, activityProfile, type Activity } from './activity';
 import { setupActivityView } from './activity-ui';
 import { activityColorings } from './activity-colorings';
@@ -1997,6 +1998,7 @@ function openSavedRoute(record: SavedRoute) {
 }
 
 setupPanel(map);
+stopTapHoldLoupe();
 setupHomeScreen();
 const navigation = setupNavigation({
   route: () => current,
