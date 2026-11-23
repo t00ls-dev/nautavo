@@ -146,7 +146,10 @@ let state: State = defaults(),
   // The route a load asked to frame; edits keep the user's view (#117).
   fitRevision = -1,
   timer: ReturnType<typeof setTimeout>;
+/** Counts status messages, so background work can tell it was superseded. */
+let statusCount = 0;
 function status(message: string, error = false) {
+  statusCount++;
   $('status').textContent = message;
   $('status').classList.toggle('error', error);
 }
@@ -1300,21 +1303,32 @@ const importOnline = onlineAttempt();
 /**
  * After an import: checks the track against the roads and replaces its GPS
  * glitches with the road taken. Offline, it waits for the connection once.
+ * Its messages never replace a newer status, such as the error of a later
+ * import that failed (#267); its result still applies to the route.
  */
-async function checkImported(raw: Route, autoStops: boolean) {
+async function checkImported(
+  raw: Route,
+  autoStops: boolean,
+  mark = statusCount,
+) {
   const token = ++checkRevision;
   const fresh = () => token === checkRevision && current === raw;
+  const report = (message: string) => {
+    if (statusCount !== mark) return;
+    status(message);
+    mark = statusCount;
+  };
   if (
     importOnline(() => {
-      if (fresh()) void checkImported(raw, autoStops);
+      if (fresh()) void checkImported(raw, autoStops, mark);
     })
   ) {
-    status(
+    report(
       'Route imported. No connection: the track will be checked against the roads when the connection returns.',
     );
     return;
   }
-  status('Checking the track against the roads…');
+  report('Checking the track against the roads…');
   // Waypoints from the file are the traveler's own and protect their
   // stretch; automatic stops do not, since they are placed again after.
   const stops = autoStops
@@ -1331,7 +1345,7 @@ async function checkImported(raw: Route, autoStops: boolean) {
   if (!fresh()) return;
   // The check is an extra: when it cannot run, the import stands as it is.
   if (outcome.kind !== 'checked') {
-    status(
+    report(
       outcome.kind === 'limit'
         ? 'Route imported. The track could not be checked against the roads now.'
         : 'Route imported. Edits recalculate only the changed sections.',
@@ -1340,14 +1354,14 @@ async function checkImported(raw: Route, autoStops: boolean) {
   }
   const { check } = outcome;
   if (!check.glitches && !check.aligned) {
+    report('Route imported. Edits recalculate only the changed sections.');
     trackChecks.set(raw, check);
     renderRoute(raw);
-    status('Route imported. Edits recalculate only the changed sections.');
     return;
   }
+  report('Track aligned to the roads.');
   const points = structuredClone(state.points);
   adoptAligned(check, { route: raw, points }, autoStops);
-  status('Track aligned to the roads.');
 }
 /**
  * Shows a track aligned to the roads, keeping the recording for Keep the

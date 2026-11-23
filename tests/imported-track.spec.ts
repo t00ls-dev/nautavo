@@ -88,6 +88,36 @@ test('a track is aligned to the roads after import, and the recording can be kep
   expect(Math.max(...raw.map((c) => Math.abs(north(c))))).toBeGreaterThan(55);
 });
 
+test('a late track check keeps the error of a newer failed import', async ({
+  page,
+}) => {
+  await setup(page);
+  // Holds the check's answer until the second import has failed.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/trace_route', async (r) => {
+    await held;
+    await r.fallback();
+  });
+  await importTrack(page, withZigzag);
+  await expect(page.locator('#status')).toHaveText(
+    'Checking the track against the roads…',
+  );
+  await page.locator('#import').setInputFiles({
+    name: 'notes.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('not a track'),
+  });
+  const error = 'This file is not a valid GPX, TCX or FIT file.';
+  await expect(page.locator('#status')).toHaveText(error);
+  release();
+  // The check still applies to the route on screen, without its message.
+  await expect(page.locator('#summary-notes')).toContainText(
+    'Track aligned to the roads.',
+  );
+  await expect(page.locator('#status')).toHaveText(error);
+});
+
 for (const [width, language] of [
   [320, 'pt'],
   [1280, 'en'],

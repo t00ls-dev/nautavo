@@ -22,6 +22,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- When a second file failed to import while the first one was still being checked against the roads, the error now stays in view; before, the first file's message replaced it.
 - On an iPhone, a tap followed by a touch and hold, such as zooming the map with one finger, no longer opens the browser's magnifier over the map, the activity view or the navigation screen.
 - On a phone, tapping an address suggestion sets that point only; before, the tap could also press the button that ended up under the finger as the list closed, such as Reverse, which moved the address to the other end of the route.
 - On a phone, tapping the bottom sheet's handle only opens or closes it; before, the same tap could also open or close a section of the route panel, or tap the map, that ended up under the finger.
