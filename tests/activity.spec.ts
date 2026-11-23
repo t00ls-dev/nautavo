@@ -178,6 +178,9 @@ test.describe('activity replay on a phone', () => {
       },
       Math.round((95 / 190) * max),
     );
+    // The replay moves only as the test runs the paused clock: a running
+    // one let a busy machine carry it past the moments checked below.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
     // At 10×, 2 s of play covers 20 s of the ride past the pause.
     await page.locator('#nav-replay-rate').selectOption('10');
     await page.locator('#nav-replay-toggle').click();
@@ -189,16 +192,20 @@ test.describe('activity replay on a phone', () => {
       'Max. HR140 bpm',
       'Stop of 2 min skipped',
     ]);
-    // Passing the highest point says so, in the color of its map label.
-    await page.clock.runFor(4000);
+    // Jumping to the end passes the top speed and the highest point
+    // together; the highest point, the last one, says so in the color of
+    // its map label. A jump, not every frame of the way: the software map
+    // drawing each one is slow on a busy machine.
+    await page.clock.fastForward(8000);
     const notice = notices.last();
     await expect(notice.locator('span')).toHaveText('Highest point');
     await expect(notice.locator('b')).toHaveText('30 m');
     await expect(notice).toHaveClass(/activity-peak-altitude/);
     await expect(notice).toHaveCSS('border-top-color', 'rgb(116, 66, 11)');
-    // The two before it have left; it leaves 5 s after it came.
-    await expect(notices).toHaveCount(1);
-    await page.clock.runFor(5000);
+    // The ones from before the jump have left; these leave 5 s after they
+    // came.
+    await expect(notices).toHaveCount(2);
+    await page.clock.fastForward(5000);
     await expect(notices).toHaveCount(0);
     await page.locator('#nav-stop').click();
     await expect(screen).toBeHidden();
