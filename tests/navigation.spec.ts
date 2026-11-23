@@ -836,7 +836,7 @@ test.describe('phone navigation', () => {
           : 'Off the route · Back to route',
       );
       // Straight-line distance to a point ahead, rounded like maneuvers.
-      await expect(page.locator('#nav-distance')).toHaveText(/^\d+[.,]\d km$/);
+      await expect(page.locator('#nav-distance')).toHaveText(/^\d+[.,]\d\skm$/);
       // On the map turned east-up, the route (south) is to the right and
       // ahead (east) is up: the arrow points up and to the right.
       const angle = Number(
@@ -1914,7 +1914,7 @@ test.describe('replay on the navigation screen', () => {
     await expect(page.locator('#nav-replay-chip')).toHaveCount(0);
     await expect(page.locator('#nav-replay-position')).toHaveAttribute(
       'aria-valuetext',
-      /^\d\d:\d\d( [AP]M)? · \S+ (km|m) of \S+ (km|m)$/,
+      /^\d\d:\d\d( [AP]M)? · \S+\s(km|m) of \S+\s(km|m)$/,
     );
     // It opens further out than live navigation, following without Re-center.
     await expect(page.locator('#nav-resume')).toBeHidden();
@@ -2378,11 +2378,11 @@ test.describe('replay going back', () => {
     const rest = page.locator('#nav-rest');
     // On the way back, 300 m from the start: 0.3 km left.
     await position.fill('850');
-    await expect(rest).toContainText(/^0\.3 km/);
+    await expect(rest).toContainText(/^0\.3\skm/);
     // Dragged back to the way out at the same place: 1.7 km left, with the
     // U-turn ahead.
     await position.fill('150');
-    await expect(rest).toContainText(/^1\.7 km/);
+    await expect(rest).toContainText(/^1\.7\skm/);
     await expect(road).toHaveText('Rua de Volta');
   });
 });
@@ -2446,7 +2446,7 @@ test.describe('speed while navigating', () => {
     // though moving at 3 m/s; the remaining 1.35 km takes about 22 min.
     for (let s = 30; s <= 600; s += 30)
       await fix(page, 100 + s, 3, t0 + 1000 + s * 1000);
-    await expect(page.locator('#nav-time')).toHaveText(/^2[0-4] min$/);
+    await expect(page.locator('#nav-time')).toHaveText(/^2[0-4]\smin$/);
   });
 
   for (const [width, language] of [

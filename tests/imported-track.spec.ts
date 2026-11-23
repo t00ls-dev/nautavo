@@ -162,7 +162,7 @@ test('on an imported track, Calculate route, Reverse and Round trip never rerout
     'Route calculated along the imported track.',
   );
   // The road, with its directions (Rua shows abbreviated as R.).
-  await expect(page.locator('#itinerary')).toContainText('Depart · R. A');
+  await expect(page.locator('#itinerary')).toContainText('Depart R. A');
   const aligned = await exported(page);
   for (const c of aligned) expect(north(c)).toBeCloseTo(10, 0);
   await page.locator('#reverse').click();

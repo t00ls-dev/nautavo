@@ -13,6 +13,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- The Itinerary shows each step's instruction on its own line, with the road and its distance below it, so on a phone a long road name no longer hides the instruction or the distance.
 - Zooming the map while navigating, traveling the route or playing an activity works as on the route planner: a pinch or a double tap zooms around your fingers, and a tap with two fingers zooms out. When you let go, the map slides back to your position and keeps following you.
 - With a phone held sideways, navigation and Travel the route fill the screen with the map and show the guidance as two cards on its left, the next turns at the top and the time with End (or the replay controls) at the bottom, with the map in view between them; the bottom card's handle opens the list of turns ahead. The route planner's panel moves to the left of the map instead of covering its lower half, with the route's distance and time and Navigate always in view. Travel the route no longer keeps a phone's narrow shape on a wide window, and its Replay label no longer covers the map: the play button, slider and arrival show the replay.
 - The name is written Nautavo, with a capital N, in page titles and every text; the logo is unchanged. A value that is not known shows a hyphen.
@@ -22,6 +23,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- A number and its unit, such as 1,308 m or 18 min, always stay together on the same line.
 - When a second file failed to import while the first one was still being checked against the roads, the error now stays in view; before, the first file's message replaced it.
 - On an iPhone, a tap followed by a touch and hold, such as zooming the map with one finger, no longer opens the browser's magnifier over the map, the activity view or the navigation screen.
 - On a phone, tapping an address suggestion sets that point only; before, the tap could also press the button that ended up under the finger as the list closed, such as Reverse, which moved the address to the other end of the route.

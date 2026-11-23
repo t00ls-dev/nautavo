@@ -1,9 +1,10 @@
 import type { Coord, Route, Step } from './core';
 import {
   distanceLabel,
-  MISSING,
+  durationLabel,
   milepostLabel,
   stepDistanceLabel,
+  withUnit,
 } from './units';
 import { distanceUnits } from './unit-preferences';
 import { icon } from './icons';
@@ -35,7 +36,6 @@ export function summaryStats(
   locale: string,
 ) {
   const duration = travelTimeSeconds(route.distance, speedKmh);
-  const minutes = Math.round(duration / 60);
   const stats = document.createElement('dl');
   stats.className = 'stats';
   const stat = (label: string, value: string, note?: string) => {
@@ -49,15 +49,10 @@ export function summaryStats(
     stats.append(item);
   };
   const distance = distanceLabel(route.distance, distanceUnits(), locale);
-  const time =
-    minutes === null
-      ? MISSING
-      : minutes < 60
-        ? `${minutes} min`
-        : `${Math.floor(minutes / 60)}h ${minutes % 60} min`;
   stat('Distance', distance);
+  const time = durationLabel(duration);
   stat('Time', time);
-  if (duration !== null && Number.isFinite(departure)) {
+  if (Number.isFinite(departure)) {
     const arrival = new Date(departure + duration * 1000);
     // The date is added only when the arrival is on another day.
     stat(
@@ -78,7 +73,7 @@ export function summaryStats(
   const speed = speedFromKmh(speedKmh, distanceUnits()).toLocaleString(locale, {
     maximumFractionDigits: 1,
   });
-  const basis = `At ${speed} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'} · no stops`;
+  const basis = `At ${withUnit(speed, distanceUnits() === 'imperial' ? 'mph' : 'km/h')} · no stops`;
   return {
     stats,
     basis: text('p', basis, 'hint stats-basis'),
@@ -136,8 +131,9 @@ export function itineraryList(
       if (arrow.mirror) svg.classList.add('mirror');
       row.append(svg);
     } else row.append(text('span', '', 'maneuver-icon'));
-    // One line: shortened road names and compact lengths; the full text stays
-    // in the tooltip and accessible label.
+    // Two lines: the instruction in full, then the road (shortened, giving
+    // way on a narrow screen) with the step's length always in view; the
+    // full text stays in the tooltip and accessible label.
     const road = t(s.name);
     const length = stepDistanceLabel(s.distance, distanceUnits(), locale);
     // Highway references are in the chips above the list; on the line they
@@ -147,12 +143,20 @@ export function itineraryList(
     const full = `${instruction ? `${t(instruction)} · ` : ''}${s.ref ? `${s.ref} · ` : ''}${road} · ${length}`;
     const body = document.createElement('span');
     body.className = 'step-text';
+    // The spaces keep the words apart when the text is copied.
     if (instruction)
       body.append(
         text('span', instruction, 'maneuver'),
-        document.createTextNode(' · '),
+        document.createTextNode(' '),
       );
-    body.append(document.createTextNode(`${shortRoad} · ${length}`));
+    const detail = document.createElement('span');
+    detail.className = 'step-detail';
+    detail.append(
+      text('span', shortRoad, 'step-road'),
+      document.createTextNode(' '),
+      text('span', length, 'step-length'),
+    );
+    body.append(detail);
     row.append(body);
     holder.title = full;
     if (s.at) {

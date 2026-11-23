@@ -1036,7 +1036,8 @@ div.step-item {
   display: grid;
   grid-template-columns: auto 18px minmax(0, 1fr);
   column-gap: 6px;
-  align-items: center;
+  /* The marker and the arrow line up with the instruction, the first line. */
+  align-items: start;
   justify-content: start;
   width: 100%;
   line-height: 1.5;
@@ -1044,14 +1045,44 @@ div.step-item {
 .step-row.no-position {
   grid-template-columns: 18px minmax(0, 1fr);
 }
+/* Two lines: the instruction, then the road and the step's length; the
+   road gives way on a narrow screen, the length never does. */
 .step-text {
+  min-width: 0;
+}
+.step-text .maneuver {
+  display: block;
+}
+.step-detail {
+  display: flex;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+/* A step without an instruction (routes saved before maneuver details): the
+   road is its only line. */
+.step-text > .step-detail:first-child {
+  color: inherit;
+  font-size: inherit;
+}
+.step-road {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.step-length {
+  flex: none;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .maneuver-icon {
   width: 18px;
   height: 18px;
+}
+.step-row .maneuver-icon {
+  margin-top: 3px;
 }
 .maneuver-icon.mirror {
   transform: scaleX(-1);

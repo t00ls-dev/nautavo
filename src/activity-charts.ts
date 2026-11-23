@@ -19,9 +19,13 @@ import {
   type ChartPoint,
 } from './profile-chart';
 import { indexTrack, pointAtDistance } from './track-position';
-import { navigationDurationLabel } from './navigation';
 import { speedFromKmh } from './travel-time';
-import { distanceLabel, elevationLabel } from './units';
+import {
+  distanceLabel,
+  durationLabel,
+  elevationLabel,
+  withUnit,
+} from './units';
 import { distanceUnits } from './unit-preferences';
 
 /**
@@ -91,9 +95,9 @@ export function setupActivityCharts(deps: {
       id: 'speed',
       icon: 'speed',
       series: activity.speeds.map(speed),
-      format: (v) => `${number(v, 1)} ${unit}`,
+      format: (v) => withUnit(number(v, 1), unit),
       summary: t(
-        `avg. ${number(speed(activity.averageSpeed), 1)} · max. ${number(speed(activity.maxSpeed), 1)} ${unit}`,
+        `avg. ${number(speed(activity.averageSpeed), 1)} · max. ${withUnit(number(speed(activity.maxSpeed), 1), unit)}`,
       ),
       fromZero: true,
     });
@@ -110,9 +114,9 @@ export function setupActivityCharts(deps: {
         id,
         icon: name,
         series,
-        format: (v) => `${number(v)} ${unitLabel}`,
+        format: (v) => withUnit(number(v), unitLabel),
         summary: t(
-          `avg. ${number(stats.average)} · max. ${number(stats.max)} ${unitLabel}`,
+          `avg. ${number(stats.average)} · max. ${withUnit(number(stats.max), unitLabel)}`,
         ),
         fromZero,
         // Coasting: the average leaves it out too, as bike computers do.
@@ -276,7 +280,7 @@ export function setupActivityCharts(deps: {
         hour: '2-digit',
         minute: '2-digit',
       });
-      readout.textContent = `${distanceLabel(activity.distances[i], units, locale)} · ${navigationDurationLabel((activity.times[i] - activity.start) / 1000)} · ${clock}`;
+      readout.textContent = `${distanceLabel(activity.distances[i], units, locale)} · ${durationLabel((activity.times[i] - activity.start) / 1000)} · ${clock}`;
       const point = pointAtDistance(index, activity.distances[i]);
       hideCursor();
       if (point)

@@ -13,7 +13,6 @@ import {
   isMoving,
   turnToward,
   navigationDistanceLabel,
-  navigationDurationLabel,
   navigationManeuvers,
   upcomingItems,
   currentStretch,
@@ -392,25 +391,23 @@ describe('recalculation', () => {
 
 describe('navigation labels', () => {
   it.each<[number, 'metric' | 'imperial', string]>([
-    [4, 'metric', '10 m'],
-    [87, 'metric', '90 m'],
-    [263, 'metric', '250 m'],
-    [990, 'metric', '1.0 km'],
-    [1260, 'metric', '1.3 km'],
-    [12400, 'metric', '12 km'],
-    [20, 'imperial', '50 ft'],
-    [120, 'imperial', '400 ft'],
-    [320, 'imperial', '0.2 mi'],
-    [20000, 'imperial', '12 mi'],
+    [4, 'metric', '10\u00a0m'],
+    [87, 'metric', '90\u00a0m'],
+    [263, 'metric', '250\u00a0m'],
+    [990, 'metric', '1.0\u00a0km'],
+    [1260, 'metric', '1.3\u00a0km'],
+    [12400, 'metric', '12\u00a0km'],
+    [20, 'imperial', '50\u00a0ft'],
+    [120, 'imperial', '400\u00a0ft'],
+    [320, 'imperial', '0.2\u00a0mi'],
+    [20000, 'imperial', '12\u00a0mi'],
   ])('%d m in %s reads %s', (meters, units, label) => {
     expect(navigationDistanceLabel(meters, units)).toBe(label);
   });
   it('uses the language decimal separator', () => {
-    expect(navigationDistanceLabel(1260, 'metric', 'pt-BR')).toBe('1,3 km');
-  });
-  it('writes the remaining time like the route summary', () => {
-    expect(navigationDurationLabel(18 * 60)).toBe('18 min');
-    expect(navigationDurationLabel(108 * 60)).toBe('1h 48 min');
+    expect(navigationDistanceLabel(1260, 'metric', 'pt-BR')).toBe(
+      '1,3\u00a0km',
+    );
   });
 });
 

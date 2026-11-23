@@ -184,12 +184,12 @@ test('daylight shows today without a departure, dark sections for an evening dep
   // About 1 h 51 min at 60 km/h from 16:30 UTC; the equator gets dark near 18:06.
   await date(page, '2026-11-08T16:30');
   await expect(line).toContainText(
-    /Sunrise \d\d:\d\d [AP]M Sunset \d\d:\d\d [AP]M · [\d.]+ km in the dark/,
+    /Sunrise \d\d:\d\d [AP]M Sunset \d\d:\d\d [AP]M · [\d.]+\skm in the dark/,
   );
   const details = page.locator('#daylight-details');
   await expect(details).toBeVisible();
   await expect(details).toContainText(
-    /Dark from [\d.]+ km \(.+\) to 111\.2 km/,
+    /Dark from [\d.]+\skm \(.+\) to 111\.2\skm/,
   );
   await expect(details).toContainText(/Leave by .+ to arrive before sunset\./);
   // 1 h 51 min at the 60 km/h set by the test, after a 16:30 UTC departure.
@@ -340,7 +340,7 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
   await expect(page.locator('div.chart-cursor')).toHaveCount(1);
   // Halfway along a steady climb from 0 to 1,000 m: about 500 m gained so far.
   await expect(page.locator('.elevation-readout')).toContainText(
-    /Gain so far (4|5)\d\d m · Loss so far 0 m/,
+    /Gain so far (4|5)\d\d\sm · Loss so far 0\sm/,
   );
   await chooseUnits(page, { distance: 'imperial' });
   await expect(page.locator('#elevation-stats')).toContainText('Max 3,281 ft');
@@ -844,7 +844,7 @@ test('climbs are listed, shaded in the chart and shown on the map', async ({
   await expect(climbs).toHaveCount(1);
   // Position, length, gain, average and steepest grade, then passage time.
   await expect(climbs.first()).toHaveText(
-    /^km 4[45]\.\d · [56](\.\d)? km · \+(49\d|500) m · (9|8\.\d|9\.\d)% · max (9|1\d)(\.\d)?% · \d\d:\d\d( [AP]M)?Hardest$/,
+    /^km\s4[45]\.\d · [56](\.\d)?\skm · \+(49\d|500)\sm · (9|8\.\d|9\.\d)% · max (9|1\d)(\.\d)?% · \d\d:\d\d( [AP]M)?Hardest$/,
   );
   await expect(page.locator('rect.elevation-climb')).toHaveCount(1);
   await expect.poll(() => overlayCount(page, 'rg-climb')).toBe(0);
@@ -926,12 +926,12 @@ test('the highest and lowest points are marked on the map while Elevation is ope
   });
   await page.locator('#elevation > summary').click();
   await expect(page.locator('#elevation-stats')).toContainText(
-    /Min (4\d|5\d) m · Max (8[89]\d|900) m/,
+    /Min (4\d|5\d)\sm · Max (8[89]\d|900)\sm/,
   );
   const highest = page.locator('.map-extreme.highest');
   const lowest = page.locator('.map-extreme.lowest');
-  await expect(highest).toHaveText(/^(8[89]\d|900) m$/);
-  await expect(lowest).toHaveText(/^(4\d|5\d) m$/);
+  await expect(highest).toHaveText(/^(8[89]\d|900)\sm$/);
+  await expect(lowest).toHaveText(/^(4\d|5\d)\sm$/);
   await expect(highest.locator('svg.icon-summit')).toHaveCount(1);
   await expect(lowest.locator('svg.icon-summit')).toHaveCount(1);
   // At the right places along the route: the lowest west of the highest.
@@ -939,7 +939,7 @@ test('the highest and lowest points are marked on the map while Elevation is ope
     highBox = (await highest.boundingBox())!;
   expect(lowBox.x).toBeLessThan(highBox.x);
   await chooseUnits(page, { distance: 'imperial' });
-  await expect(highest).toHaveText(/ ft$/);
+  await expect(highest).toHaveText(/\sft$/);
   await page.locator('#elevation > summary').click();
   await expect(page.locator('.map-extreme')).toHaveCount(0);
 });
@@ -1499,8 +1499,8 @@ for (const language of ['en', 'pt'])
     await expect(card).toHaveAttribute(
       'aria-label',
       pt
-        ? /Predominantemente limpo · 24,1 °C · Chuva 13% · 0,2 mm/
-        : /Mainly clear · 24.1 °C · Rain 13% · 0.2 mm/,
+        ? /Predominantemente limpo · 24,1\s°C · Chuva 13% · 0,2\smm/
+        : /Mainly clear · 24.1\s°C · Rain 13% · 0.2\smm/,
     );
   });
 
@@ -1691,7 +1691,7 @@ test('consecutive samples with equivalent weather share one card and one marker'
   await expect(merged.locator('.weather-card-temperature')).toHaveText(
     '22–23 °C',
   );
-  await expect(merged).toHaveAttribute('aria-label', /9\.3–101\.9 km/);
+  await expect(merged).toHaveAttribute('aria-label', /9\.3–101\.9\skm/);
   await page.locator('.weather-marker').nth(1).click();
   await expect(merged).toHaveAttribute('aria-current', 'true');
   await page.locator('#language').selectOption('pt');
@@ -1911,7 +1911,7 @@ test('temperature units switch the weather card to °F and inches without anothe
   await expect(card.locator('.weather-card-place')).toContainText('km');
   await page.locator('#language').selectOption('pt');
   await expect(card.locator('.weather-card-rain')).toHaveText('13% · 0,5 in');
-  await expect(card).toHaveAttribute('aria-label', /Chuva 13% · 0,5 in/);
+  await expect(card).toHaveAttribute('aria-label', /Chuva 13% · 0,5\sin/);
   expect(calls).toBe(requests);
 });
 
@@ -2136,7 +2136,7 @@ for (const mobile of [false, true])
     page.on('request', (request) => {
       if (request.url().includes('/v1/forecast?')) calls++;
     });
-    await expect(card).toHaveAttribute('aria-label', /Show on map.*55\.6 km/);
+    await expect(card).toHaveAttribute('aria-label', /Show on map.*55\.6\skm/);
     await card.click();
     await expect(marker).toBeFocused();
     await expect(page.locator('#panel-toggle')).toHaveAttribute(

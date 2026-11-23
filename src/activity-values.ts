@@ -9,7 +9,7 @@ import { iconControl, type IconName } from './icons';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
 import { speedFromKmh } from './travel-time';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
-import { elevationLabel, MISSING, speedLabel } from './units';
+import { elevationLabel, MISSING, speedLabel, withUnit } from './units';
 
 /**
  * The data page of the activity replay (#156), as bike computers show a
@@ -126,7 +126,7 @@ export function peakLabel(peak: Peak, locale: string): string {
   if (peak.kind === 'speed') return speedLabel(peak.value, units, locale);
   if (peak.kind === 'altitude')
     return elevationLabel(peak.value, units, locale);
-  return `${valueLabel(peak.kind, peak.value, locale)} ${unitOf(peak.kind)}`;
+  return withUnit(valueLabel(peak.kind, peak.value, locale), unitOf(peak.kind));
 }
 
 export function activityValues(locale: () => string, onChange: () => void) {
