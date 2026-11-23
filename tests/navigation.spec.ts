@@ -124,6 +124,15 @@ async function fits(page: Page) {
       stop.top < eta.bottom
     )
       problems.push('time under Stop');
+    // A stop's name may give way in the upcoming list; its arrival never.
+    for (const clock of document.querySelectorAll<HTMLElement>(
+      '.nav-list-stop .nav-list-detail',
+    )) {
+      const box = clock.getBoundingClientRect(),
+        row = clock.closest('li')!.getBoundingClientRect();
+      if (clock.scrollWidth > clock.clientWidth + 1 || box.right > row.right)
+        problems.push(`arrival ${clock.textContent} cut off`);
+    }
     return problems;
   });
 }
@@ -1161,6 +1170,10 @@ test.describe('phone navigation', () => {
         await page.locator('#nav-time').click();
         const rows = page.locator('#nav-list li');
         await expect(rows.first()).toBeVisible();
+        await expect(
+          page.locator('.nav-list-stop .nav-list-detail'),
+        ).not.toHaveCount(0);
+        expect(await fits(page)).toEqual([]);
         // Every row answers at its text and at its distance, uncovered.
         for (const row of await rows.all()) {
           const box = (await row.boundingBox())!;
@@ -1225,6 +1238,10 @@ test.describe('phone navigation', () => {
           card.x + card.width + 0.5,
         );
         expect(await landscapeProblems(page)).toEqual([]);
+        await expect(
+          page.locator('.nav-list-stop .nav-list-detail'),
+        ).not.toHaveCount(0);
+        expect(await fits(page)).toEqual([]);
         // The handle closes it again.
         await page.locator('#nav-list-toggle').click();
         await expect(page.locator('#nav-list')).toBeHidden();

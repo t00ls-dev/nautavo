@@ -78,17 +78,19 @@ function unitOf(value: ActivityValue): string {
       return imperial ? 'ft' : 'm';
   }
 }
-/** A recorded value (speed in m/s) in the device's units, as a number. */
-function valueLabel(value: ActivityValue, raw: number): string {
+/**
+ * A recorded value (speed in m/s) in the device's units, as a whole number
+ * with the language's digit grouping, as every other label in Nautavo.
+ */
+function valueLabel(value: ActivityValue, raw: number, locale: string): string {
   const imperial = distanceUnits() === 'imperial';
+  const whole = (n: number) => Math.round(n).toLocaleString(locale);
   switch (value) {
     case 'speed':
-      return String(Math.round(speedFromKmh(raw * 3.6, distanceUnits())));
+      return whole(speedFromKmh(raw * 3.6, distanceUnits()));
     case 'temperature':
-      return String(
-        Math.round(
-          temperatureUnits() === 'fahrenheit' ? (raw * 9) / 5 + 32 : raw,
-        ),
+      return whole(
+        temperatureUnits() === 'fahrenheit' ? (raw * 9) / 5 + 32 : raw,
       );
     case 'balance': {
       // Left / right, as bike computers write it.
@@ -96,14 +98,14 @@ function valueLabel(value: ActivityValue, raw: number): string {
       return `${left}/${100 - left}`;
     }
     case 'grade':
-      return `${raw > 0.5 ? '+' : ''}${Math.round(raw)}`;
+      return `${raw > 0.5 ? '+' : ''}${whole(raw)}`;
     case 'altitude':
     case 'climb': {
-      const meters = Math.round(imperial ? raw * 3.280839895 : raw);
-      return value === 'climb' ? `+${meters}` : String(meters);
+      const height = whole(imperial ? raw * 3.280839895 : raw);
+      return value === 'climb' ? `+${height}` : height;
     }
     default:
-      return String(Math.round(raw));
+      return whole(raw);
   }
 }
 
@@ -117,15 +119,14 @@ export const PEAK_ICONS: Record<Peak['kind'], IconName> = {
 };
 /**
  * A highest value as its label on the map and its replay notice show it:
- * speed with one decimal, altitude with digit grouping, in the device's
- * units.
+ * speed with one decimal, in the device's units.
  */
 export function peakLabel(peak: Peak, locale: string): string {
   const units = distanceUnits();
   if (peak.kind === 'speed') return speedLabel(peak.value, units, locale);
   if (peak.kind === 'altitude')
     return elevationLabel(peak.value, units, locale);
-  return `${valueLabel(peak.kind, peak.value)} ${unitOf(peak.kind)}`;
+  return `${valueLabel(peak.kind, peak.value, locale)} ${unitOf(peak.kind)}`;
 }
 
 export function activityValues(locale: () => string, onChange: () => void) {
@@ -231,10 +232,12 @@ export function activityValues(locale: () => string, onChange: () => void) {
         });
       else {
         const raw = values[field];
-        shown = raw === undefined ? MISSING : valueLabel(field, raw);
-        const unit = cell.querySelector('small')!;
-        if (unit.textContent !== unitOf(field))
-          unit.textContent = unitOf(field);
+        shown = raw === undefined ? MISSING : valueLabel(field, raw, locale());
+        // A value not known yet, such as the grade over the first 50 m,
+        // shows the hyphen alone.
+        const unit = cell.querySelector('small')!,
+          label = shown === MISSING ? '' : unitOf(field);
+        if (unit.textContent !== label) unit.textContent = label;
       }
       const number = cell.querySelector('b')!;
       if (number.textContent !== shown) number.textContent = shown;

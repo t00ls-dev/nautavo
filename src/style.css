@@ -3979,7 +3979,9 @@ dialog:modal:not(.nav-screen) {
   border-left: 4px solid var(--color-primary);
   background: var(--color-soft);
 }
-.nav-list-current .nav-list-text > span {
+/* Two lines: the road or stop, and below it the stretch's number or the
+   arrival. */
+.nav-list-text > span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3987,9 +3989,10 @@ dialog:modal:not(.nav-screen) {
 .nav-list-current .nav-list-text > :first-child {
   font-weight: 700;
 }
-.nav-list-step {
+.nav-list-detail {
   color: var(--color-text-muted);
   font-size: 14px;
+  font-weight: 400;
 }
 .nav-list-distance {
   flex: none;

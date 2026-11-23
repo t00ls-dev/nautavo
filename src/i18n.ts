@@ -725,7 +725,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Under (.+)$/, (value) => `Abaixo de ${value}`],
   [/^(.+) and over$/, (value) => `${value} ou mais`],
   [
-    /^(\d+) (bpm|W), max\. (\d+)$/,
+    /^(\S+) (bpm|W), max\. (\S+)$/,
     (n, unit, max) => `${n} ${unit}, máx. ${max}`,
   ],
   [/^Stop of (\d+) min skipped$/, (n) => `Parada de ${n} min pulada`],
