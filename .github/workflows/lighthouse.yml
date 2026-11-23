@@ -1,12 +1,7 @@
 name: Lighthouse
-# Audits the published site on Dependabot's schedule and on demand. Not a
-# required check; it never builds or publishes.
+# Audits the published site on demand only. Not a required check; it never
+# builds or publishes.
 on:
-  schedule:
-    # Minute 17, not 0: GitHub delays scheduled runs at the top of the hour,
-    # when most schedules fire, and may drop them (the 09:00 run of
-    # 2026-11-16 never started). Same expression as Dependabot.
-    - cron: '17 9 * * 1' # Monday 09:17 UTC
   workflow_dispatch:
 permissions:
   contents: read
