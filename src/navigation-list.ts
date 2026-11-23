@@ -77,7 +77,7 @@ export function upcomingList(deps: {
     label.className = 'nav-list-text';
     label.append(
       text('span', `${t('Now')} · ${name}`),
-      text('span', count, 'nav-list-step'),
+      text('span', count, 'nav-list-detail'),
     );
     li.title = `${t('Now')} · ${road ?? name} · ${count}`;
     li.append(glyph, label);
@@ -97,13 +97,15 @@ export function upcomingList(deps: {
           distanceUnits(),
           locale,
         );
-        let label: string, full: string, glyph: SVGSVGElement;
+        let label: HTMLElement, full: string, glyph: SVGSVGElement;
         if (item.kind === 'maneuver') {
           const instruction = t(maneuverText(item.step) ?? 'Continue');
           const road = stepRoad(item.step);
-          label = road
-            ? `${instruction} · ${shortRoadName(road)}`
-            : instruction;
+          label = text(
+            'span',
+            road ? `${instruction} · ${shortRoadName(road)}` : instruction,
+            'nav-list-text',
+          );
           full = road ? `${instruction} · ${road}` : instruction;
           glyph = maneuverGlyph(item.step);
         } else {
@@ -114,17 +116,22 @@ export function upcomingList(deps: {
           const clock = new Date(
             deps.now() + seconds * 1000,
           ).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-          label = full = `${t(item.name)} · ${clock}`;
+          full = `${t(item.name)} · ${clock}`;
+          // The arrival on its own line, below the stop's name, as the
+          // stretch's number is below the road: on the narrowest card the
+          // name and a 12-hour time do not fit side by side.
+          label = document.createElement('span');
+          label.className = 'nav-list-text';
+          label.append(
+            text('span', t(item.name)),
+            text('span', clock, 'nav-list-detail'),
+          );
           glyph = icon('pin');
           li.classList.add('nav-list-stop');
         }
         glyph.classList.add('nav-list-icon');
         li.title = `${full} · ${distance}`;
-        li.append(
-          glyph,
-          text('span', label, 'nav-list-text'),
-          text('span', distance, 'nav-list-distance'),
-        );
+        li.append(glyph, label, text('span', distance, 'nav-list-distance'));
         return li;
       },
     );

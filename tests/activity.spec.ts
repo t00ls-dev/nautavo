@@ -117,6 +117,9 @@ test.describe('activity replay on a phone', () => {
       '60×',
       '300×',
     ]);
+    // At the start the grade is not known yet: the hyphen, without its unit.
+    await expect(page.locator('.nav-activity-grade b')).toHaveText('-');
+    await expect(page.locator('.nav-activity-grade small')).toHaveText('');
     // At 25 s: 125 m along, heart rate 122, 5 m/s.
     const range = page.locator('#nav-replay-position');
     const max = Number(await range.getAttribute('max'));
@@ -128,6 +131,7 @@ test.describe('activity replay on a phone', () => {
       Math.round((25 / 190) * max),
     );
     await expect(page.locator('.nav-activity-hr b')).toHaveText('122');
+    await expect(page.locator('.nav-activity-grade small')).toHaveText('%');
     // Values stay in their columns whatever their digits.
     const columns = () =>
       page
@@ -394,6 +398,11 @@ for (const [width, height] of [
       await page.reload();
       await mapReady(page);
       await importActivity(page, extremeRide());
+      // Four-digit values grouped as every other label, here and in the
+      // power chart alike.
+      await expect(page.locator('#activity-values')).toContainText(
+        lang === 'pt' ? '1.290 W, máx. 1.700' : '1,290 W, max. 1,700',
+      );
       const row = page.locator('#activity-charts-row');
       // Closed on a phone, where the summary fills the half sheet; open on a
       // wide screen.

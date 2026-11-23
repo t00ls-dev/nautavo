@@ -213,7 +213,7 @@ export function setupActivityView(deps: {
     );
     const values: [IconName, string, string][] = [];
     const { hr, cadence, power, temperature } = activity.channels;
-    const round = (n: number) => String(Math.round(n));
+    const round = (n: number) => Math.round(n).toLocaleString(locale);
     if (hr)
       values.push([
         'heart',
