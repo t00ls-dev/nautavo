@@ -375,23 +375,40 @@ test('one-finger zoom: double tap and drag down zooms in, up zooms out, without 
   const x = box.x + 160,
     y = box.y + 200;
   const session = await context.newCDPSession(page);
-  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', ty = y) =>
-    session.send('Input.dispatchTouchEvent', {
+  // Each event carries the time of the script, not the moment a busy
+  // renderer accepts it: MapLibre and the app time taps by the event's
+  // timeStamp, and under load the real gaps outgrew the 500 ms double tap.
+  // The clock follows the script's pauses and catches up with real time at
+  // each gesture, so it never runs ahead of it.
+  let clock = 0;
+  const gesture = () => {
+    clock = Math.max(clock, Date.now() / 1000);
+  };
+  const pause = async (ms: number) => {
+    clock += ms / 1000;
+    await page.waitForTimeout(ms);
+  };
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', ty = y) => {
+    clock += 0.001;
+    return session.send('Input.dispatchTouchEvent', {
       type,
       touchPoints: type === 'touchEnd' ? [] : [{ x, y: ty }],
+      timestamp: clock,
     });
+  };
   const quickZoom = async (dy: number) => {
+    gesture();
     await touch('touchStart');
     await touch('touchEnd');
-    await page.waitForTimeout(80);
+    await pause(80);
     await touch('touchStart');
     for (let step = 1; step <= 10; step++) {
       await touch('touchMove', y + (dy * step) / 10);
-      await page.waitForTimeout(30);
+      await pause(30);
     }
-    await page.waitForTimeout(600); // Longer than the point menu's long press.
+    await pause(600); // Longer than the point menu's long press.
     await touch('touchEnd');
-    await page.waitForTimeout(400);
+    await pause(400);
   };
   const zoom = () =>
     page.evaluate(() =>
@@ -409,30 +426,34 @@ test('one-finger zoom: double tap and drag down zooms in, up zooms out, without 
   await expect(page.locator('#point-menu')).toBeHidden();
   const start = await zoom();
   // Tap, then hold still: still the zoom gesture, never the point menu.
+  gesture();
   await touch('touchStart');
   await touch('touchEnd');
-  await page.waitForTimeout(80);
+  await pause(80);
   await touch('touchStart');
-  await page.waitForTimeout(800);
+  await pause(800);
   await expect(page.locator('#point-menu')).toBeHidden();
+  gesture();
   await touch('touchEnd');
   // Released without dragging: the view stays, as in phone map apps; the
   // browser's double click no longer follows the cancelled second touch.
-  await page.waitForTimeout(500);
+  await pause(500);
   expect(await zoom()).toBe(start);
   // A quick double tap zooms one level in.
+  gesture();
   await touch('touchStart');
   await touch('touchEnd');
-  await page.waitForTimeout(80);
+  await pause(80);
   await touch('touchStart');
   await touch('touchEnd');
   await expect
     .poll(async () => Math.round(await zoom()))
     .toBe(Math.round(start) + 1);
-  await page.waitForTimeout(600);
+  await pause(600);
   // A single long press still opens it.
+  gesture();
   await touch('touchStart');
-  await page.waitForTimeout(700);
+  await pause(700);
   await touch('touchEnd');
   await expect(page.locator('#point-menu')).toBeVisible();
   await session.detach();
