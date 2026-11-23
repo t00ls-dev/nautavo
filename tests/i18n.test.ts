@@ -21,6 +21,13 @@ it('translates native UI labels and dynamic messages in both directions', () => 
   setLanguage('en');
   expect(t('Download GPX')).toBe('Download GPX');
 });
+it('keeps the no-break space between a number and its unit', () => {
+  // Other runs of white space become one space before matching.
+  expect(
+    translate('Min 100\u00a0m · Max 2,500\u00a0m · Avg 1,308\u00a0m', 'pt'),
+  ).toBe('Mín 100\u00a0m · Máx 2,500\u00a0m · Média 1,308\u00a0m');
+  expect(translate('  Download\n  GPX ', 'pt')).toBe('Baixar GPX');
+});
 it('switches existing content and placeholders without overwriting typed place names', () => {
   document.body.innerHTML =
     '<h1>Plan your route</h1><input placeholder="My road trip" value="Postinho do Alto">';

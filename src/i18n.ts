@@ -686,7 +686,11 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Share saved route: (.*?)$/, (n) => `Compartilhar rota salva: ${n}`],
   [/^Delete saved route: (.*?)$/, (n) => `Excluir rota salva: ${n}`],
 
-  [/^At (.*?) (km\/h|mph) · no stops$/, (n, u) => `A ${n} ${u} · sem paradas`],
+  [
+    // Numbers and units are joined by a no-break space (`withUnit`): \s.
+    /^At (.*?)\s(km\/h|mph) · no stops$/,
+    (n, u) => `A ${n}\u00a0${u} · sem paradas`,
+  ],
   [/^Location of point (\d+)$/, (n) => `Local do ponto ${n}`],
   [/^Results for point (\d+)$/, (n) => `Resultados do ponto ${n}`],
   [
@@ -715,7 +719,10 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     (value, category) =>
       `UV ${value} · ${({ Low: 'baixo', Moderate: 'moderado', High: 'alto', 'Very high': 'muito alto', Extreme: 'extremo' } as Record<string, string>)[category]}`,
   ],
-  [/^(\S+ (?:km|mi)) of (\S+ (?:km|mi))$/, (done, all) => `${done} de ${all}`],
+  [
+    /^(\S+\s(?:km|mi)) of (\S+\s(?:km|mi))$/,
+    (done, all) => `${done} de ${all}`,
+  ],
   // Recorded activities (#156).
   [/^max\. (.+)$/, (value) => `máx. ${value}`],
   [
@@ -725,8 +732,8 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Under (.+)$/, (value) => `Abaixo de ${value}`],
   [/^(.+) and over$/, (value) => `${value} ou mais`],
   [
-    /^(\S+) (bpm|W), max\. (\S+)$/,
-    (n, unit, max) => `${n} ${unit}, máx. ${max}`,
+    /^(\S+)\s(bpm|W), max\. (\S+)$/,
+    (n, unit, max) => `${n}\u00a0${unit}, máx. ${max}`,
   ],
   [/^Stop of (\d+) min skipped$/, (n) => `Parada de ${n} min pulada`],
   [/^total (.+)$/, (value) => `total ${value}`],
@@ -737,7 +744,7 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     /^Sunset in (\d+) minutes?\.$/,
     (n) => `O sol se põe em ${n} ${n === '1' ? 'minuto' : 'minutos'}.`,
   ],
-  [/^About (-?[\d.,]+ (?:m|ft))$/, (value) => `Cerca de ${value}`],
+  [/^About (-?[\d.,]+\s(?:m|ft))$/, (value) => `Cerca de ${value}`],
   [
     /^Min (.+) · Max (.+) · Avg (.+)$/,
     (min, max, avg) => `Mín ${min} · Máx ${max} · Média ${avg}`,
@@ -839,7 +846,9 @@ export function t(value: string): string {
 /** Translates English source text into `lang` without changing the page language. */
 export function translate(value: string, lang: Language): string {
   if (lang === 'en') return value;
-  const normalized = value.trim().replace(/\s+/g, ' ');
+  // Runs of spaces and line breaks become one space; the no-break space
+  // between a number and its unit (`withUnit`) stays.
+  const normalized = value.trim().replace(/[^\S\u00a0]+/g, ' ');
   if (pt[normalized]) return pt[normalized];
   for (const [pattern, replace] of patterns) {
     const m = normalized.match(pattern);

@@ -10,6 +10,7 @@ import type { IconName } from './icons';
 import type { Coloring, Range } from './route-overlays';
 import { speedFromKmh } from './travel-time';
 import { distanceUnits } from './unit-preferences';
+import { withUnit } from './units';
 
 /**
  * Route colorings of a recorded activity (#156): speed, heart rate and
@@ -115,10 +116,10 @@ export function activityColorings(deps: {
         label: !limits.length
           ? kind
           : i === 0
-            ? `Under ${number(limits[0])} ${unit}`
+            ? `Under ${withUnit(number(limits[0]), unit)}`
             : i === limits.length
-              ? `${number(limits[i - 1])} ${unit} and over`
-              : `${number(limits[i - 1])}–${number(limits[i])} ${unit}`,
+              ? `${withUnit(number(limits[i - 1]), unit)} and over`
+              : withUnit(`${number(limits[i - 1])}–${number(limits[i])}`, unit),
       }));
     },
     get scale() {

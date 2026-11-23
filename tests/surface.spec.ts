@@ -96,8 +96,8 @@ test('surface is asked only when opened, totals and stretches translate and conv
   const totals = page.locator('.surface-totals li');
   await expect(totals).toHaveCount(2);
   // About 89 km paved and 22 km gravel on a 111 km route.
-  await expect(totals.nth(0)).toHaveText(/^Paved(8[89]|90)(\.\d)? km · 80%$/);
-  await expect(totals.nth(1)).toHaveText(/^Unpaved2[12](\.\d)? km · 20%$/);
+  await expect(totals.nth(0)).toHaveText(/^Paved(8[89]|90)(\.\d)?\skm · 80%$/);
+  await expect(totals.nth(1)).toHaveText(/^Unpaved2[12](\.\d)?\skm · 20%$/);
   expect(requests).toHaveLength(1);
   // A POST to the Valhalla server with the sent shape and attributes.
   const sent = JSON.parse(requests[0].body) as {
@@ -109,7 +109,9 @@ test('surface is asked only when opened, totals and stretches translate and conv
   await expect(page.locator('.surface-sections .climbs-heading')).toHaveText(
     'Unpaved stretches (1)',
   );
-  await expect(sections).toHaveText(/^km 33\.\d · 2[12](\.\d)? km · Unpaved$/);
+  await expect(sections).toHaveText(
+    /^km\s33\.\d · 2[12](\.\d)?\skm · Unpaved$/,
+  );
   await sections.first().click();
   await expect(sections.first()).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => overlayCount(page, 'rg-surface')).toBe(1);
@@ -227,7 +229,7 @@ test('an answer for an older route is discarded', async ({ page }) => {
   await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 10000 });
   // Only the new route's surface: about 55 km, gravel from 33 to 55 km.
   await expect(page.locator('.surface-totals li').nth(1)).toHaveText(
-    /^Unpaved2[12](\.\d)? km · 40%$/,
+    /^Unpaved2[12](\.\d)?\skm · 40%$/,
   );
   expect(requests).toHaveLength(2);
 });

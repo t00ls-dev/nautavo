@@ -361,12 +361,11 @@ test('undo restores a moved marker and a removed stop', async ({ page }) => {
   await page.locator('#undo').click();
   await expect(page.locator('#points li')).toHaveCount(3);
 });
-test('the itinerary shows turn directions in both languages', async ({
-  page,
-}) => {
-  await setup(page);
-  // Later routes override the shared mock: three steps with OSRM's
-  // maneuvers, which answers as the fallback when Valhalla fails.
+/**
+ * Three steps with OSRM's maneuvers, which answers as the fallback when
+ * Valhalla fails; registered after `setup`, so it overrides the shared mock.
+ */
+async function mockSteps(page: Page, roads = ['Rua A', 'Rua B', 'Rua C']) {
   await page.route(/\/route\?json=/, (r) => r.abort());
   await page.route('**/route/v1/driving/**', async (r) => {
     const coords = osrmPoints(r.request().url());
@@ -383,9 +382,9 @@ test('the itinerary shows turn directions in both languages', async ({
         legs: [
           {
             steps: [
-              step('Rua A', { type: 'depart', location: coords[0] }),
+              step(roads[0], { type: 'depart', location: coords[0] }),
               {
-                ...step('Rua B', {}),
+                ...step(roads[1], {}),
                 ref: 'RJ-116',
                 maneuver: {
                   type: 'turn',
@@ -397,13 +396,19 @@ test('the itinerary shows turn directions in both languages', async ({
                 },
               },
               // No location: plain text, positioned by step lengths.
-              step('Rua C', { type: 'roundabout', exit: 2 }),
+              step(roads[2], { type: 'roundabout', exit: 2 }),
             ],
           },
         ],
       }),
     });
   });
+}
+test('the itinerary shows turn directions in both languages', async ({
+  page,
+}) => {
+  await setup(page);
+  await mockSteps(page);
   await page.goto(base);
   await page.locator('#location-0').fill(start);
   await page.locator('#location-0').press('Tab');
@@ -425,10 +430,10 @@ test('the itinerary shows turn directions in both languages', async ({
   ).toBeInViewport();
   const items = page.locator('#itinerary li');
   await expect(items).toHaveText([
-    'km 0.0 Depart · R. A · 1 km',
-    'km 16.6 Turn left · R. B · 1 km',
+    'km 0.0 Depart R. A 1 km',
+    'km 16.6 Turn left R. B 1 km',
     // No location: placed by the step lengths, but not a map button.
-    'km 2.0 Roundabout, exit 2 · R. C · 1 km',
+    'km 2.0 Roundabout, exit 2 R. C 1 km',
   ]);
   await expect(items.locator('button.maneuver-link')).toHaveCount(2);
   // The grid lives inside the button (older Safari ignores grid on buttons),
@@ -446,7 +451,8 @@ test('the itinerary shows turn directions in both languages', async ({
   // Shortened names are display only; the accessible label keeps them whole.
   await expect(items.nth(1).locator('button')).toHaveAttribute(
     'aria-label',
-    'Show on map: km 16.6 · Turn left · RJ-116 · Rua B · 1 km',
+    // Numbers keep their units with a no-break space (`withUnit`).
+    'Show on map: km\u00a016.6 · Turn left · RJ-116 · Rua B · 1\u00a0km',
   );
   await expect(items.nth(2).locator('button')).toHaveCount(0);
   // Choosing an instruction centers the map on it, at street zoom.
@@ -473,11 +479,53 @@ test('the itinerary shows turn directions in both languages', async ({
     'true',
   );
   await page.locator('#language').selectOption('pt');
-  await expect(items.nth(1)).toContainText('Vire à esq. · R. B');
+  await expect(items.nth(1)).toContainText('Vire à esq. R. B');
   await expect(items.nth(2)).toContainText('Rotatória, 2ª saída');
   await page.locator('#language').selectOption('en');
-  await expect(items.nth(1)).toContainText('Turn left · R. B');
+  await expect(items.nth(1)).toContainText('Turn left R. B');
 });
+for (const language of ['en', 'pt'] as const)
+  test(`itinerary steps keep their instruction and length whole at 320px in ${language}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await setup(page);
+    await mockSteps(page, [
+      'Avenida Prefeito Dulcídio Cardoso',
+      'Estrada Engenheiro Rufino de Almeida Sobrinho',
+      'Avenida Presidente Juscelino Kubitschek de Oliveira',
+    ]);
+    await page.goto(`${base}?lang=${language}`);
+    // Miles: the longest lengths.
+    await chooseUnits(page, { distance: 'imperial' });
+    await page.locator('#location-0').fill(start);
+    await page.locator('#location-0').press('Tab');
+    await page.locator('#location-1').fill(end);
+    await page.locator('#location-1').press('Tab');
+    await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
+    await page.locator('#itinerary summary').dispatchEvent('click');
+    await expect(page.locator('#itinerary li')).toHaveCount(3);
+    // The road may give way; the instruction and the length never do.
+    const cut = await page.evaluate(() =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          '#itinerary .maneuver, #itinerary .step-length',
+        ),
+      ]
+        .filter((e) => {
+          const box = e.getBoundingClientRect(),
+            row = e.closest('.step-row')!.getBoundingClientRect();
+          return (
+            e.scrollWidth > e.clientWidth + 1 || box.right > row.right + 0.5
+          );
+        })
+        .map((e) => e.textContent),
+    );
+    expect(cut).toEqual([]);
+    await expect(page.locator('#itinerary .step-length').first()).toHaveText(
+      language === 'pt' ? '0,6 mi' : '0.6 mi',
+    );
+  });
 test('imports FIT and TCX files by content and reports damaged files', async ({
   page,
 }) => {
@@ -623,11 +671,13 @@ test('editing an imported track reroutes only the track around the edit', async 
       page.locator(`#location-${i + 1}`).inputValue(),
     ),
   );
-  for (const stop of stops) expect(stop).toMatch(/^Stop · km \d+\.\d$/);
+  for (const stop of stops) expect(stop).toMatch(/^Stop · km\s\d+\.\d$/);
   const kms = stops.map((s) => Number(s.split('km ')[1]));
   expect(kms).toEqual([...kms].sort((a, b) => a - b));
   await page.locator('#language').selectOption('pt');
-  await expect(page.locator('#location-1')).toHaveValue(/^Parada · km \d+,\d$/);
+  await expect(page.locator('#location-1')).toHaveValue(
+    /^Parada · km\s\d+,\d$/,
+  );
   await page.locator('#language').selectOption('en');
 
   await page.locator('#route-name').fill('Renamed spur');
@@ -1387,8 +1437,8 @@ test('a route saved before turn directions gets them once, keeping its geometry'
   expect(routeRequests).toHaveLength(0);
   await page.locator('#itinerary summary').click();
   await expect(page.locator('#itinerary li')).toHaveText([
-    'km 0.0 Depart · R. A · 5 km',
-    'km 5.1 Turn left · R. B · 5.2 km',
+    'km 0.0 Depart R. A 5 km',
+    'km 5.1 Turn left R. B 5.2 km',
   ]);
   expect(routeRequests).toHaveLength(1);
   // The saved geometry is kept: three points, not the router's two.
@@ -1624,11 +1674,11 @@ test('an imported track gets directions by map matching when the itinerary opens
   await page.locator('#itinerary summary').click();
   // 6.5 km traced every 300 m: 23 points in 3 chunks of up to 10.
   await expect(page.locator('#itinerary li').first()).toContainText(
-    'Depart · R. A',
+    'Depart R. A',
     { timeout: 15000 },
   );
   await expect(page.locator('#itinerary li').nth(1)).toContainText(
-    'Turn right · R. B',
+    'Turn right R. B',
   );
   expect(matches).toHaveLength(3);
   expect(
@@ -1670,7 +1720,7 @@ test('directions that fail without a connection are added once it returns', asyn
   offline = false;
   await context.setOffline(false);
   await expect(page.locator('#itinerary li').nth(1)).toContainText(
-    'Turn right · R. B',
+    'Turn right R. B',
     { timeout: 15000 },
   );
   await expect(page.locator('#directions-status')).toBeHidden();

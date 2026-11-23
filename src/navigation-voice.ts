@@ -42,7 +42,7 @@ export function spokenDistance(
   locale: string,
 ): string {
   const label = navigationDistanceLabel(meters, units, locale);
-  const [value, unit] = label.split(' ');
+  const [value, unit] = label.split(/\s/);
   const word = { m: 'meters', km: 'kilometers', ft: 'feet', mi: 'miles' }[unit];
   return word ? `${value} ${word}` : label;
 }

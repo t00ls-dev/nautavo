@@ -189,12 +189,12 @@ describe('maneuver positions', () => {
   });
 
   it('formats compact step lengths', () => {
-    expect(stepDistanceLabel(537, 'metric', 'en')).toBe('540 m');
-    expect(stepDistanceLabel(3, 'metric', 'en')).toBe('10 m');
-    expect(stepDistanceLabel(2049, 'metric', 'pt-BR')).toBe('2 km');
-    expect(stepDistanceLabel(2149, 'metric', 'pt-BR')).toBe('2,1 km');
-    expect(stepDistanceLabel(100, 'imperial', 'en')).toBe('330 ft');
-    expect(stepDistanceLabel(1609.344, 'imperial', 'en')).toBe('1 mi');
+    expect(stepDistanceLabel(537, 'metric', 'en')).toBe('540\u00a0m');
+    expect(stepDistanceLabel(3, 'metric', 'en')).toBe('10\u00a0m');
+    expect(stepDistanceLabel(2049, 'metric', 'pt-BR')).toBe('2\u00a0km');
+    expect(stepDistanceLabel(2149, 'metric', 'pt-BR')).toBe('2,1\u00a0km');
+    expect(stepDistanceLabel(100, 'imperial', 'en')).toBe('330\u00a0ft');
+    expect(stepDistanceLabel(1609.344, 'imperial', 'en')).toBe('1\u00a0mi');
   });
 
   it('places steps saved without a location by their lengths on routed routes', () => {
@@ -209,9 +209,9 @@ describe('maneuver positions', () => {
   });
 
   it('formats positions like road markers', () => {
-    expect(milepostLabel(12345, 'metric', 'en')).toBe('km 12.3');
-    expect(milepostLabel(12345, 'metric', 'pt-BR')).toBe('km 12,3');
-    expect(milepostLabel(0, 'metric', 'en')).toBe('km 0.0');
-    expect(milepostLabel(16093.44, 'imperial', 'en')).toBe('mi 10.0');
+    expect(milepostLabel(12345, 'metric', 'en')).toBe('km\u00a012.3');
+    expect(milepostLabel(12345, 'metric', 'pt-BR')).toBe('km\u00a012,3');
+    expect(milepostLabel(0, 'metric', 'en')).toBe('km\u00a00.0');
+    expect(milepostLabel(16093.44, 'imperial', 'en')).toBe('mi\u00a010.0');
   });
 });

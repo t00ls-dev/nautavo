@@ -11,7 +11,7 @@ import {
   type RejoinPoint,
   type TrackIndex,
 } from './track-position';
-import type { DistanceUnits } from './units';
+import { withUnit, type DistanceUnits } from './units';
 import { bearingBetween } from './weather-wind';
 
 /**
@@ -379,24 +379,17 @@ export function navigationDistanceLabel(
     const miles = value / 1609.344;
     if (miles < 0.1) {
       const feet = Math.round((value * 3.280839895) / 50) * 50;
-      return `${Math.max(50, feet).toLocaleString(locale)} ft`;
+      return withUnit(Math.max(50, feet).toLocaleString(locale), 'ft');
     }
-    return `${decimal(miles)} mi`;
+    return withUnit(decimal(miles), 'mi');
   }
-  if (value < 100) return `${Math.max(10, Math.round(value / 10) * 10)} m`;
+  if (value < 100)
+    return withUnit(Math.max(10, Math.round(value / 10) * 10), 'm');
   if (value < 1000) {
     const rounded = Math.round(value / 50) * 50;
-    if (rounded < 1000) return `${rounded} m`;
+    if (rounded < 1000) return withUnit(rounded, 'm');
   }
-  return `${decimal(value / 1000)} km`;
-}
-
-/** Remaining time as the summary writes it: "18 min", "1h 48 min". */
-export function navigationDurationLabel(seconds: number): string {
-  const minutes = Math.max(0, Math.round(seconds / 60));
-  return minutes < 60
-    ? `${minutes} min`
-    : `${Math.floor(minutes / 60)}h ${minutes % 60} min`;
+  return withUnit(decimal(value / 1000), 'km');
 }
 
 /** Faster than this (m/s, about 7 km/h) the traveler is moving. */

@@ -10,6 +10,7 @@ import {
   MISSING,
   precipitationLabel,
   temperatureLabel,
+  withUnit,
 } from './units';
 import { classifyWeather, groupWeather, uvCategory } from './weather-risk';
 import { windRelation, windStrength, windFlowDirection } from './weather-wind';
@@ -416,9 +417,12 @@ export function setupWeather(
     const speedLabel = (kmh: number | null) =>
       kmh === null
         ? null
-        : `${speedFromKmh(kmh, distanceUnits()).toLocaleString(locale, {
-            maximumFractionDigits: 1,
-          })} ${speedUnit()}`;
+        : withUnit(
+            speedFromKmh(kmh, distanceUnits()).toLocaleString(locale, {
+              maximumFractionDigits: 1,
+            }),
+            speedUnit(),
+          );
     /** "4 km" or "4–9 km": the number of the lowest, the label of the highest. */
     const range = (
       values: (number | null)[],
@@ -429,7 +433,7 @@ export function setupWeather(
       const low = Math.min(...known),
         high = Math.max(...known);
       const top = label(high);
-      return label(low) === top ? top : `${label(low).split(' ')[0]}–${top}`;
+      return label(low) === top ? top : `${label(low).split(/\s/)[0]}–${top}`;
     };
     const clock = (v: number) =>
       new Date(v).toLocaleTimeString(locale, {

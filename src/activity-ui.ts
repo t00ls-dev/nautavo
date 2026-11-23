@@ -15,15 +15,16 @@ import {
 import {
   distanceLabel,
   elevationLabel,
+  durationLabel,
   speedLabel,
   temperatureLabel,
+  withUnit,
 } from './units';
 import { distanceUnits, temperatureUnits } from './unit-preferences';
 import { routeLineColor } from './map-layers';
 import { COLORING_OVERLAY } from './route-overlays';
-import { navigationDurationLabel } from './navigation';
 
-const durationLabel = (ms: number) => navigationDurationLabel(ms / 1000);
+const elapsed = (ms: number) => durationLabel(ms / 1000);
 
 /**
  * The activity view (#156): a recorded activity opened from Import, apart
@@ -202,8 +203,8 @@ export function setupActivityView(deps: {
       stat('Distance', distanceLabel(activity.distance, units, locale)),
       stat(
         'Moving time',
-        durationLabel(activity.moving),
-        t(`total ${durationLabel(activity.end - activity.start)}`),
+        elapsed(activity.moving),
+        t(`total ${elapsed(activity.end - activity.start)}`),
       ),
       stat(
         'Average speed',
@@ -218,19 +219,27 @@ export function setupActivityView(deps: {
       values.push([
         'heart',
         'Heart rate',
-        t(`${round(hr.average)} bpm, max. ${round(hr.max)}`),
+        t(`${withUnit(round(hr.average), 'bpm')}, max. ${round(hr.max)}`),
       ]);
     if (cadence)
-      values.push(['cadence', 'Cadence', `${round(cadence.average)} rpm`]);
+      values.push([
+        'cadence',
+        'Cadence',
+        withUnit(round(cadence.average), 'rpm'),
+      ]);
     if (power)
       values.push([
         'power',
         'Power',
-        t(`${round(power.average)} W, max. ${round(power.max)}`),
+        t(`${withUnit(round(power.average), 'W')}, max. ${round(power.max)}`),
       ]);
     if (activity.channels.balance) {
       const left = Math.round(activity.channels.balance.average);
-      values.push(['power', 'Power balance', `${left}/${100 - left} %`]);
+      values.push([
+        'power',
+        'Power balance',
+        withUnit(`${left}/${100 - left}`, '%'),
+      ]);
     }
     if (temperature)
       values.push([
@@ -265,7 +274,7 @@ export function setupActivityView(deps: {
     $('activity-when').textContent =
       `${start.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}, ${start.toLocaleTimeString(locale, time)}–${end.toLocaleTimeString(locale, time)}`;
     $('peek-main').textContent =
-      `${distanceLabel(activity.distance, units, locale)} · ${durationLabel(activity.end - activity.start)}`;
+      `${distanceLabel(activity.distance, units, locale)} · ${elapsed(activity.end - activity.start)}`;
   }
 
   /** Opens an activity; `fileName` names it when the file has no name. */

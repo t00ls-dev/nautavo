@@ -19,7 +19,12 @@ import {
   storedSpeedKmh,
   rememberSpeedKmh,
 } from './travel-time';
-import { milepostLabel, shortDistanceLabel, stepDistanceLabel } from './units';
+import {
+  milepostLabel,
+  shortDistanceLabel,
+  stepDistanceLabel,
+  withUnit,
+} from './units';
 import { UndoHistory } from './history';
 import {
   getLanguage,
@@ -564,8 +569,10 @@ function settings() {
   input.setAttribute('aria-valuemin', '1');
   input.setAttribute('aria-valuemax', String(bounds.max));
   showSpeed(value);
-  $('speed-range').textContent =
-    `1–${bounds.max} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'}`;
+  $('speed-range').textContent = withUnit(
+    `1–${bounds.max}`,
+    distanceUnits() === 'imperial' ? 'mph' : 'km/h',
+  );
   $('speed-unit').textContent = distanceUnits() === 'imperial' ? 'mph' : 'km/h';
   unitSelects();
   for (const key of ['osrm', 'valhalla', 'nominatim'] as const)
@@ -1964,7 +1971,7 @@ function showSpeed(value: number) {
   input.setAttribute('aria-valuenow', String(value));
   input.setAttribute(
     'aria-valuetext',
-    `${value} ${distanceUnits() === 'imperial' ? 'mph' : 'km/h'}`,
+    withUnit(value, distanceUnits() === 'imperial' ? 'mph' : 'km/h'),
   );
   $('average-speed-value').textContent = String(value);
 }

@@ -30,7 +30,6 @@ import {
   isMoving,
   turnToward,
   navigationDistanceLabel,
-  navigationDurationLabel,
   type NavigationManeuver,
   type NavigationReadout,
 } from './navigation';
@@ -80,7 +79,7 @@ import {
   type Peak,
   type Stop,
 } from './activity';
-import { distanceLabel, MISSING } from './units';
+import { distanceLabel, durationLabel, MISSING } from './units';
 import { distanceUnits } from './unit-preferences';
 import { activityValues, PEAK_ICONS, peakLabel } from './activity-values';
 
@@ -812,7 +811,7 @@ export function setupNavigation(deps: {
     if (!tracker) return;
     const remaining = r ? r.remaining : tracker.total;
     const seconds = travelTimeSeconds(remaining, arrivalSpeed());
-    $('nav-time').textContent = r ? navigationDurationLabel(seconds) : MISSING;
+    $('nav-time').textContent = r ? durationLabel(seconds) : MISSING;
     const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
       deps.locale(),
       { hour: '2-digit', minute: '2-digit' },
