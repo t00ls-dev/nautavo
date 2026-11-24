@@ -102,6 +102,88 @@ describe('routing adapters', () => {
     expect(r.steps[3]).not.toHaveProperty('exit');
     expect(r.steps[3]).not.toHaveProperty('at');
   });
+  it("keeps OSRM's sign: route numbers, destinations and exit (#135)", async () => {
+    const data = structuredClone(osrm) as typeof osrm & {
+      routes: { legs: { steps: Record<string, unknown>[] }[] }[];
+    };
+    const step = (extra: Record<string, unknown>) => ({
+      name: '',
+      distance: 1,
+      duration: 1,
+      maneuver: { type: 'fork', modifier: 'slight right' },
+      ...extra,
+    });
+    data.routes[0].legs[0].steps.push(
+      step({
+        destinations:
+          'RJ-071: Ilha do Governador, Aeroporto Internacional, Petrópolis',
+        exits: '7A;7B',
+      }),
+      step({ destinations: 'Jacarepaguá' }),
+      step({ destinations: `bad\u0007sign`, exits: '9'.repeat(201) }),
+    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(data)));
+    const r = await osrmRoute(state());
+    expect(r.steps[1]).toMatchObject({
+      branch: 'RJ-071',
+      toward: 'Ilha do Governador, Aeroporto Internacional, Petrópolis',
+      exitNumber: '7A',
+    });
+    expect(r.steps[2]).toMatchObject({ toward: 'Jacarepaguá' });
+    expect(r.steps[2]).not.toHaveProperty('branch');
+    // Control characters and over-long text are left out, not the route.
+    expect(r.steps[3]).not.toHaveProperty('toward');
+    expect(r.steps[3]).not.toHaveProperty('exitNumber');
+  });
+  it("keeps Valhalla's sign elements as OSRM writes them (#135)", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        response({
+          trip: {
+            status: 0,
+            summary: { length: 1, time: 90 },
+            legs: [
+              {
+                shape: '??_c`|@_gayB',
+                maneuvers: [
+                  {
+                    length: 0.5,
+                    time: 1,
+                    type: 23,
+                    sign: {
+                      exit_branch_elements: [{ text: 'RJ-071' }],
+                      exit_toward_elements: [
+                        { text: 'Ilha do Governador' },
+                        { text: 'Aeroporto Internacional' },
+                      ],
+                      exit_number_elements: [{ text: '12' }],
+                    },
+                  },
+                  {
+                    length: 0.5,
+                    time: 1,
+                    type: 18,
+                    sign: { exit_name_elements: [{ text: 'Barra' }] },
+                  },
+                  { length: 0, time: 0, type: 4, sign: {} },
+                ],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    const r = await valhallaRoute(state());
+    expect(r.steps[0]).toMatchObject({
+      branch: 'RJ-071',
+      toward: 'Ilha do Governador, Aeroporto Internacional',
+      exitNumber: '12',
+    });
+    // A named exit stands in for destinations the sign does not give.
+    expect(r.steps[1]).toMatchObject({ toward: 'Barra' });
+    expect(r.steps[2]).not.toHaveProperty('toward');
+  });
   it('maps Valhalla maneuver types to the shared vocabulary', async () => {
     const maneuver = (type: number, extra = {}) => ({
       street_names: ['Road'],

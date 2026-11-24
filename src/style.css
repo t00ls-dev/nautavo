@@ -3580,6 +3580,52 @@ dialog:modal:not(.nav-screen) {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+/* The first destination on the sign at the maneuver (#135), below a named
+   road: smaller, two lines at most. */
+.nav-toward {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 16px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  opacity: 0.9;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.nav-toward[hidden] {
+  display: none;
+}
+/* A route number and an exit number from the sign, outlined as on a road
+   sign; in the itinerary they take the text's color. */
+.sign-route,
+.sign-exit {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border: 2px solid currentColor;
+  border-radius: 5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.nav-banner .sign-route,
+.nav-banner .sign-exit {
+  font-size: 15px;
+  vertical-align: 2px;
+}
+.step-detail .sign-route,
+.step-toward .sign-route {
+  font-size: 12px;
+  vertical-align: 1px;
+}
+.step-toward {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nav-then {
   display: flex;
   align-items: center;

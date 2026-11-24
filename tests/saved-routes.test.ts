@@ -119,6 +119,15 @@ it('imports backups with old steps and with maneuver details, rejecting invalid 
         kind: 'roundabout',
         exit: 3,
       },
+      {
+        name: 'Unnamed road',
+        ref: '',
+        distance: 500,
+        duration: 30,
+        kind: 'fork',
+        branch: 'RJ-071',
+        toward: 'Ilha do Governador, Aeroporto Internacional',
+      },
     ],
   };
   expect(roundtrip([current])[0].route).toEqual(current.route);
@@ -127,6 +136,13 @@ it('imports backups with old steps and with maneuver details, rejecting invalid 
   ) as EditableBackup;
   broken.routes[1].route.steps[0].modifier = 'sideways';
   expect(() => parseLibraryBackup(JSON.stringify(broken))).toThrow(
+    'Invalid saved route geometry.',
+  );
+  const badSign = JSON.parse(
+    exportLibraryBackup({ routes: [current], favorites: [] }),
+  ) as EditableBackup;
+  (badSign.routes[0].route.steps[2] as { toward: unknown }).toward = ['A'];
+  expect(() => parseLibraryBackup(JSON.stringify(badSign))).toThrow(
     'Invalid saved route geometry.',
   );
 });

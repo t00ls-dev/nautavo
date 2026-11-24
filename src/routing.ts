@@ -6,6 +6,7 @@ import {
   type Step,
   isExit,
   isModifier,
+  isSignText,
   serverUrl,
   validCoord,
   validRoute,
@@ -33,6 +34,10 @@ export interface OsrmResponse {
           exit?: number;
           location?: [number, number];
         };
+        /** The sign's route numbers and destinations: "RJ-071: A, B". */
+        destinations?: string;
+        /** The sign's exit numbers, separated by ";". */
+        exits?: string;
       }[];
     }[];
   }[];
@@ -92,6 +97,48 @@ function maneuverDetails(
     ...(isExit(exit) ? { exit } : {}),
     ...(at && validCoord(at) ? { at } : {}),
   };
+}
+/**
+ * A maneuver's sign from untrusted router data (#135): destinations, route
+ * numbers and exit number, each kept only when it is plain short text.
+ */
+function signDetails(
+  toward: unknown,
+  branch: unknown,
+  exitNumber: unknown,
+): Pick<Step, 'toward' | 'branch' | 'exitNumber'> {
+  const clean = (value: unknown) =>
+    typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : value;
+  const [t, b, e] = [toward, branch, exitNumber].map(clean);
+  return {
+    ...(isSignText(t) ? { toward: t } : {}),
+    ...(isSignText(b) ? { branch: b } : {}),
+    ...(isSignText(e) ? { exitNumber: e } : {}),
+  };
+}
+/** OSRM's sign: "RJ-071: Ilha do Governador, Aeroporto" (refs, then names). */
+function osrmSign(destinations?: string, exits?: string) {
+  const [, refs, names] = /^(?:([^:]*):)?(.*)$/s.exec(destinations ?? '') ?? [];
+  return signDetails(names, refs, exits?.split(';')[0]);
+}
+/** Valhalla's sign elements, joined as OSRM writes them. */
+function valhallaSign(
+  sign: NonNullable<
+    ValhallaResponse['trip']
+  >['legs'][number]['maneuvers'][number]['sign'],
+) {
+  const texts = (elements?: { text?: string }[]) =>
+    (elements ?? [])
+      .map((e) => e.text)
+      .filter(
+        (text): text is string => typeof text === 'string' && !!text.trim(),
+      )
+      .join(', ');
+  return signDetails(
+    texts(sign?.exit_toward_elements) || texts(sign?.exit_name_elements),
+    texts(sign?.exit_branch_elements),
+    sign?.exit_number_elements?.[0]?.text,
+  );
 }
 /** Valhalla maneuver types in the shared vocabulary (OSRM kinds and modifiers). */
 const VALHALLA_TYPES: Record<number, [kind: string, modifier?: Modifier]> = {
@@ -179,6 +226,12 @@ export interface ValhallaResponse {
         type: number;
         begin_shape_index?: number;
         roundabout_exit_count?: number;
+        sign?: {
+          exit_number_elements?: { text?: string }[];
+          exit_branch_elements?: { text?: string }[];
+          exit_toward_elements?: { text?: string }[];
+          exit_name_elements?: { text?: string }[];
+        };
       }[];
     }[];
   };
@@ -248,6 +301,7 @@ export function tripRoute(
               ? segments[leg][m.begin_shape_index!]
               : undefined,
           ),
+          ...valhallaSign(m.sign),
         };
       }),
     );
@@ -318,6 +372,7 @@ export function osrmStep(
       s.maneuver?.location &&
         ([s.maneuver.location[1], s.maneuver.location[0]] as Coord),
     ),
+    ...osrmSign(s.destinations, s.exits),
   };
 }
 

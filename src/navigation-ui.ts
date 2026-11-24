@@ -20,7 +20,7 @@ import {
   vectorCredits,
 } from './basemap';
 import { loadMapLibre } from './maplibre-loader';
-import { maneuverText, stepRoad } from './maneuvers';
+import { maneuverText, stepRoad, stepToward, towardText } from './maneuvers';
 import { navigationStyle } from './navigation-style';
 import {
   createNavigationTracker,
@@ -691,6 +691,7 @@ export function setupNavigation(deps: {
         deps.locale(),
       );
       $('nav-road').textContent = 'Back to route';
+      $('nav-toward').hidden = true;
       $('nav-then').hidden = true;
     } else renderManeuver(r, arrived);
     announce(r, arrived, !!rejoin);
@@ -863,11 +864,7 @@ export function setupNavigation(deps: {
           deps.locale(),
         );
     $('nav-distance').hidden = arrived;
-    $('nav-road').textContent = arrived
-      ? 'You have arrived'
-      : step
-        ? t(nextStop(r) ?? roadText(step))
-        : 'Destination';
+    renderRoad(arrived ? null : step, nextStop(r), arrived);
     const after = !arrived && r?.after ? r.after : null;
     $('nav-then').hidden = !after;
     if (after) {
@@ -878,6 +875,52 @@ export function setupNavigation(deps: {
         deps.locale(),
       );
     }
+  }
+  /**
+   * The road of the next maneuver and, from its sign (#135), the route
+   * number and first destination: a road without a name reads "toward X"
+   * (with the route number beside it), a named road keeps its name with
+   * "toward X" on a smaller line below; an exit number leads the line.
+   */
+  function renderRoad(
+    step: Step | null,
+    stop: string | null,
+    arrived: boolean,
+  ) {
+    const road = $('nav-road'),
+      below = $('nav-toward');
+    below.hidden = true;
+    if (arrived || !step || stop) {
+      road.textContent = arrived
+        ? 'You have arrived'
+        : stop
+          ? t(stop)
+          : 'Destination';
+      return;
+    }
+    const named = !!stepRoad(step),
+      branch = step.branch ?? '',
+      toward = stepToward(step);
+    const chips = [
+      ...(step.exitNumber
+        ? [text('span', t(`Exit ${step.exitNumber}`), 'sign-exit'), ' ']
+        : []),
+      ...(branch && !named ? [text('span', branch, 'sign-route'), ' '] : []),
+    ];
+    const main =
+      named || !(branch || toward)
+        ? t(roadText(step))
+        : branch
+          ? ''
+          : t(towardText(toward));
+    road.replaceChildren(...chips, ...(main ? [main] : []));
+    const line = named || branch ? toward : '';
+    if (!line && !(named && branch)) return;
+    below.hidden = false;
+    below.replaceChildren(
+      ...(named && branch ? [text('span', branch, 'sign-route'), ' '] : []),
+      ...(line ? [t(towardText(line))] : []),
+    );
   }
   /** Spoken by screen readers only when the maneuver or the state changes. */
   function announce(
@@ -893,7 +936,14 @@ export function setupNavigation(deps: {
       : arrived
         ? t('You have arrived')
         : r.next
-          ? `${t(maneuverText(r.next.step) ?? 'Continue')} · ${roadText(r.next.step)}`
+          ? [
+              t(maneuverText(r.next.step) ?? 'Continue'),
+              roadText(r.next.step),
+              r.next.step.branch,
+              stepToward(r.next.step) && t(towardText(stepToward(r.next.step))),
+            ]
+              .filter(Boolean)
+              .join(' · ')
           : t('Destination');
   }
   function renderBar(r: NavigationReadout | null) {

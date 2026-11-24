@@ -40,6 +40,16 @@ export const isModifier = (value: unknown): value is Modifier =>
 /** Roundabout exit numbers kept from routers. */
 export const isExit = (value: unknown): value is number =>
   Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 20;
+/** Longest sign text kept from a router (#135), characters. */
+const SIGN_LENGTH = 200;
+/** Text from a sign at a maneuver: a short line, no control characters. */
+export const isSignText = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.trim() === value &&
+  value.length > 0 &&
+  value.length <= SIGN_LENGTH &&
+  // eslint-disable-next-line no-control-regex
+  !/[\u0000-\u001f\u007f]/.test(value);
 export interface Step {
   name: string;
   ref: string;
@@ -54,6 +64,14 @@ export interface Step {
   exit?: number;
   /** Maneuver location on the route. */
   at?: Coord;
+  /**
+   * The sign at the maneuver (#135): its destinations as written, comma
+   * separated (the first is shown), the route numbers it names (RJ-071) and
+   * the exit number (7, 12A).
+   */
+  toward?: string;
+  branch?: string;
+  exitNumber?: string;
 }
 export interface Route {
   segments: Coord[][];
@@ -115,7 +133,10 @@ export function validRoute(value: unknown): value is Route {
         (s.kind === undefined || typeof s.kind === 'string') &&
         (s.modifier === undefined || isModifier(s.modifier)) &&
         (s.exit === undefined || isExit(s.exit)) &&
-        (s.at === undefined || validCoord(s.at)),
+        (s.at === undefined || validCoord(s.at)) &&
+        (s.toward === undefined || isSignText(s.toward)) &&
+        (s.branch === undefined || isSignText(s.branch)) &&
+        (s.exitNumber === undefined || isSignText(s.exitNumber)),
     ) &&
     (route.snapped === undefined ||
       (Array.isArray(route.snapped) && route.snapped.every(validCoord)))
