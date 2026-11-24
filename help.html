@@ -654,35 +654,40 @@
           The app asks the browser to keep the screen on while navigating, where
           the browser allows it. Routes without turn directions, such as
           imported tracks before their Itinerary is opened, count down to the
-          destination. If you leave the route for a few seconds (farther than 50
-          m, or more when the GPS is imprecise), the card turns amber and says
-          Back to route, with an arrow and the straight-line distance to a point
-          on the route ahead of you, and the map shows a dashed line to it. The
-          arrow does not know the roads: take the streets that lead there. It
-          needs no connection. Online, after 15 seconds off the route the app
-          recalculates a way back to the planned route, at most once a minute;
-          Recalculate route asks right away within the same limit. The new path
-          is used only during this navigation; the planned route does not
-          change. To follow the planned track exactly, as in an event, uncheck
-          Recalculate the route automatically in the start notice or in
-          Settings, or tap Turn off on the reminder shown when navigation starts
-          without the notice; Recalculate route still asks when you tap it. Tap
-          or drag up the bottom bar (a sheet with a handle, like the route
-          panel) to list the turns and route points ahead, with their distance
-          and, for route points, the arrival time; the road you are on comes
-          first, highlighted, with its stage of the route (Step 2 of 6). Drag it
-          down, tap it again or press Escape to close it, while navigation goes
-          on underneath. To hear the directions, check Speak the directions in
-          the start notice or in Settings, or tap the speaker button on the
-          navigation screen: the phone's own voice says each turn ahead, the
-          arrival, leaving the route and a recalculated route, in the interface
-          language, with no request and without a connection; it is off by
-          default and stays quiet while the page is hidden. On an iPhone, the
-          browser's voice follows the ring/silent switch, so turn silent mode
-          off to hear it, and it pauses music or podcasts playing in other apps;
-          only native apps can mix their voice with them. A round badge at the
-          bottom left shows your current speed (0 when stopped, hidden with a
-          weak signal). The time left and the arrival start from your average
+          destination. When you start on a road the route uses more than once,
+          such as halfway along an out-and-back route, and you are not moving
+          along it yet, the top of the screen asks Which way are you going?,
+          with the next route point and the distance left for each way: tap
+          yours, or start moving and the app tells from your direction. Near the
+          start of the route it never asks. If you leave the route for a few
+          seconds (farther than 50 m, or more when the GPS is imprecise), the
+          card turns amber and says Back to route, with an arrow and the
+          straight-line distance to a point on the route ahead of you, and the
+          map shows a dashed line to it. The arrow does not know the roads: take
+          the streets that lead there. It needs no connection. Online, after 15
+          seconds off the route the app recalculates a way back to the planned
+          route, at most once a minute; Recalculate route asks right away within
+          the same limit. The new path is used only during this navigation; the
+          planned route does not change. To follow the planned track exactly, as
+          in an event, uncheck Recalculate the route automatically in the start
+          notice or in Settings, or tap Turn off on the reminder shown when
+          navigation starts without the notice; Recalculate route still asks
+          when you tap it. Tap or drag up the bottom bar (a sheet with a handle,
+          like the route panel) to list the turns and route points ahead, with
+          their distance and, for route points, the arrival time; the road you
+          are on comes first, highlighted, with its stage of the route (Step 2
+          of 6). Drag it down, tap it again or press Escape to close it, while
+          navigation goes on underneath. To hear the directions, check Speak the
+          directions in the start notice or in Settings, or tap the speaker
+          button on the navigation screen: the phone's own voice says each turn
+          ahead, the arrival, leaving the route and a recalculated route, in the
+          interface language, with no request and without a connection; it is
+          off by default and stays quiet while the page is hidden. On an iPhone,
+          the browser's voice follows the ring/silent switch, so turn silent
+          mode off to hear it, and it pauses music or podcasts playing in other
+          apps; only native apps can mix their voice with them. A round badge at
+          the bottom left shows your current speed (0 when stopped, hidden with
+          a weak signal). The time left and the arrival start from your average
           speed and, over the first 10 minutes, move to the trip's own average
           with stops, measured on your device. Weather is shown in the planner,
           where it is current, not while navigating. When the sun sets or rises
@@ -1537,39 +1542,44 @@
           Safari no iOS. O app pede ao navegador que mantenha a tela acesa
           durante a navegação, quando o navegador permite. Rotas sem instruções
           de conversão, como trilhas importadas antes de abrir o Itinerário,
-          contam a distância até o destino. Se você sair da rota por alguns
-          segundos (mais de 50 m, ou mais quando o GPS está impreciso), o cartão
-          fica âmbar e diz Volte à rota, com uma seta e a distância em linha
-          reta até um ponto da rota à sua frente, e o mapa mostra uma linha
-          tracejada até ele. A seta não conhece as ruas: siga pelas ruas que
-          levam até lá. Não precisa de conexão. Com conexão, depois de 15
-          segundos fora da rota o app recalcula um caminho de volta à rota
-          planejada, no máximo uma vez por minuto; Recalcular rota pede na hora,
-          dentro do mesmo limite. O novo caminho vale só nesta navegação; a rota
-          planejada não muda. Para seguir exatamente o trajeto planejado, como
-          numa prova, desmarque Recalcular a rota automaticamente no aviso
-          inicial ou nas Configurações, ou toque em Desativar no lembrete que
-          aparece ao iniciar a navegação sem o aviso; Recalcular rota continua
-          pedindo quando você toca. Toque ou arraste para cima a barra inferior
-          (uma folha com alça, como o painel da rota) para ver as próximas
-          curvas e os pontos da rota, com a distância e, nos pontos, o horário
-          de chegada; a via em que você está vem primeiro, destacada, com a
-          etapa do trajeto (Etapa 2 de 6). Arraste para baixo, toque de novo ou
-          pressione Esc para fechar, com a navegação continuando por baixo. Para
-          ouvir as instruções, marque Falar as instruções no aviso inicial ou
-          nas Configurações, ou toque no botão de alto-falante na tela de
-          navegação: a própria voz do celular fala cada curva adiante, a
-          chegada, quando você sai da rota e um recálculo, no idioma da
-          interface, sem nenhuma consulta e sem conexão; vem desligada e fica em
-          silêncio com a página oculta. No iPhone, a voz do navegador obedece à
-          chave do modo silencioso, então desligue o modo silencioso para ouvir,
-          e ela pausa a música ou o podcast tocando em outros apps; só apps
-          nativos conseguem misturar a voz com eles. Um selo redondo no canto
-          inferior esquerdo mostra a sua velocidade atual (0 parado, escondido
-          com sinal fraco). O tempo restante e a chegada começam pela sua
-          velocidade média e, nos primeiros 10 minutos, passam a seguir a média
-          da própria viagem, com as paradas, medida no seu aparelho. O clima
-          aparece no planejador, onde está atualizado, e não durante a
+          contam a distância até o destino. Quando você começa numa via que a
+          rota percorre mais de uma vez, como no meio de uma rota de ida e
+          volta, e ainda não está se movendo por ela, o topo da tela pergunta
+          Para que lado você vai?, com o próximo ponto da rota e a distância
+          restante de cada sentido: toque no seu, ou comece a se mover e o app
+          descobre pelo seu sentido. Perto do início da rota, nunca pergunta. Se
+          você sair da rota por alguns segundos (mais de 50 m, ou mais quando o
+          GPS está impreciso), o cartão fica âmbar e diz Volte à rota, com uma
+          seta e a distância em linha reta até um ponto da rota à sua frente, e
+          o mapa mostra uma linha tracejada até ele. A seta não conhece as ruas:
+          siga pelas ruas que levam até lá. Não precisa de conexão. Com conexão,
+          depois de 15 segundos fora da rota o app recalcula um caminho de volta
+          à rota planejada, no máximo uma vez por minuto; Recalcular rota pede
+          na hora, dentro do mesmo limite. O novo caminho vale só nesta
+          navegação; a rota planejada não muda. Para seguir exatamente o trajeto
+          planejado, como numa prova, desmarque Recalcular a rota
+          automaticamente no aviso inicial ou nas Configurações, ou toque em
+          Desativar no lembrete que aparece ao iniciar a navegação sem o aviso;
+          Recalcular rota continua pedindo quando você toca. Toque ou arraste
+          para cima a barra inferior (uma folha com alça, como o painel da rota)
+          para ver as próximas curvas e os pontos da rota, com a distância e,
+          nos pontos, o horário de chegada; a via em que você está vem primeiro,
+          destacada, com a etapa do trajeto (Etapa 2 de 6). Arraste para baixo,
+          toque de novo ou pressione Esc para fechar, com a navegação
+          continuando por baixo. Para ouvir as instruções, marque Falar as
+          instruções no aviso inicial ou nas Configurações, ou toque no botão de
+          alto-falante na tela de navegação: a própria voz do celular fala cada
+          curva adiante, a chegada, quando você sai da rota e um recálculo, no
+          idioma da interface, sem nenhuma consulta e sem conexão; vem desligada
+          e fica em silêncio com a página oculta. No iPhone, a voz do navegador
+          obedece à chave do modo silencioso, então desligue o modo silencioso
+          para ouvir, e ela pausa a música ou o podcast tocando em outros apps;
+          só apps nativos conseguem misturar a voz com eles. Um selo redondo no
+          canto inferior esquerdo mostra a sua velocidade atual (0 parado,
+          escondido com sinal fraco). O tempo restante e a chegada começam pela
+          sua velocidade média e, nos primeiros 10 minutos, passam a seguir a
+          média da própria viagem, com as paradas, medida no seu aparelho. O
+          clima aparece no planejador, onde está atualizado, e não durante a
           navegação. Quando o sol se põe ou nasce antes da sua chegada, dentro
           de uma hora, um chip no topo à esquerda avisa (Sol se põe em 40 min);
           ele é calculado no seu aparelho a partir da rota e da sua velocidade,

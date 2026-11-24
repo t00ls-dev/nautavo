@@ -25,12 +25,14 @@ import { navigationStyle } from './navigation-style';
 import {
   createNavigationTracker,
   createRerouteSchedule,
+  nextStopName,
   spliceRoute,
   stopAt,
   isMoving,
   turnToward,
   navigationDistanceLabel,
   type NavigationManeuver,
+  type NavigationFix,
   type NavigationReadout,
 } from './navigation';
 import { navigationCompass } from './navigation-compass';
@@ -242,7 +244,7 @@ export function setupNavigation(deps: {
     travelHeading = 0,
     moving = false,
     previous: { coord: Coord; time: number } | null = null,
-    last: { coord: Coord; accuracy: number } | null = null,
+    last: NavigationFix | null = null,
     readout: NavigationReadout | null = null,
     announced: NavigationManeuver | 'off' | null | undefined,
     /** Each navigation gets a number; late answers of an older one are dropped. */
@@ -641,6 +643,7 @@ export function setupNavigation(deps: {
       renderActivity(activity);
       return;
     }
+    if (renderPasses()) return;
     const r = readout;
     const turn = $('nav-turn');
     const arrived = !!r?.arrived;
@@ -676,6 +679,68 @@ export function setupNavigation(deps: {
     renderBar(r);
     upcoming.render();
     renderSpeed();
+  }
+  /** The passes on screen, by their along-track distances. */
+  let passesShown = '';
+  /**
+   * Where the route uses the same road more than once and the start cannot
+   * tell which pass the traveler is on (#191), the banner asks, with one
+   * button per pass: the next route point and the distance left. Nothing is
+   * said or shown as ahead until one is chosen. False when there is no
+   * question.
+   */
+  function renderPasses(): boolean {
+    const choices = tracker?.choices ?? null;
+    screen.classList.toggle('choosing-pass', !!choices);
+    $('nav-pass').hidden = !choices;
+    if (!choices) {
+      passesShown = '';
+      return false;
+    }
+    const key = choices.map((p) => Math.round(p.at)).join();
+    if (key !== passesShown) {
+      passesShown = key;
+      $('nav-announce').textContent = t('Which way are you going?');
+      const total = tracker!.total;
+      $('nav-pass-options').replaceChildren(
+        ...choices.map((pass) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          const name = t(nextStopName(stopPlaces, pass.at));
+          button.title = name;
+          button.append(
+            icon('pin'),
+            text('span', name, 'nav-pass-name'),
+            document.createTextNode(' '),
+            text(
+              'span',
+              distanceLabel(total - pass.at, units(), deps.locale()),
+              'nav-pass-left',
+            ),
+          );
+          button.addEventListener('click', () => choosePass(pass.at));
+          return button;
+        }),
+      );
+    }
+    $('nav-hint').hidden = true;
+    $('nav-then').hidden = true;
+    screen.classList.remove('off-route');
+    renderBar(null);
+    upcoming.render();
+    renderSpeed();
+    return true;
+  }
+  function choosePass(at: number) {
+    if (!tracker) return;
+    tracker.choose(at);
+    plannedProgress = at;
+    readout = last ? tracker.update(last) : null;
+    if (!replaying) rememberProgress(plannedProgress, Date.now());
+    // The buttons are gone; the screen keeps the focus.
+    screen.focus({ preventScroll: true });
+    render();
+    place();
   }
   /**
    * The speed the arrival follows: the trip's own average once it has lasted
@@ -812,6 +877,13 @@ export function setupNavigation(deps: {
     const remaining = r ? r.remaining : tracker.total;
     const seconds = travelTimeSeconds(remaining, arrivalSpeed());
     $('nav-time').textContent = r ? durationLabel(seconds) : MISSING;
+    // Until a pass is chosen (#191), the distance left is not known either.
+    if (tracker.choices) {
+      $('nav-rest').textContent = MISSING;
+      $('nav-waiting').hidden = true;
+      $('nav-gps').hidden = true;
+      return;
+    }
     const clock = new Date(now() + seconds * 1000).toLocaleTimeString(
       deps.locale(),
       { hour: '2-digit', minute: '2-digit' },
@@ -878,24 +950,30 @@ export function setupNavigation(deps: {
       heading: deviceHeading,
     } = position.coords;
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-    last = {
-      coord: [latitude, longitude],
-      accuracy: Math.max(0, accuracy || 0),
-    };
-    deviceCompass.placeAt(last.coord);
-    // A replay knows its distance along the route; live fixes are located.
-    readout = tracker.update(last, replaying ? replayDistance : undefined);
+    const coord: Coord = [latitude, longitude];
     // The device's speed, or one measured between fixes when it gives none.
     const time = position.timestamp || Date.now();
     let speed: number | null = Number.isFinite(position.coords.speed)
       ? position.coords.speed
       : null;
     if (speed === null && previous && time - previous.time >= 500)
-      speed =
-        meters(previous.coord, last.coord) / ((time - previous.time) / 1000);
-    previous = { coord: last.coord, time };
+      speed = meters(previous.coord, coord) / ((time - previous.time) / 1000);
+    previous = { coord, time };
     moving = isMoving(speed, moving);
     speedNow = speed ?? speedNow;
+    // The GPS course, while moving, tells the router which way the
+    // traveler is going, and the start which pass of the route (#191); the
+    // compass is not reliable enough for that.
+    course =
+      moving && deviceHeading !== null && Number.isFinite(deviceHeading)
+        ? deviceHeading
+        : null;
+    last = { coord, accuracy: Math.max(0, accuracy || 0), course };
+    deviceCompass.placeAt(last.coord);
+    // A replay knows its distance along the route; live fixes are located.
+    // While the traveler has not chosen a pass, nothing is shown as ahead.
+    readout = tracker.update(last, replaying ? replayDistance : undefined);
+    if (tracker.choices) readout = null;
     // Progress on the planned route: the trip's average and the sun notices
     // are measured on it, so both hold after a recalculation.
     if (replaying) plannedProgress = replayDistance;
@@ -905,7 +983,8 @@ export function setupNavigation(deps: {
         backtrack: 50,
       });
       if (position) plannedProgress = position.distance;
-      rememberProgress(plannedProgress, Date.now());
+      // A pass still to be chosen is not one to continue after a reload.
+      if (!tracker.choices) rememberProgress(plannedProgress, Date.now());
       meter.update({
         time,
         progress: plannedProgress,
@@ -927,12 +1006,6 @@ export function setupNavigation(deps: {
       travelHeading = readout.heading;
     else if (deviceHeading !== null && Number.isFinite(deviceHeading))
       travelHeading = deviceHeading;
-    // The GPS course, while moving, tells the router which way the
-    // traveler is going; the compass is not reliable enough for that.
-    course =
-      moving && deviceHeading !== null && Number.isFinite(deviceHeading)
-        ? deviceHeading
-        : null;
     chooseHeading();
     calibrationNotice();
     render();
@@ -1154,7 +1227,14 @@ export function setupNavigation(deps: {
     schedule = createRerouteSchedule();
     rerouting = 'idle';
     course = null;
-    tracker = createNavigationTracker(route, stops(), progress);
+    // A live start from the beginning asks which pass the traveler is on
+    // where the route uses the same road more than once (#191).
+    tracker = createNavigationTracker(
+      route,
+      stops(),
+      progress,
+      !replay && !activity && progress === 0,
+    );
     placeStops();
     upcoming.set(false);
     deviceCompass.placeAt(route.segments[0]?.[0]);

@@ -10,6 +10,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 - Recorded activities: importing a GPX, FIT or TCX file with recorded times, such as an activity from a bike computer, watch or app, opens it apart from the route you are planning, with its distance, moving and total time, average and maximum speed and the heart rate, cadence, power and temperature it carries. Charts of its altitude, speed, heart rate, cadence and power share one cursor that shows the point on the map, the map marks the top speed, the highest heart rate and the highest point, and Map layers colors the track by its speed, heart rate, power or grade, in five zones of the activity itself. Play activity replays it at its own pace (1× to 300× real time) with the recorded clock and the values you choose to show, including altitude, grade, climb so far and left/right power balance, noting the top speed and the highest heart rate, cadence, power and point as it passes them and skipping stops of a minute or more; Use as route imports it as a route as before. The activity is read on the device only and is not saved or sent.
 - The list of turns ahead while navigating starts with the road you are on, highlighted, with its stage of the route (Step 2 of 6).
+- When navigation starts on a road the route uses more than once, such as halfway along an out-and-back route, and cannot tell which way you are going, it asks, showing the next route point and the distance left for each way; once you move, your direction of travel answers on its own. Before, it took the first way, and its directions could be those of the other one.
 
 ### Changed
 
@@ -23,6 +24,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- While navigating, the distance to the next turn and the distance left no longer lag up to 30 m behind your position.
 - A number and its unit, such as 1,308 m or 18 min, always stay together on the same line.
 - When a second file failed to import while the first one was still being checked against the roads, the error now stays in view; before, the first file's message replaced it.
 - On an iPhone, a tap followed by a touch and hold, such as zooming the map with one finger, no longer opens the browser's magnifier over the map, the activity view or the navigation screen.

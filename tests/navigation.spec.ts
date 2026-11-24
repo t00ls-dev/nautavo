@@ -10,6 +10,7 @@ import {
   overlapping,
 } from './app-helpers';
 import { BASEMAP_STYLE } from './map-helpers';
+import { defaults, encodeState } from '../src/core';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
 const lon = (i: number) => -43.24 + i * 0.001;
@@ -1479,6 +1480,171 @@ test.describe('phone navigation', () => {
       expect(lines).toBeLessThanOrEqual(2.05);
     });
 
+  /**
+   * An out-and-back route (#191): east to coords[20] through the named
+   * turnaround, then back west on the same road to the start.
+   */
+  async function outAndBack(
+    page: Page,
+    names = ['Home', 'Vista Chinesa', 'Home'],
+  ) {
+    const back = coords.slice(0, -1).reverse();
+    const leg = (road: string, from: number[], to: number[]) => ({
+      steps: [
+        {
+          name: road,
+          distance: 2050,
+          duration: 150,
+          maneuver: { type: 'depart', location: from },
+        },
+        {
+          name: '',
+          distance: 0,
+          duration: 0,
+          maneuver: { type: 'arrive', location: to },
+        },
+      ],
+    });
+    await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
+    await page.route('**/route/v1/driving/**', (r) =>
+      r.fulfill({
+        json: {
+          code: 'Ok',
+          waypoints: [coords[0], coords[20], coords[0]].map((location) => ({
+            location,
+            distance: 0,
+          })),
+          routes: [
+            {
+              distance: 4100,
+              duration: 300,
+              geometry: { coordinates: [...coords, ...back] },
+              legs: [
+                leg('Rua Uruguai', coords[0], coords[20]),
+                leg('Estrada do Joá', coords[20], coords[0]),
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const state = defaults();
+    state.prefer = false;
+    state.points = names.map((name, i) => ({
+      name,
+      coord: [lat, lon(i === 1 ? 20 : 0)],
+    }));
+    await page.goto(base + encodeState(state));
+    await page.locator('#language').selectOption('en');
+    await expect(page.locator('#navigate')).toBeEnabled({ timeout: 15000 });
+  }
+
+  test('on a road used both ways, the start asks which way and follows the choice', async ({
+    page,
+  }) => {
+    // The fix is about 610 m from the start, on both passes.
+    await outAndBack(page);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    const question = page.getByRole('group', {
+      name: 'Which way are you going?',
+    });
+    await expect(question).toBeVisible();
+    const options = question.getByRole('button');
+    await expect(options).toHaveText([
+      /^Vista Chinesa 3\.\d\skm$/,
+      /^Home 0\.6\skm$/,
+    ]);
+    // Nothing ahead is shown or said until the traveler chooses.
+    await expect(page.locator('.nav-banner-main')).toBeHidden();
+    await expect(page.locator('#nav-time')).toHaveText('-');
+    await expect(page.locator('#nav-rest')).toHaveText('-');
+    await expect(page.locator('#nav-announce')).toHaveText(
+      'Which way are you going?',
+    );
+    await options.filter({ hasText: 'Home' }).click();
+    await expect(question).toBeHidden();
+    await expect(page.locator('.nav-banner-main')).toBeVisible();
+    await expect(page.locator('#nav-rest')).toContainText('0.6 km ·');
+    await expect(page.locator('#nav-road')).not.toHaveText('Vista Chinesa');
+    await expect(page.locator('#nav-screen')).toBeFocused();
+  });
+
+  test('at the start of an out-and-back route, nothing is asked', async ({
+    page,
+    context,
+  }) => {
+    await context.setGeolocation({
+      latitude: lat,
+      longitude: lon(1),
+      accuracy: 6,
+    });
+    await outAndBack(page);
+    await page.locator('#navigate').click();
+    await page.locator('#nav-notice-start').click();
+    await expect(page.locator('#nav-road')).toHaveText('Vista Chinesa');
+    await expect(page.locator('#nav-pass')).toBeHidden();
+  });
+
+  for (const [width, height, language] of [
+    [320, 568, 'pt'],
+    [320, 568, 'en'],
+    [430, 932, 'pt'],
+    [568, 320, 'pt'],
+    [568, 320, 'en'],
+  ] as const)
+    test(`the question of which way fits at ${width}x${height} in ${language} with long names`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await outAndBack(page, [
+        longName,
+        'Mirante Dona Marta, Estrada das Paineiras',
+        longName,
+      ]);
+      await chooseUnits(page, { distance: 'imperial' });
+      await page.locator('#language').selectOption(language);
+      await page.locator('#navigate').click();
+      await page.locator('#nav-notice-start').click();
+      const options = page.locator('#nav-pass-options button');
+      await expect(options).toHaveCount(2);
+      const problems = await page.evaluate(() => {
+        const out: string[] = [];
+        const banner = document
+          .querySelector('.nav-banner')!
+          .getBoundingClientRect();
+        if (banner.bottom > innerHeight / 2 + 40) out.push('banner too tall');
+        // One line on a phone held upright; the narrower card in landscape
+        // may take two.
+        const title = document.querySelector<HTMLElement>('.nav-pass-title')!;
+        const lines =
+          title.getBoundingClientRect().height /
+          parseFloat(getComputedStyle(title).lineHeight);
+        if (lines > (innerWidth > innerHeight ? 2.05 : 1.05))
+          out.push('question wraps');
+        for (const button of document.querySelectorAll<HTMLElement>(
+          '#nav-pass-options button',
+        )) {
+          const box = button.getBoundingClientRect();
+          if (box.right > banner.right + 0.5)
+            out.push('option leaves the banner');
+          if (box.height > 50) out.push(`option wraps: ${button.textContent}`);
+          const left = button.querySelector<HTMLElement>('.nav-pass-left')!;
+          if (
+            left.scrollWidth > left.clientWidth + 1 ||
+            left.getBoundingClientRect().right > box.right
+          )
+            out.push(`distance cut: ${left.textContent}`);
+        }
+        return out;
+      });
+      expect(problems).toEqual([]);
+      expect(await coveredControls(page, '#nav-screen')).toEqual([]);
+      expect(await overlapping(page, ['.nav-banner', MAP_OVERLAYS])).toEqual(
+        [],
+      );
+    });
+
   test('the bar opens a list of the turns and stops ahead', async ({
     page,
     context,
@@ -1604,9 +1770,10 @@ test.describe('phone navigation', () => {
     await page.getByRole('checkbox', { name: 'Speak the directions' }).check();
     await page.locator('#nav-notice-start').click();
     await expect(page.locator('#nav-road')).toHaveText('Stop 1');
-    // Near the stop, the voice names it too.
+    // Near the stop, about 82 m before it (0.001° is 102 m here, read in
+    // 10 m steps), the voice names it too.
     await context.setGeolocation({ latitude: lat, longitude: lon(9.2) });
-    await expect(page.locator('#nav-distance')).toHaveText('100 m');
+    await expect(page.locator('#nav-distance')).toHaveText('80 m');
     await expect
       .poll(async () => (await said()).map(([text]) => text))
       .toContainEqual(expect.stringMatching(/, you reach Stop 1\.$/));

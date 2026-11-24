@@ -3591,6 +3591,63 @@ dialog:modal:not(.nav-screen) {
 .nav-then[hidden] {
   display: none;
 }
+/* Where the route uses the same road more than once, the banner asks which
+   pass the traveler is on (#191): one compact row per pass, its next route
+   point (cut short) and the distance left, which always tells them apart. */
+.choosing-pass .nav-banner-main {
+  display: none;
+}
+.nav-pass {
+  padding: 10px 12px 12px;
+}
+.nav-pass[hidden] {
+  display: none;
+}
+.nav-pass-title {
+  margin: 0 4px 8px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.nav-pass-options {
+  display: grid;
+  gap: 6px;
+}
+.nav-pass-options button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+.nav-pass-options .button-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary-strong);
+}
+.nav-pass-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-pass-left {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 /* Off the route: the banner turns amber and says the arrow is a straight
    line, not a road to follow. */
 .off-route .nav-banner {
