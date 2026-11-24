@@ -430,6 +430,39 @@ test('late IP result cannot override a manually chosen map view', async ({
   await expect(page.locator('.route-marker')).toHaveCount(1);
 });
 
+test('a late IP result leaves the point menu opened from the keyboard in place', async ({
+  page,
+}) => {
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(regionRoute, async (r) => {
+    await pending;
+    await r.fulfill({ json: parisRegion });
+  });
+  await page.goto(base);
+  await mapReady(page);
+  const center = () =>
+    page.evaluate(() =>
+      (
+        window as unknown as { plannerMap: { getCenter(): [number, number] } }
+      ).plannerMap.getCenter(),
+    );
+  const before = await center();
+  await page.locator('#map canvas.maplibregl-canvas').focus();
+  await page.keyboard.press('Shift+F10');
+  const menu = page.locator('#point-menu');
+  await expect(menu).toBeVisible();
+  const answered = page.waitForResponse(`**${REGION_PATH}`);
+  release();
+  // The region answered: the map stays where it was and the menu open.
+  await answered;
+  await page.waitForTimeout(300);
+  expect(await center()).toEqual(before);
+  await expect(menu.getByRole('menuitem')).toBeFocused();
+});
+
 test('insecure context explains HTTPS requirement', async ({ page }) => {
   await page.addInitScript(() =>
     Object.defineProperty(window, 'isSecureContext', { value: false }),

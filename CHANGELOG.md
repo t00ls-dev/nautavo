@@ -24,6 +24,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- A point menu opened on the map right after the page opens, with a right click or the keyboard, stays open; before, the map could still move to your approximate region and close it.
 - While navigating, the distance to the next turn and the distance left no longer lag up to 30 m behind your position.
 - A number and its unit, such as 1,308 m or 18 min, always stay together on the same line.
 - When a second file failed to import while the first one was still being checked against the roads, the error now stays in view; before, the first file's message replaced it.
