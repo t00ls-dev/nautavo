@@ -36,6 +36,30 @@ async function panMap(page: Page) {
   await page.keyboard.press('ArrowUp');
 }
 
+/**
+ * Touches on the destination marker, through the browser's touch events: at
+ * its pin (`x`, `y`) unless another point is given.
+ */
+async function touchDestination(page: Page) {
+  const box = (await page
+    .locator('.maplibregl-marker.route-marker')
+    .last()
+    .boundingBox())!;
+  const x = box.x + box.width / 2,
+    y = box.y + 12;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    px = x,
+    py = y,
+  ) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py }],
+    });
+  return { x, y, touch };
+}
+
 test.describe('phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -101,22 +125,7 @@ test.describe('phone', () => {
   }) => {
     await setup(page);
     const loupe = page.locator('.placement-loupe');
-    const box = (await page
-      .locator('.maplibregl-marker.route-marker')
-      .last()
-      .boundingBox())!;
-    const x = box.x + box.width / 2,
-      y = box.y + 12;
-    const cdp = await page.context().newCDPSession(page);
-    const touch = (
-      type: 'touchStart' | 'touchMove' | 'touchEnd',
-      px = x,
-      py = y,
-    ) =>
-      cdp.send('Input.dispatchTouchEvent', {
-        type,
-        touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py }],
-      });
+    const { x, y, touch } = await touchDestination(page);
     await touch('touchStart');
     for (let k = 1; k <= 6; k++) await touch('touchMove', x + 6 * k, y + 4 * k);
     await expect(loupe).toBeVisible();
@@ -126,6 +135,39 @@ test.describe('phone', () => {
     expect(circle.x + circle.width).toBeLessThanOrEqual(390);
     await touch('touchEnd');
     await expect(loupe).toBeHidden();
+    await expect(page.locator('#location-1')).not.toHaveValue(destination);
+  });
+
+  test('a tap and then a drag on a point opens no iOS loupe and still moves it', async ({
+    page,
+  }) => {
+    await setup(page);
+    await page.evaluate(() => {
+      const record = window as unknown as { cancelled: boolean[] };
+      record.cancelled = [];
+      // After the app's own listener (src/tap-hold.ts).
+      document.addEventListener(
+        'touchstart',
+        (event) => record.cancelled.push(event.defaultPrevented),
+        true,
+      );
+    });
+    const { x, y, touch } = await touchDestination(page);
+    await touch('touchStart');
+    await touch('touchEnd');
+    await page.waitForTimeout(80);
+    await touch('touchStart');
+    for (let k = 1; k <= 6; k++) await touch('touchMove', x + 6 * k, y + 4 * k);
+    await expect(page.locator('.placement-loupe')).toBeVisible();
+    await touch('touchEnd');
+    // The marker is a button for the keyboard, yet its second touch is
+    // cancelled like the map's (WebKit's tap-and-a-half loupe); the drag,
+    // on pointer events, goes on.
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { cancelled: boolean[] }).cancelled,
+      ),
+    ).toEqual([false, true]);
     await expect(page.locator('#location-1')).not.toHaveValue(destination);
   });
 });
