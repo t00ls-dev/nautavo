@@ -1,6 +1,12 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { holdMap, mockBasemap, BASEMAP_STYLE, mapCanvas } from './map-helpers';
+import {
+  holdMap,
+  mockBasemap,
+  BASEMAP_STYLE,
+  mapCanvas,
+  scriptedTouches,
+} from './map-helpers';
 import { base, gpxPoints, mockRegion } from './app-helpers';
 const features = {
   features: [
@@ -374,28 +380,10 @@ test('one-finger zoom: double tap and drag down zooms in, up zooms out, without 
   const box = (await page.locator('#map').boundingBox())!;
   const x = box.x + 160,
     y = box.y + 200;
-  const session = await context.newCDPSession(page);
-  // Each event carries the time of the script, not the moment a busy
-  // renderer accepts it: MapLibre and the app time taps by the event's
-  // timeStamp, and under load the real gaps outgrew the 500 ms double tap.
-  // The clock follows the script's pauses and catches up with real time at
-  // each gesture, so it never runs ahead of it.
-  let clock = 0;
-  const gesture = () => {
-    clock = Math.max(clock, Date.now() / 1000);
-  };
-  const pause = async (ms: number) => {
-    clock += ms / 1000;
-    await page.waitForTimeout(ms);
-  };
-  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', ty = y) => {
-    clock += 0.001;
-    return session.send('Input.dispatchTouchEvent', {
-      type,
-      touchPoints: type === 'touchEnd' ? [] : [{ x, y: ty }],
-      timestamp: clock,
-    });
-  };
+  const touches = await scriptedTouches(page);
+  const { session, gesture, pause } = touches;
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', ty = y) =>
+    touches.touch(type, x, ty);
   const quickZoom = async (dy: number) => {
     gesture();
     await touch('touchStart');

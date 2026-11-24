@@ -160,3 +160,45 @@ export async function closePanel(page: Page) {
     .not.toBe(before);
   await mapIdle(page);
 }
+
+/**
+ * One-finger touches through the browser's own touch events, each stamped
+ * with the script's time, not the moment a busy renderer accepts it:
+ * MapLibre and the app time taps by the event's timeStamp, and under load
+ * the real gaps outgrew the 500 ms double tap (#272). The clock follows the
+ * script's pauses and catches up with real time at each gesture, so it
+ * never runs ahead of it.
+ */
+export async function scriptedTouches(page: Page) {
+  const session = await page.context().newCDPSession(page);
+  let clock = 0;
+  const gesture = () => {
+    clock = Math.max(clock, Date.now() / 1000);
+  };
+  const pause = async (ms: number) => {
+    clock += ms / 1000;
+    await page.waitForTimeout(ms);
+  };
+  const touch = (
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    x: number,
+    y: number,
+  ) => {
+    clock += 0.001;
+    return session.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+      timestamp: clock,
+    });
+  };
+  /** A quick double tap at one point, as MapLibre counts it. */
+  const doubleTap = async (x: number, y: number) => {
+    gesture();
+    await touch('touchStart', x, y);
+    await touch('touchEnd', x, y);
+    await pause(80);
+    await touch('touchStart', x, y);
+    await touch('touchEnd', x, y);
+  };
+  return { session, gesture, pause, touch, doubleTap };
+}
