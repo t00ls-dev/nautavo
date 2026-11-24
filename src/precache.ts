@@ -36,7 +36,7 @@ export function precacheUrl(file: string): string {
   return file === '/index.html' ? '/' : file.slice(0, -'.html'.length);
 }
 
-/** A page's public URL (`/`, `/help`): answered network-first, never from the cache alone. */
+/** A page's public URL (`/`, `/help`): the browser loads it online; the cache answers it only offline. */
 export function isPageUrl(url: string): boolean {
   return url === '/' || /^\/[^/.]+$/.test(url);
 }

@@ -27,6 +27,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- In Chrome and Brave on iPhone and iPad, Nautavo's pages no longer say the connection is not secure. The connection always was secure; two things confused those browsers: a security header that isolates the page from other windows, now removed, and pages answered by the copy kept for offline use, which now answers only without a connection.
 - While navigating, the way ahead always draws above the way travelled, so on a road the route uses both ways it no longer disappears under the gray; close up, the two passes draw side by side, as on the planning map, and with the whole route in view the lines are thinner and the way travelled lighter.
 - A point menu opened on the map right after the page opens, with a right click or the keyboard, stays open; before, the map could still move to your approximate region and close it.
 - While navigating, the distance to the next turn and the distance left no longer lag up to 30 m behind your position.

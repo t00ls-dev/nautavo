@@ -59,6 +59,29 @@ async function routedPair(page: Page) {
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
 }
 
+test('online, pages come from the network, not the service worker', async ({
+  page,
+  context,
+}) => {
+  await mockServices(context);
+  await controlled(page);
+  // Chrome and Brave on iOS call a page the service worker answered not
+  // secure, so it answers pages only without a connection.
+  for (const path of ['', 'help', 'changelog']) {
+    const response = (await page.goto(base + path))!;
+    expect(response.fromServiceWorker()).toBe(false);
+  }
+  // Its own files still come from its cache.
+  const assets = await page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .filter((e) => new URL(e.name).pathname.startsWith('/assets/'))
+      .map((e) => (e as PerformanceResourceTiming).workerStart > 0),
+  );
+  expect(assets.length).toBeGreaterThan(0);
+  expect(assets.every(Boolean)).toBe(true);
+});
+
 test("after one online visit, the app, help and What's new open offline", async ({
   page,
   context,
