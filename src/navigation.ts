@@ -2,14 +2,18 @@ import type { Coord, Route, Step } from './core';
 import { maneuverPositions } from './maneuvers';
 import { isImportedRoute } from './track-legs';
 import {
+  headingGap,
   indexTrack,
   legDistances,
   locateOnTrack,
+  PASS_SLACK,
+  passesNear,
   pointAtDistance,
   rejoinPoint,
   trackSlice,
   type RejoinPoint,
   type TrackIndex,
+  type TrackPass,
 } from './track-position';
 import { withUnit, type DistanceUnits } from './units';
 import { bearingBetween } from './weather-wind';
@@ -56,6 +60,16 @@ export const REROUTE_SESSION_CAP = 20;
 const REROUTE_AHEAD = 300;
 /** A route point closer than this ahead of the progress counts as reached. */
 const STOP_REACHED = 30;
+/**
+ * Starting where the route uses the same road more than once (#191): a pass
+ * within `START_PASS` meters of the route's start is taken as the start (a
+ * loop or an out-and-back begins there, never arrives); a GPS course within
+ * `COURSE_MATCH` degrees of a single pass's direction takes that pass;
+ * otherwise the traveler chooses among the `MAX_PASSES` nearest.
+ */
+const START_PASS = 300;
+const COURSE_MATCH = 60;
+const MAX_PASSES = 3;
 /** Largest gap between an arrive maneuver and the stop it reaches, meters. */
 const STOP_MATCH = 200;
 
@@ -70,6 +84,8 @@ export interface NavigationFix {
   accuracy: number;
   /** When the fix was taken, ms; defaults to now. */
   time?: number;
+  /** GPS course while moving, degrees from north; null or absent otherwise. */
+  course?: number | null;
 }
 export interface NavigationReadout {
   /** Along-track distance travelled, meters. */
@@ -264,6 +280,58 @@ function headingAt(index: TrackIndex, distance: number): number | null {
 }
 
 /**
+ * The pass of the route a navigation starting at `fix` is on (#191): its
+ * along-track distance when it can be told (a single pass, the start, or the
+ * GPS course matching one pass), the passes to ask about when it cannot, or
+ * null while the fix says nothing yet (too inaccurate or off the route).
+ */
+export function startPass(
+  index: TrackIndex,
+  fix: NavigationFix,
+): number | TrackPass[] | null {
+  if (!(fix.accuracy <= OFF_ROUTE_MAX_ACCURACY)) return null;
+  const passes = passesNear(
+    index,
+    fix.coord,
+    Math.max(PASS_SLACK, fix.accuracy),
+  );
+  const nearest = passes[0];
+  if (
+    !nearest ||
+    nearest.offTrack >
+      Math.max(OFF_ROUTE_MIN, OFF_ROUTE_ACCURACY * fix.accuracy)
+  )
+    return null;
+  if (passes.length === 1) return nearest.at;
+  const start = passes.find((p) => p.at <= START_PASS);
+  if (start) return start.at;
+  const course = fix.course;
+  if (typeof course === 'number' && Number.isFinite(course)) {
+    const matching = passes.filter(
+      (p) =>
+        p.bearing !== null && headingGap(p.bearing, course) <= COURSE_MATCH,
+    );
+    if (matching.length === 1) return matching[0].at;
+  }
+  return passes.slice(0, MAX_PASSES);
+}
+
+/**
+ * The name of the next route point after an along-track distance: the
+ * destination's when none is left before it.
+ */
+export function nextStopName(
+  stops: { at: number | null; name: string }[],
+  at: number,
+): string {
+  return (
+    stops.find((s) => s.at !== null && s.at > at + STOP_REACHED)?.name ??
+    stops.at(-1)?.name ??
+    'Destination'
+  );
+}
+
+/**
  * Follows one route through a sequence of fixes. Progress is kept between
  * fixes so loops and out-and-back routes keep the pass being travelled; a
  * jump back is accepted only within the fix's accuracy (GPS jitter).
@@ -278,6 +346,11 @@ export function createNavigationTracker(
    * the start, not the arrival; more when continuing after a reload.
    */
   initial = 0,
+  /**
+   * The pass is unknown (a live start, #191): where the first fix on the
+   * route matches more than one pass, `choices` lists them until `choose`.
+   */
+  ask = false,
 ) {
   const index = indexTrack(route.segments);
   const maneuvers = navigationManeuvers(route);
@@ -286,7 +359,14 @@ export function createNavigationTracker(
   const nextStop = (at: number) =>
     stopsAt.find((d) => d > at + STOP_REACHED) ?? index.total;
   let progress = initial,
-    offSince: number | null = null;
+    offSince: number | null = null,
+    pending = ask,
+    choices: TrackPass[] | null = null;
+  const choose = (at: number) => {
+    progress = at;
+    pending = false;
+    choices = null;
+  };
   return {
     total: index.total,
     hasManeuvers: maneuvers.length > 0,
@@ -308,11 +388,22 @@ export function createNavigationTracker(
       const point = pointAtDistance(index, at);
       return point ? { coord: point.coord, at } : null;
     },
+    /** The passes to ask about, while the traveler has not chosen one. */
+    get choices() {
+      return choices;
+    },
+    /** Follows the pass at `at`, an along-track distance from `choices`. */
+    choose,
     /**
      * `at`: the along-track distance when it is known (a replay), so a road
      * used both ways or a jump back takes that pass rather than a guess.
      */
     update(fix: NavigationFix, at?: number): NavigationReadout | null {
+      if (pending && at === undefined) {
+        const found = startPass(index, fix);
+        if (typeof found === 'number') choose(found);
+        else if (found) choices = found;
+      }
       const accuracy = Number.isFinite(fix.accuracy)
         ? Math.max(0, fix.accuracy)
         : Infinity;

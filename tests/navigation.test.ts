@@ -17,8 +17,10 @@ import {
   upcomingItems,
   currentStretch,
   stopAt,
+  nextStopName,
+  startPass,
 } from '../src/navigation';
-import { legPositions } from '../src/track-position';
+import { indexTrack, legPositions } from '../src/track-position';
 
 // About 111.2 m per 0.001° along the equator.
 const M = 111.195;
@@ -506,5 +508,109 @@ describe('upcoming list', () => {
         ],
       ),
     ).toEqual([expect.closeTo(10 * M, 0), null, expect.closeTo(20 * M, 0)]);
+  });
+});
+
+describe('which pass a navigation starts on (#191)', () => {
+  // Out and back along the same road: 2.2 km east, then 2.2 km west.
+  const out = east(0, 20);
+  const back = out.slice(0, -1).reverse();
+  const outAndBack = indexTrack([[...out, ...back]]);
+  const fix = (
+    lon: number,
+    extra: { accuracy?: number; course?: number } = {},
+  ) => ({
+    coord: [0, lon] as Coord,
+    accuracy: 5,
+    ...extra,
+  });
+
+  it('asks between both passes in the middle of an out-and-back road', () => {
+    const found = startPass(outAndBack, fix(0.008));
+    expect(Array.isArray(found)).toBe(true);
+    expect((found as { at: number }[]).map((p) => Math.round(p.at))).toEqual(
+      [8 * M, 32 * M].map(Math.round),
+    );
+  });
+
+  it('takes the start near it, so a loop or an out-and-back begins there', () => {
+    expect(startPass(outAndBack, fix(0.002))).toBeCloseTo(2 * M, 0);
+  });
+
+  it('takes the pass the GPS course follows', () => {
+    expect(startPass(outAndBack, fix(0.008, { course: 95 }))).toBeCloseTo(
+      8 * M,
+      0,
+    );
+    expect(startPass(outAndBack, fix(0.008, { course: 260 }))).toBeCloseTo(
+      32 * M,
+      0,
+    );
+    // Across the road, the course tells nothing.
+    expect(
+      Array.isArray(startPass(outAndBack, fix(0.008, { course: 0 }))),
+    ).toBe(true);
+  });
+
+  it('never asks on a road used once', () => {
+    expect(startPass(indexTrack([out]), fix(0.008))).toBeCloseTo(8 * M, 0);
+  });
+
+  it('waits while the fix is off the route or too inaccurate', () => {
+    expect(startPass(outAndBack, { coord: [0.005, 0.008], accuracy: 5 })).toBe(
+      null,
+    );
+    expect(startPass(outAndBack, fix(0.008, { accuracy: 150 }))).toBeNull();
+  });
+
+  it('offers at most three passes, the nearest first', () => {
+    const shifted =
+      (lat: number) =>
+      (c: Coord): Coord => [lat, c[1]];
+    const four = indexTrack([
+      [
+        ...out.map(shifted(0)),
+        ...back.map(shifted(0.00004)),
+        ...out.slice(1).map(shifted(0.00008)),
+        ...back.map(shifted(0.00012)),
+      ],
+    ]);
+    const found = startPass(four, fix(0.008, { accuracy: 20 }));
+    expect(Array.isArray(found) && found.map((p) => p.at / M)).toEqual([
+      expect.closeTo(8, 1),
+      expect.closeTo(32, 1),
+      expect.closeTo(48, 1),
+    ]);
+  });
+
+  it('the tracker asks once and follows the chosen pass', () => {
+    const loop = route({ segments: [[...out, ...back]], steps: [] });
+    const tracker = createNavigationTracker(loop, [], 0, true);
+    tracker.update(fix(0.008));
+    expect(tracker.choices).toHaveLength(2);
+    tracker.choose(tracker.choices![1].at);
+    expect(tracker.choices).toBeNull();
+    const r = tracker.update(fix(0.0079));
+    expect(r!.progress).toBeCloseTo(32.1 * M, 0);
+    expect(tracker.update(fix(0.0078))!.progress).toBeCloseTo(32.2 * M, 0);
+  });
+
+  it('without asking, the tracker starts on the first pass as before', () => {
+    const loop = route({ segments: [[...out, ...back]], steps: [] });
+    const tracker = createNavigationTracker(loop);
+    expect(tracker.update(fix(0.008))!.progress).toBeCloseTo(8 * M, 0);
+    expect(tracker.choices).toBeNull();
+  });
+
+  it('names the next route point after a pass, else the destination', () => {
+    const stops = [
+      { at: 1000, name: 'Peak' },
+      { at: null, name: 'Lost' },
+      { at: 2000, name: 'Home' },
+    ];
+    expect(nextStopName(stops, 500)).toBe('Peak');
+    expect(nextStopName(stops, 1500)).toBe('Home');
+    expect(nextStopName(stops, 1990)).toBe('Home');
+    expect(nextStopName([], 0)).toBe('Destination');
   });
 });

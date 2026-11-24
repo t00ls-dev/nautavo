@@ -95,6 +95,7 @@ const pt: Record<string, string> = {
   'This browser cannot draw the map. Follow the directions.':
     'Este navegador não consegue desenhar o mapa. Siga as indicações.',
   'Back to route': 'Volte à rota',
+  'Which way are you going?': 'Para que lado você vai?',
   'Recalculate route': 'Recalcular rota',
   'Recalculating…': 'Recalculando…',
   'Route recalculated': 'Rota recalculada',

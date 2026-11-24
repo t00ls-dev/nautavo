@@ -46,7 +46,12 @@ export interface LocateOptions {
 }
 
 /** Extra distance a farther pass may have and still count as "as close". */
-const PASS_SLACK = 30;
+export const PASS_SLACK = 30;
+/**
+ * Closer than this along the track (meters), nearby candidates are one pass:
+ * the bends of a hairpin road, not a road travelled twice.
+ */
+const PASS_GAP = 500;
 const EARTH_RADIUS = 6371000;
 const RAD = Math.PI / 180;
 const longitudeDelta = (from: number, to: number) =>
@@ -96,6 +101,30 @@ export function toSegment([lat, lon]: Coord, a: Coord, b: Coord) {
 }
 const project = (edge: Edge, position: Coord) =>
   toSegment(position, edge.a, edge.b);
+/** A position projected on every edge, with the along-track distance. */
+function projectAll(index: TrackIndex, coord: Coord) {
+  return index.edges.map((edge) => {
+    const { t, offTrack } = project(edge, coord);
+    return { edge, t, offTrack, at: edge.from + t * edge.length };
+  });
+}
+/**
+ * Projections grouped into passes (closer than `PASS_GAP` along the track
+ * are one), each by its point nearest the position, in track order.
+ */
+function nearestPerPass<P extends { at: number; offTrack: number }>(
+  projections: P[],
+): P[] {
+  const passes: P[][] = [];
+  for (const p of [...projections].sort((a, b) => a.at - b.at)) {
+    const pass = passes.at(-1);
+    if (pass && p.at - pass[pass.length - 1].at < PASS_GAP) pass.push(p);
+    else passes.push([p]);
+  }
+  return passes.map((pass) =>
+    pass.reduce((nearest, p) => (p.offTrack < nearest.offTrack ? p : nearest)),
+  );
+}
 
 export function locateOnTrack(
   index: TrackIndex,
@@ -103,29 +132,22 @@ export function locateOnTrack(
   options: LocateOptions = {},
 ): TrackPosition | null {
   if (!index.edges.length) return null;
-  const projections = index.edges.map((edge) => ({
-    edge,
-    ...project(edge, coord),
-  }));
+  const projections = projectAll(index, coord);
   let best = projections[0];
   for (const p of projections) if (p.offTrack < best.offTrack) best = p;
   let chosen = best;
   if (options.progress !== undefined) {
+    // The first pass ahead among those about as close as the nearest, at
+    // its point nearest the position (not the vertex just behind it).
     const floor = options.progress - (options.backtrack ?? 100);
-    const along = (p: (typeof projections)[number]) =>
-      p.edge.from + p.t * p.edge.length;
-    let ahead: (typeof projections)[number] | undefined;
-    for (const p of projections)
-      if (
-        p.offTrack <= best.offTrack + PASS_SLACK &&
-        along(p) >= floor &&
-        (!ahead || along(p) < along(ahead))
-      )
-        ahead = p;
+    const ahead = nearestPerPass(
+      projections.filter(
+        (p) => p.offTrack <= best.offTrack + PASS_SLACK && p.at >= floor,
+      ),
+    )[0];
     if (ahead) chosen = ahead;
   }
-  const { edge, t, offTrack } = chosen;
-  const distance = edge.from + t * edge.length;
+  const { edge, t, offTrack, at: distance } = chosen;
   return {
     coord: [
       edge.a[0] + (edge.b[0] - edge.a[0]) * t,
@@ -139,6 +161,47 @@ export function locateOnTrack(
     segment: edge.segment,
   };
 }
+
+/** One pass of the track near a position (#191). */
+export interface TrackPass {
+  /** Along-track distance of the pass's point nearest the position, meters. */
+  at: number;
+  /** Distance from the position to that point, meters. */
+  offTrack: number;
+  /** Direction of travel there, degrees from north, or null if unknown. */
+  bearing: number | null;
+}
+/**
+ * The passes of the track about as close to a position as the nearest one
+ * (within `slack` meters of it), nearest first: two or more where the track
+ * uses the same road more than once (an out-and-back, a lollipop stem, the
+ * crossing of a figure eight). Candidates closer than `PASS_GAP` along the
+ * track count as one pass.
+ */
+export function passesNear(
+  index: TrackIndex,
+  coord: Coord,
+  slack: number,
+): TrackPass[] {
+  if (!index.edges.length) return [];
+  const projections = projectAll(index, coord);
+  // A loop, not Math.min(...): a long imported track has too many edges to
+  // spread as arguments.
+  let nearest = Infinity;
+  for (const p of projections) nearest = Math.min(nearest, p.offTrack);
+  return nearestPerPass(
+    projections.filter((p) => p.offTrack <= nearest + slack),
+  )
+    .map((p) => ({
+      at: p.at,
+      offTrack: p.offTrack,
+      bearing: bearingBetween(p.edge.a, p.edge.b),
+    }))
+    .sort((a, b) => a.offTrack - b.offTrack);
+}
+/** The smaller angle between two directions, degrees (0 to 180). */
+export const headingGap = (a: number, b: number) =>
+  Math.abs(longitudeDelta(a, b));
 
 export interface TrackPoint {
   coord: Coord;

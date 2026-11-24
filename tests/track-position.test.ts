@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Coord } from '../src/core';
 import {
+  headingGap,
   indexTrack,
   locateOnTrack,
+  passesNear,
   pointAtDistance,
 } from '../src/track-position';
 
@@ -69,6 +71,13 @@ describe('repeated passes', () => {
     expect(p.distance).toBeCloseTo(2.9 * M, 0);
   });
 
+  it('with progress, takes the position, not the vertex just behind it', () => {
+    // 20 m past the vertex at 0.003: the edge that ends there is within the
+    // pass slack too, but the position is on the next one.
+    const p = locateOnTrack(outAndBack, [0, 0.00318], { progress: 3 * M })!;
+    expect(p.distance).toBeCloseTo(3.18 * M, 0);
+  });
+
   it('keeps the closest pass when the one ahead is much farther', () => {
     // A loop: east 1 km, north 1 km, west 1 km, back south to the start.
     const loop = indexTrack([
@@ -89,6 +98,55 @@ describe('repeated passes', () => {
     const p = locateOnTrack(loop, [0.0002, 0.005], { progress: 25 * M })!;
     expect(p.distance).toBeCloseTo(5 * M, 0);
     expect(p.offTrack).toBeLessThan(30);
+  });
+});
+
+describe('passes near a position (#191)', () => {
+  const out = east(10);
+  const outAndBack = indexTrack([[...out, ...out.slice(0, -1).reverse()]]);
+
+  it('finds both passes of an out-and-back road, with their directions', () => {
+    const passes = passesNear(outAndBack, [0, 0.005], 30);
+    expect(passes.map((p) => Math.round(p.at))).toEqual(
+      [5 * M, 15 * M].map(Math.round),
+    );
+    expect(passes[0].bearing).toBeCloseTo(90, 5);
+    expect(passes[1].bearing).toBeCloseTo(270, 5);
+  });
+
+  it('finds one pass on a road used once', () => {
+    const passes = passesNear(indexTrack([east(10)]), [0.0001, 0.005], 30);
+    expect(passes).toHaveLength(1);
+    expect(passes[0].at).toBeCloseTo(5 * M, 0);
+  });
+
+  it('counts the two sides of a hairpin as one pass', () => {
+    // East 300 m, 25 m north, back west 300 m: the sides are 25 m apart but
+    // less than 500 m apart along the road.
+    const hairpin = indexTrack([
+      [
+        [0, 0],
+        [0, 0.0027],
+        [0.000225, 0.0027],
+        [0.000225, 0],
+      ],
+    ]);
+    expect(passesNear(hairpin, [0.0001, 0.00135], 30)).toHaveLength(1);
+  });
+
+  it('leaves out a pass farther than the slack', () => {
+    // Out 1 km, then back on a road 100 m north of it.
+    const apart = indexTrack([
+      [...out, ...out.map(([, lon]): Coord => [0.0009, lon]).reverse()],
+    ]);
+    expect(passesNear(apart, [0, 0.005], 30)).toHaveLength(1);
+    expect(passesNear(apart, [0, 0.005], 120)).toHaveLength(2);
+  });
+
+  it('measures the smaller angle between two directions', () => {
+    expect(headingGap(350, 10)).toBe(20);
+    expect(headingGap(90, 270)).toBe(180);
+    expect(headingGap(30, 30)).toBe(0);
   });
 });
 
