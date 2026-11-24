@@ -19,7 +19,15 @@ const start = `${lat}, ${lon(0)}`,
   end = `${lat}, ${lon(20)}`;
 const longName = 'Avenida Prefeito Dulcídio Cardoso';
 
-async function setup(page: Page, road = 'Estrada das Furnas') {
+/**
+ * The planner with an OSRM route 2.2 km east, ready to navigate: by default
+ * a right turn onto `road` at 1 km and a left one at 1.5 km, or `steps`.
+ */
+async function setup(
+  page: Page,
+  road = 'Estrada das Furnas',
+  steps?: Record<string, unknown>[],
+) {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await page.route('**/route/v1/driving/**', (r) =>
     r.fulfill({
@@ -36,7 +44,7 @@ async function setup(page: Page, road = 'Estrada das Furnas') {
             geometry: { coordinates: coords },
             legs: [
               {
-                steps: [
+                steps: steps ?? [
                   {
                     name: 'Rua Uruguai',
                     distance: 1000,
@@ -1654,6 +1662,93 @@ test.describe('phone navigation', () => {
       expect(await overlapping(page, ['.nav-banner', MAP_OVERLAYS])).toEqual(
         [],
       );
+    });
+
+  for (const [width, language] of [
+    [320, 'pt'],
+    [390, 'en'],
+  ] as const)
+    test(`the banner and the itinerary name the sign at a maneuver at ${width} px in ${language} (#135)`, async ({
+      page,
+      context,
+    }) => {
+      await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
+      // A nameless fork with the sign's route number and destinations, then
+      // a named road whose sign gives destinations only.
+      await setup(page, undefined, [
+        {
+          name: 'Rua Uruguai',
+          distance: 1000,
+          duration: 70,
+          maneuver: { type: 'depart', location: coords[0] },
+        },
+        {
+          name: '',
+          destinations:
+            'RJ-071: Ilha do Governador, Aeroporto Internacional, Petrópolis, São Paulo',
+          distance: 500,
+          duration: 40,
+          maneuver: {
+            type: 'fork',
+            modifier: 'slight right',
+            location: coords[10],
+          },
+        },
+        {
+          name: longName,
+          destinations: 'Aeroporto Internacional Tom Jobim, Ilha do Governador',
+          distance: 600,
+          duration: 40,
+          maneuver: {
+            type: 'continue',
+            modifier: 'slight left',
+            location: coords[15],
+          },
+        },
+        {
+          name: '',
+          distance: 0,
+          duration: 0,
+          maneuver: { type: 'arrive', location: coords[20] },
+        },
+      ]);
+      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      const toward = language === 'pt' ? 'em direção a' : 'toward';
+      // The itinerary: the route number and first destination stand in for
+      // the nameless road, and go on a third line under a named one.
+      if (!(await page.locator('#itinerary').isVisible()))
+        await page.locator('#panel-toggle').click();
+      await page.locator('#itinerary summary').click();
+      const rows = page.locator('#itinerary li');
+      await expect(rows.nth(1).locator('.step-road')).toHaveText(
+        `RJ-071 ${toward} Ilha do Governador`,
+      );
+      await expect(rows.nth(2).locator('.step-toward')).toHaveText(
+        `${toward} Aeroporto Internacional Tom Jobim`,
+      );
+      await page.locator('#navigate').click();
+      await page.locator('#nav-notice-start').click();
+      const road = page.locator('#nav-road'),
+        below = page.locator('#nav-toward');
+      await expect(road.locator('.sign-route')).toHaveText('RJ-071');
+      await expect(below).toHaveText(`${toward} Ilha do Governador`);
+      expect(await fits(page)).toEqual([]);
+      // Past the fork: the named road, its first destination below it, each
+      // within two lines.
+      await context.setGeolocation({ latitude: lat, longitude: lon(12) });
+      await expect(road).toHaveText(longName);
+      await expect(below).toHaveText(
+        `${toward} Aeroporto Internacional Tom Jobim`,
+      );
+      for (const line of [road, below])
+        expect(
+          await line.evaluate(
+            (e) =>
+              e.getBoundingClientRect().height /
+              parseFloat(getComputedStyle(e).lineHeight),
+          ),
+        ).toBeLessThanOrEqual(2.05);
+      expect(await fits(page)).toEqual([]);
     });
 
   test('the bar opens a list of the turns and stops ahead', async ({

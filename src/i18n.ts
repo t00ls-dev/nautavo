@@ -657,6 +657,9 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     },
   ],
   [/^Stop (\d+)$/, (n) => `Parada ${n}`],
+  // The sign at a maneuver (#135): its first destination and exit number.
+  [/^toward (.+)$/, (place) => `em direção a ${place}`],
+  [/^Exit ([0-9][0-9A-Za-z-]*)$/, (n) => `Saída ${n}`],
   // Spoken directions (`src/navigation-voice.ts`): distance words and the
   // maneuver's own translation, mid-sentence.
   [

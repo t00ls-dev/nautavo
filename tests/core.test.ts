@@ -297,6 +297,16 @@ describe('route validation', () => {
       exit: 2,
       at: [-22.905, -43.105],
     });
+    r.steps.push({
+      name: 'Unnamed road',
+      ref: '',
+      distance: 5,
+      duration: 1,
+      kind: 'fork',
+      branch: 'RJ-071',
+      toward: 'Ilha do Governador, Aeroporto Internacional',
+      exitNumber: '12A',
+    });
     expect(validRoute(r)).toBe(true);
   });
   it.each<[string, (r: Route) => void]>([
@@ -319,6 +329,13 @@ describe('route validation', () => {
     ['a fractional roundabout exit', (r) => (r.steps[0].exit = 1.5)],
     ['an out-of-range roundabout exit', (r) => (r.steps[0].exit = 0)],
     ['an invalid maneuver location', (r) => (r.steps[0].at = [0, 181])],
+    [
+      'a non-string sign',
+      (r) => ((r.steps[0] as { toward: unknown }).toward = 7),
+    ],
+    ['an empty sign route number', (r) => (r.steps[0].branch = '')],
+    ['an over-long sign', (r) => (r.steps[0].toward = 'x'.repeat(201))],
+    ['a sign with a line break', (r) => (r.steps[0].exitNumber = '1\n2')],
     ['invalid snapped points', (r) => (r.snapped = [[0, 200]])],
   ])('rejects %s', (_, change) => {
     const r = good();

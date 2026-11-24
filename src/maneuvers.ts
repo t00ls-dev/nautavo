@@ -41,6 +41,13 @@ export function stepRoad(step: Step): string {
   return name || step.ref || '';
 }
 
+/** The first destination on the sign at a step's maneuver (#135), or ''. */
+export function stepToward(step: Step): string {
+  return step.toward?.split(/\s*[,;]\s*/)[0] ?? '';
+}
+/** "toward {place}", in English source text (translated by `src/i18n.ts`). */
+export const towardText = (place: string) => `toward ${place}`;
+
 /** Instruction for the maneuver that starts a step, or null when unknown. */
 export function maneuverText(step: Step): string | null {
   const { kind, modifier, exit } = step;

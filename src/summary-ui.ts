@@ -14,6 +14,8 @@ import {
   maneuverPositions,
   maneuverText,
   shortRoadName,
+  stepToward,
+  towardText,
 } from './maneuvers';
 import { speedFromKmh, travelTimeSeconds } from './travel-time';
 import { t } from './i18n';
@@ -140,7 +142,27 @@ export function itineraryList(
     // stand in only for a road without a name.
     const shortRoad =
       s.ref && s.name === 'Unnamed road' ? s.ref : shortRoadName(road);
-    const full = `${instruction ? `${t(instruction)} · ` : ''}${s.ref ? `${s.ref} · ` : ''}${road} · ${length}`;
+    // The sign at the maneuver (#135): a road without a name or reference
+    // reads its route number and "toward X"; a named road gets them on a
+    // third line.
+    const toward = stepToward(s),
+      branch = s.branch ?? '';
+    // The space keeps the route number apart from the text when copied.
+    const sign = [
+      ...(branch ? [text('span', branch, 'sign-route'), ' '] : []),
+      ...(toward ? [t(towardText(toward))] : []),
+    ];
+    const nameless = s.name === 'Unnamed road' && !s.ref;
+    const full = [
+      instruction && t(instruction),
+      s.ref,
+      road,
+      branch,
+      toward && t(towardText(toward)),
+      length,
+    ]
+      .filter(Boolean)
+      .join(' · ');
     const body = document.createElement('span');
     body.className = 'step-text';
     // The spaces keep the words apart when the text is copied.
@@ -151,12 +173,20 @@ export function itineraryList(
       );
     const detail = document.createElement('span');
     detail.className = 'step-detail';
+    const roadLine = text('span', shortRoad, 'step-road');
+    if (nameless && sign.length) roadLine.replaceChildren(...sign);
     detail.append(
-      text('span', shortRoad, 'step-road'),
+      roadLine,
       document.createTextNode(' '),
       text('span', length, 'step-length'),
     );
     body.append(detail);
+    if (!nameless && sign.length) {
+      const line = document.createElement('span');
+      line.className = 'step-toward';
+      line.append(...sign);
+      body.append(document.createTextNode(' '), line);
+    }
     row.append(body);
     holder.title = full;
     if (s.at) {

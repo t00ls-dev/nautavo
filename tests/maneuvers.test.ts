@@ -6,6 +6,8 @@ import {
   maneuverPositions,
   maneuverText,
   shortRoadName,
+  stepToward,
+  towardText,
 } from '../src/maneuvers';
 import { milepostLabel, stepDistanceLabel } from '../src/units';
 
@@ -15,6 +17,29 @@ const step = (extra: Partial<Step>): Step => ({
   distance: 100,
   duration: 10,
   ...extra,
+});
+
+describe('the sign at a maneuver (#135)', () => {
+  const step = (toward?: string): Step => ({
+    name: 'Unnamed road',
+    ref: '',
+    distance: 1,
+    duration: 1,
+    ...(toward === undefined ? {} : { toward }),
+  });
+  it('shows only the first destination, translated', () => {
+    expect(
+      stepToward(step('Ilha do Governador, Aeroporto Internacional')),
+    ).toBe('Ilha do Governador');
+    expect(stepToward(step('Centro;Niterói'))).toBe('Centro');
+    expect(stepToward(step())).toBe('');
+    expect(translate(towardText('Jacarepaguá'), 'pt')).toBe(
+      'em direção a Jacarepaguá',
+    );
+    expect(translate('Exit 12A', 'pt')).toBe('Saída 12A');
+    // The instruction "Exit left" keeps its own translation.
+    expect(translate('Exit left', 'pt')).toBe('Saída à esq.');
+  });
 });
 
 describe('maneuver instructions', () => {

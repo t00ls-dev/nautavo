@@ -7,6 +7,8 @@ import {
   maneuverText,
   shortRoadName,
   stepRoad,
+  stepToward,
+  towardText,
 } from './maneuvers';
 import {
   currentStretch,
@@ -101,12 +103,19 @@ export function upcomingList(deps: {
         if (item.kind === 'maneuver') {
           const instruction = t(maneuverText(item.step) ?? 'Continue');
           const road = stepRoad(item.step);
+          // A road without a name reads its sign (#135): the route number
+          // and the first destination.
+          const toward = stepToward(item.step);
+          const sign = [item.step.branch, toward && t(towardText(toward))]
+            .filter(Boolean)
+            .join(' ');
+          const way = road ? shortRoadName(road) : sign;
           label = text(
             'span',
-            road ? `${instruction} · ${shortRoadName(road)}` : instruction,
+            way ? `${instruction} · ${way}` : instruction,
             'nav-list-text',
           );
-          full = road ? `${instruction} · ${road}` : instruction;
+          full = [instruction, road || sign].filter(Boolean).join(' · ');
           glyph = maneuverGlyph(item.step);
         } else {
           const seconds = travelTimeSeconds(
