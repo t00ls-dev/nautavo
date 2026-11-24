@@ -25,10 +25,14 @@ export function setupMapView(
   };
   // Input and map gestures supersede startup work, including address edits without coordinates.
   document.addEventListener('input', interact, { once: true });
-  for (const type of ['dragstart', 'zoomstart', 'click'])
+  for (const type of ['dragstart', 'zoomstart', 'click', 'contextmenu'])
     map.on(type, (event: { originalEvent?: Event }) => {
       if (event.originalEvent) interact();
     });
+  // The keyboard on the map too (arrows, the point menu's ContextMenu key or
+  // Shift+F10): a startup view arriving late would move the map from under
+  // the keys, and close the point menu just opened.
+  map.container.addEventListener('keydown', interact);
   let detectRegion = readPreference(PREFERENCE.detectRegion) !== 'false';
   $<HTMLInputElement>('detect-region').checked = detectRegion;
   $<HTMLInputElement>('detect-region').onchange = () => {
