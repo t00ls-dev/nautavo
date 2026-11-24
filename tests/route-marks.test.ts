@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Coord } from '../src/core';
-import { passOf, repeatedRanges, splitByRepeat } from '../src/route-marks';
+import type { Coord, Route } from '../src/core';
+import {
+  passOf,
+  repeatedRanges,
+  routePieces,
+  splitByRepeat,
+} from '../src/route-marks';
 import { indexTrack, pointAtDistance } from '../src/track-position';
 
 // About 111.2 m per 0.001°; tracks along the equator or the prime meridian.
@@ -72,6 +77,52 @@ describe('drawing helpers', () => {
       { from: 30, to: 60, kind: 'day', repeated: true },
       { from: 60, to: 100, kind: 'day', repeated: false },
     ]);
+  });
+});
+
+describe('route pieces between two distances', () => {
+  const route = (segments: Coord[][]): Route => ({
+    segments,
+    steps: [],
+    distance: 0,
+    duration: 0,
+    provider: 'OSRM',
+  });
+  const length = (coords: Coord[]) =>
+    coords
+      .slice(1)
+      .reduce((sum, c, i) => sum + Math.abs(c[1] - coords[i][1]), 0);
+
+  it('cuts an out-and-back at the progress, flagging the passes', () => {
+    // 2 km east and back: the way travelled and the way ahead.
+    const outAndBack = route([[...line(0, 0.018), ...line(0.018, 0).slice(1)]]);
+    const total = routePieces(outAndBack).reduce(
+      (sum, p) => sum + length(p.coords),
+      0,
+    );
+    const travelled = routePieces(outAndBack, 0, 3000),
+      ahead = routePieces(outAndBack, 3000);
+    expect(travelled.some((p) => p.repeated)).toBe(true);
+    expect(ahead.every((p) => p.repeated)).toBe(true);
+    const sum = (pieces: { coords: Coord[] }[]) =>
+      pieces.reduce((n, p) => n + length(p.coords), 0);
+    expect(sum(travelled) + sum(ahead)).toBeCloseTo(total, 9);
+    // The way ahead starts at the progress, on the way back.
+    expect(ahead[0].coords[0][1]).toBeCloseTo(
+      0.018 - (3000 - 2002) / 111195,
+      3,
+    );
+  });
+
+  it('returns a road used once whole, or nothing past its end', () => {
+    const once = route([line(0, 0.018)]);
+    expect(routePieces(once)).toEqual([
+      { repeated: false, coords: once.segments[0] },
+    ]);
+    expect(routePieces(once, 5000)).toEqual([]);
+    const [half] = routePieces(once, 0, 1000);
+    expect(half.repeated).toBe(false);
+    expect(half.coords.at(-1)![1]).toBeCloseTo(1000 / 111195, 4);
   });
 });
 

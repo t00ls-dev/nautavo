@@ -373,8 +373,6 @@ export function createNavigationTracker(
     maneuvers,
     /** The route's departure step, the first stretch, if it has one. */
     departure: route.steps.find((s) => s.kind === 'depart') ?? null,
-    /** Track from the start to an along-track distance, split at segment gaps. */
-    travelled: (distance: number) => trackSlice(index, 0, distance),
     /**
      * Where a recalculated route should rejoin this one: past the rejoin
      * point by `REROUTE_AHEAD`, never past the next route point.

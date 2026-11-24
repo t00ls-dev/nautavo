@@ -176,23 +176,39 @@ export function splitByRepeat(ranges: Range[], repeated: Range[]): Range[] {
 const ARROW_SPACING = 90;
 const ARROW = 'route-arrow';
 
+const lengths = new WeakMap<Route, number>();
+/** The route's length along its segments, meters, once per route object. */
+function lengthOf(route: Route): number {
+  let total = lengths.get(route);
+  if (total === undefined) {
+    total = route.segments.reduce(
+      (sum, s) => sum + s.slice(1).reduce((n, c, i) => n + meters(s[i], c), 0),
+      0,
+    );
+    lengths.set(route, total);
+  }
+  return total;
+}
+
 /**
- * The route as drawn: one piece per stretch, those travelled twice in
- * opposite directions flagged, so they draw as offset parallel lines.
+ * The route as drawn, from `from` to `to` meters along it (the whole route
+ * by default): one piece per stretch, those travelled twice in opposite
+ * directions flagged, so they draw as offset parallel lines.
  */
 export function routePieces(
   route: Route,
+  from = 0,
+  to = Infinity,
 ): { repeated: boolean; coords: Coord[] }[] {
   const repeated = repeatsFor(route);
-  if (!repeated.length)
+  const total = lengthOf(route);
+  if (!repeated.length && from <= 0 && to >= total)
     return route.segments.map((coords) => ({ repeated: false, coords }));
-  const total = route.segments.reduce(
-    (sum, s) => sum + s.slice(1).reduce((n, c, i) => n + meters(s[i], c), 0),
-    0,
-  );
+  const end = Math.min(to, total);
+  if (end <= from) return [];
   return sliceByRanges(
     route.segments,
-    splitByRepeat([{ from: 0, to: total, kind: 'route' }], repeated),
+    splitByRepeat([{ from, to: end, kind: 'route' }], repeated),
   ).map(({ repeated, coords }) => ({ repeated, coords }));
 }
 

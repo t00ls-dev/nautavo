@@ -187,12 +187,6 @@ describe('navigation tracker', () => {
     expect(r.next).toBeNull();
     expect(r.toNext).toBeCloseTo(15 * M, 0);
   });
-  it('draws the travelled part up to the progress', () => {
-    const tracker = createNavigationTracker(route());
-    const [part] = tracker.travelled(2 * M);
-    expect(part[0]).toEqual([0, 0]);
-    expect(part.at(-1)![1]).toBeCloseTo(0.002, 6);
-  });
 });
 
 describe('off the route', () => {
