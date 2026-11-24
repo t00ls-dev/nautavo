@@ -10,7 +10,10 @@
  * working, and only the browser's own reaction to it is dropped.
  *
  * Controls and text fields keep the second touch, so a quick second press
- * still clicks and a word can still be selected while typing. Only a short
+ * still clicks and a word can still be selected while typing. Map markers
+ * are buttons for the keyboard but not such controls: a tap and then a
+ * drag on one showed the loupe over the map, so they never keep it; their
+ * drag follows pointer events, which a cancelled touch does not stop. Only a short
  * tap that stayed in place counts as the first touch, so a pan or scroll
  * followed by a quick new one is never blocked.
  */
@@ -37,6 +40,13 @@ export const followsTap = (tap: TouchAt | null, down: TouchAt) =>
   !!tap && down.time - tap.time < DOUBLE_TAP.interval && near(tap, down);
 const KEEPS_TOUCH =
   'button, a, input, textarea, select, label, summary, [contenteditable], [role="button"], [role="slider"]';
+/** Points and weather on the map, whatever their role. */
+const MAP_MARKER = '.maplibregl-marker';
+/** Whether a second touch on `target` stays the browser's own. */
+const keepsTouch = (target: EventTarget | null) => {
+  const element = target as Element | null;
+  return !!element?.closest?.(KEEPS_TOUCH) && !element.closest(MAP_MARKER);
+};
 
 export function stopTapHoldLoupe(): void {
   let start: TouchAt | null = null,
@@ -53,11 +63,7 @@ export function stopTapHoldLoupe(): void {
       const second = followsTap(tap, at);
       tap = null;
       start = second ? null : at;
-      if (
-        second &&
-        event.cancelable &&
-        !(event.target as Element | null)?.closest?.(KEEPS_TOUCH)
-      )
+      if (second && event.cancelable && !keepsTouch(event.target))
         event.preventDefault();
     },
     { capture: true, passive: false },
