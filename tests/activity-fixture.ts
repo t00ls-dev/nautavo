@@ -82,3 +82,22 @@ export function extremeRide(): Sample[] {
     ele: 2400 - i * 5,
   }));
 }
+
+/**
+ * A 20 km ride whose top speed, highest heart rate and highest point come
+ * within about 200 m of one another, so their map labels meet at the zoom
+ * that shows the whole ride.
+ */
+export function clusteredPeaksRide(): Sample[] {
+  return Array.from({ length: 401 }, (_, i) => ({
+    t: i * 10,
+    // 5 m/s, with one 20 m/s step at 200.
+    at: i <= 200 ? i : i + 3,
+    hr: i === 202 ? 190 : 140,
+    cad: 80,
+    power: 200,
+    temp: 25,
+    // A hill topping out at 201.
+    ele: 500 - Math.abs(i - 201) * 2,
+  }));
+}

@@ -1,7 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { base, coveredControls, overlapping } from './app-helpers';
 import { mapReady, mockBasemap } from './map-helpers';
-import { activityGpx, extremeRide, ride } from './activity-fixture';
+import {
+  activityGpx,
+  clusteredPeaksRide,
+  extremeRide,
+  ride,
+} from './activity-fixture';
 
 /** Requests to the routing, search, weather and elevation services. */
 async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
@@ -360,6 +365,38 @@ test('a value the activity did not record is not offered as a coloring (#156)', 
   ).toHaveCount(0);
 });
 
+/** Peak labels covering one another or not whole on the map. */
+async function peakProblems(page: Page) {
+  const problems = await overlapping(page, ['.activity-peak']);
+  const map = (await page.locator('#map').boundingBox())!;
+  for (const peak of await page.locator('.activity-peak').all()) {
+    const b = (await peak.boundingBox())!;
+    if (
+      b.x < map.x ||
+      b.y < map.y ||
+      b.x + b.width > map.x + map.width ||
+      b.y + b.height > map.y + map.height
+    )
+      problems.push(`${await peak.textContent()} leaves the map`);
+  }
+  return problems;
+}
+for (const [width, height] of [
+  [320, 568],
+  [390, 844],
+  [1280, 800],
+] as const)
+  test(`peak labels close together take different sides at ${width}x${height} (#156)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await setup(page);
+    await importActivity(page, clusteredPeaksRide());
+    const peaks = page.locator('.activity-peak');
+    await expect(peaks).toHaveCount(3);
+    await expect.poll(() => peakProblems(page)).toEqual([]);
+  });
+
 test('the fastest point, highest heart rate and highest point are marked (#156)', async ({
   page,
 }) => {
@@ -370,16 +407,7 @@ test('the fastest point, highest heart rate and highest point are marked (#156)'
   await expect(peaks).toHaveCount(3);
   await expect(page.locator('.activity-peak-hr')).toHaveText('190 bpm');
   await expect(page.locator('.activity-peak-altitude')).toHaveText('2,400 m');
-  // Each label whole on the map and apart from the others.
-  expect(await overlapping(page, ['.activity-peak'])).toEqual([]);
-  const map = (await page.locator('#map').boundingBox())!;
-  for (const peak of await peaks.all()) {
-    const b = (await peak.boundingBox())!;
-    expect(b.x).toBeGreaterThanOrEqual(map.x);
-    expect(b.y).toBeGreaterThanOrEqual(map.y);
-    expect(b.x + b.width).toBeLessThanOrEqual(map.x + map.width);
-    expect(b.y + b.height).toBeLessThanOrEqual(map.y + map.height);
-  }
+  expect(await peakProblems(page)).toEqual([]);
   await page.locator('#activity-close').click();
   await expect(peaks).toHaveCount(0);
 });
