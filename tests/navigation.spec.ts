@@ -1568,6 +1568,15 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-rest')).toContainText('0.6 km ·');
     await expect(page.locator('#nav-road')).not.toHaveText('Vista Chinesa');
     await expect(page.locator('#nav-screen')).toBeFocused();
+    // Stopped, without a compass, the map stays north up: the way back
+    // ahead (west, to the left) draws in the route's color right of its
+    // direction (north, above the road), beside the way out travelled (gray,
+    // south of it), never under it.
+    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
+    const x = arrow.x + arrow.width / 2 - 60,
+      y = arrow.y + arrow.height / 2;
+    await expect.poll(() => pixel(page, x, y - 6)).toEqual(ROUTE_COLOR);
+    expect(await pixel(page, x, y + 6)).toEqual([0x87, 0x95, 0xa1]);
   });
 
   test('at the start of an out-and-back route, nothing is asked', async ({

@@ -40,8 +40,10 @@ import {
   addNavigationLayers,
   circleAround,
   lines,
+  passLines,
   rejoinLine,
 } from './navigation-layers';
+import { routePieces } from './route-marks';
 import { maneuverGlyph, upcomingList } from './navigation-list';
 import {
   navigationSwitches,
@@ -556,8 +558,9 @@ export function setupNavigation(deps: {
   const source = (id: string) => map?.getSource<GeoJSONSource>(id);
 
   function drawRoute(next: Route) {
-    void source('route')?.setData(lines(next.segments));
+    void source('route')?.setData(passLines(routePieces(next)));
     void source('travelled')?.setData(lines([]));
+    void source('ahead')?.setData(lines([]));
   }
 
   /**
@@ -915,21 +918,27 @@ export function setupNavigation(deps: {
     return Math.min((speed * travelledDelay) / 1000, radius * perPixel);
   }
   /**
-   * Redraws the travelled line up to `progress`. Each redraw goes through
+   * Redraws the travelled line up to `progress` and the way ahead from it.
+   * Each redraw goes through
    * MapLibre's worker; while one is under way only the latest progress waits,
    * so a playing replay keeps the line right behind the arrow without a queue.
    */
   function drawTravelled(progress: number) {
-    const target = source('travelled');
-    if (!target || !tracker) return;
+    const travelled = source('travelled'),
+      ahead = source('ahead');
+    if (!travelled || !ahead || !route) return;
     if (travelledBusy) {
       travelledNext = progress;
       return;
     }
     travelledBusy = true;
     const sent = performance.now();
-    void target
-      .setData(lines(tracker.travelled(progress)))
+    // The way ahead draws above the way travelled, so where the route uses
+    // a road both ways the part still to come is never hidden.
+    void Promise.all([
+      travelled.setData(passLines(routePieces(route, 0, progress))),
+      ahead.setData(passLines(routePieces(route, progress))),
+    ])
       .catch(() => undefined)
       .finally(() => {
         travelledBusy = false;
