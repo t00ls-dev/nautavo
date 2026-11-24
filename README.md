@@ -7,7 +7,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 ## Features
 
 - **Plan** with addresses, coordinates, map points or your location, on a map that turns.
-- **Edit:** move and reorder points, reverse, add a return trip, undo and lock the route.
+- **Edit:** add a stop by dragging the route line, move, remove and reorder points on the map or in the list, reverse, add a return trip, undo and lock the route.
 - **Review** distance, time from your own average speed, an itinerary with turn directions, elevation and climbs, road surface and daylight.
 - **Weather** along the route for the departure time, with wind relative to the route and risk alerts.
 - **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints.
