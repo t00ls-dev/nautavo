@@ -2,8 +2,10 @@
  * Element lookup for every module: `byId` (imported as `$`) for elements the
  * page markup always provides, `optionalById` where an element may be
  * absent (created later, or on another page); `text` creates an element
- * with its text.
+ * with its text, and `SVG_NS` is the namespace of every SVG element made in
+ * code.
  */
+export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const byId = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 export const optionalById = <T extends HTMLElement = HTMLElement>(

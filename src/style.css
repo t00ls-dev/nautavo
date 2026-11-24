@@ -3698,23 +3698,27 @@ dialog:modal:not(.nav-screen) {
   display: grid;
   place-items: center;
 }
-.nav-arrow {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 8px #1b293466;
-  color: var(--color-focus);
+.nav-mark {
+  display: block;
+  width: 40px;
+  height: 40px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px #1b293466);
 }
-.nav-arrow .button-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
+/* White with a sea-green edge, so it stands out on the route line it sits
+   on and against the dot's own ring. */
+.nav-mark-cone {
+  fill: #fff;
+  stroke: var(--color-primary);
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
-.nav-position.weak .nav-arrow {
+.nav-mark-dot {
+  fill: var(--color-primary);
+  stroke: #fff;
+  stroke-width: 3;
+}
+.nav-position.weak .nav-mark {
   opacity: 0.75;
 }
 .nav-accuracy {

@@ -9,7 +9,7 @@ import {
 import { detectClimbs, hardestClimb, type Climb } from './climbs';
 import type { Coord, Route, State } from './core';
 import { departureOf } from './departure';
-import { byId as $ } from './dom';
+import { byId as $, SVG_NS } from './dom';
 import { sheetCoversMap } from './panel';
 import { icon, iconControl } from './icons';
 import { t } from './i18n';
@@ -43,7 +43,6 @@ import {
   chartAxis,
   chartFrame,
   profileChart,
-  SVG_NS,
   type ChartPoint,
 } from './profile-chart';
 

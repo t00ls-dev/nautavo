@@ -1,3 +1,4 @@
+import { SVG_NS } from './dom';
 const cloud =
   '<path class="weather-cloud-shape" d="M6 14a4 4 0 1 1 .8-7.9A6 6 0 0 1 18.5 7a3.5 3.5 0 0 1-.5 7Z"/>';
 const lightning =
@@ -118,7 +119,7 @@ const paths = {
 } as const;
 export type IconName = keyof typeof paths;
 export function icon(name: IconName): SVGSVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('width', '20');
   svg.setAttribute('height', '20');
@@ -154,7 +155,7 @@ export function iconControl(
 export function centerIcon(svg: SVGSVGElement): void {
   const box = svg.getBBox();
   if (!box.width || !box.height) return;
-  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const group = document.createElementNS(SVG_NS, 'g');
   group.setAttribute(
     'transform',
     `translate(${(12 - box.x - box.width / 2).toFixed(3)} ${(12 - box.y - box.height / 2).toFixed(3)})`,

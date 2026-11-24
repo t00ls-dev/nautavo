@@ -14,6 +14,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- While navigating, traveling the route or playing an activity, your position is a green dot with a cone pointing the way, in Nautavo's colors, instead of a blue arrow.
 - The Itinerary shows each step's instruction on its own line, with the road and its distance below it, so on a phone a long road name no longer hides the instruction or the distance.
 - Zooming the map while navigating, traveling the route or playing an activity works as on the route planner: a pinch or a double tap zooms around your fingers, and a tap with two fingers zooms out. When you let go, the map slides back to your position and keeps following you.
 - With a phone held sideways, navigation and Travel the route fill the screen with the map and show the guidance as two cards on its left, the next turns at the top and the time with End (or the replay controls) at the bottom, with the map in view between them; the bottom card's handle opens the list of turns ahead. The route planner's panel moves to the left of the map instead of covering its lower half, with the route's distance and time and Navigate always in view. Travel the route no longer keeps a phone's narrow shape on a wide window, and its Replay label no longer covers the map: the play button, slider and arrival show the replay.
