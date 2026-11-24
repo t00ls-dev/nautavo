@@ -17,6 +17,13 @@ const SIDE_SHEET = '(orientation: landscape) and (max-height: 500px)';
 /** The open sheet covers the map: showing a place there closes it first. */
 export const sheetCoversMap = (): boolean =>
   compactLayout() && !matchMedia(SIDE_SHEET).matches;
+/** Height of the map left in view above the bottom sheet, in pixels. */
+export function visibleMapHeight(container: HTMLElement): number {
+  const box = container.getBoundingClientRect();
+  if (!sheetCoversMap()) return box.height;
+  const top = $('sheet').getBoundingClientRect().top - box.top;
+  return Math.min(box.height, Math.max(0, top));
+}
 
 /**
  * With no point set, Saved routes and Favorite places come right below the

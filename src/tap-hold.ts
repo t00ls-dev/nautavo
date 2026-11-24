@@ -40,8 +40,11 @@ export const followsTap = (tap: TouchAt | null, down: TouchAt) =>
   !!tap && down.time - tap.time < DOUBLE_TAP.interval && near(tap, down);
 const KEEPS_TOUCH =
   'button, a, input, textarea, select, label, summary, [contenteditable], [role="button"], [role="slider"]';
-/** Points and weather on the map, whatever their role. */
-const MAP_MARKER = '.maplibregl-marker';
+/**
+ * Points and weather on the map, whatever their role; a popup's buttons
+ * (drawn as a marker too, `MapPopup`) stay controls.
+ */
+const MAP_MARKER = '.maplibregl-marker:not(.map-popup-anchor)';
 /** Whether a second touch on `target` stays the browser's own. */
 const keepsTouch = (target: EventTarget | null) => {
   const element = target as Element | null;

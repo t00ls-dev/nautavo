@@ -2191,6 +2191,35 @@ dialog.settings::backdrop {
 .route-marker:focus-visible .marker-tooltip {
   display: block;
 }
+/* The handle on the route line that adds a stop (#285): a wide hit area
+   around a small ring in the route's color. */
+.route-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+.route-handle.dragging {
+  cursor: grabbing;
+}
+.route-handle-dot {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--color-primary);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px #0006;
+}
+@media (pointer: coarse) {
+  .route-handle-dot {
+    width: 20px;
+    height: 20px;
+  }
+}
+.route-handle.dragging .route-handle-dot {
+  width: 20px;
+  height: 20px;
+}
 /* A popup above a map point (elevation here). */
 .map-popup {
   position: absolute;
@@ -3163,12 +3192,14 @@ input[type='range'].range-input:disabled {
   --extreme: #0b5ea8;
 }
 /* Elevation of one map point, asked from the point menu. */
-.elevation-point-popup .map-popup-content {
+.elevation-point-popup .map-popup-content,
+.point-popup .map-popup-content {
   margin: 8px 10px 10px 12px;
   font-size: 14px;
   line-height: 1.4;
 }
-.elevation-point-header {
+.elevation-point-header,
+.point-popup-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3177,7 +3208,8 @@ input[type='range'].range-input:disabled {
 .elevation-point-header strong {
   white-space: nowrap;
 }
-.elevation-point-close {
+.elevation-point-close,
+.point-popup-close {
   flex: none;
   width: 36px;
   min-height: 36px;
@@ -3190,6 +3222,94 @@ input[type='range'].range-input:disabled {
 .elevation-point-value {
   font-size: 16px;
   font-weight: 700;
+}
+/* A route point's popup on the map (#285): its name and Remove. */
+.point-popup-header {
+  justify-content: flex-start;
+}
+.point-popup-header strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.point-popup-number {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  /* The selected marker's color: the point just tapped. */
+  background: #164e8a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.point-popup-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.point-popup-actions button {
+  white-space: nowrap;
+}
+.point-popup .map-popup-content {
+  width: min(240px, calc(100vw - 112px));
+}
+/* The trash zone while a route point is dragged: drop the point on it. */
+.map-trash {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.map-trash[hidden] {
+  display: none;
+}
+.map-trash span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--color-danger);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 3px 12px #0005;
+  color: var(--color-danger);
+}
+.map-trash .button-icon {
+  width: 26px;
+  height: 26px;
+}
+.map-trash b {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px #0003;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.map-trash.hot span {
+  width: 68px;
+  height: 68px;
+  border-color: #fff;
+  background: var(--color-danger);
+  color: #fff;
+}
+.map-trash.hot b {
+  background: var(--color-danger);
+  color: #fff;
+}
+.route-marker.over-trash {
+  opacity: 0.6;
 }
 #elevation-status:empty {
   display: none;

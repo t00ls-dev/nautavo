@@ -124,6 +124,8 @@ import {
 import { setupMapControls } from './map-controls';
 import { compactLayout, placeLibrary, setupPanel } from './panel';
 import { stopTapHoldLoupe } from './tap-hold';
+import { setupRouteDrag } from './route-drag';
+import { createPointPopup, createTrash, pointRole } from './point-removal';
 import { activityOf, activityProfile, type Activity } from './activity';
 import { setupActivityView } from './activity-ui';
 import { activityColorings } from './activity-colorings';
@@ -323,6 +325,12 @@ const loupe = createLoupe(map);
 const crosshair = createCrosshair(map);
 /** The point being placed with the crosshair, drawn by it, not as a marker. */
 let adjusting: Point | null = null;
+/** A stop from the route line being placed with the crosshair (#285). */
+let inserting = false;
+// Removing a point from the map (#285): the trash zone while a marker is
+// dragged and the popup of a tapped marker.
+const trash = createTrash(map);
+const pointPopup = createPointPopup(map);
 let touchDrag = false;
 map.container.addEventListener(
   'pointerdown',
@@ -408,7 +416,12 @@ const maneuverLayer = {
     maneuver = null;
   },
 };
-map.on('click', () => maneuverLayer.clearLayers());
+map.on('click', (event: { originalEvent: Event }) => {
+  maneuverLayer.clearLayers();
+  // A tap on a marker opens its popup; any other tap on the map closes it.
+  if (!(event.originalEvent.target as Element).closest('.maplibregl-marker'))
+    pointPopup.close();
+});
 function showManeuver(coord: Coord) {
   if (!$('route-panel').hidden && compactLayout()) $('panel-toggle').click();
   map.stop();
@@ -656,6 +669,11 @@ const pointPositions = new WeakMap<Route, Map<Point, number>>();
  * the GPX and on the map.
  */
 function stopLabel(point: Point, route = current): string | null {
+  const at = stopPosition(point, route);
+  return at === null ? null : t(`Stop · ${at}`);
+}
+/** An automatic stop's place on the route shown ("km 1.2"), or null. */
+function stopPosition(point: Point, route = current): string | null {
   if (!/^Stop \d+$/.test(point.name) || !point.coord || !route) return null;
   let positions = pointPositions.get(route);
   if (!positions) {
@@ -672,7 +690,7 @@ function stopLabel(point: Point, route = current): string | null {
   const at = positions.get(point);
   if (at === undefined) return null;
   const locale = getLanguage() === 'pt' ? 'pt-BR' : 'en';
-  return t(`Stop · ${milepostLabel(at, distanceUnits(), locale)}`);
+  return milepostLabel(at, distanceUnits(), locale);
 }
 function pointValue(point: Point, route = current): string {
   return (
@@ -932,13 +950,7 @@ function renderPoints() {
     remove.className = 'point-remove';
     iconControl(remove, 'close', `Remove point ${i + 1}`, true);
     remove.disabled = locked || state.points.length <= 2;
-    remove.onclick = () => {
-      if (editBlocked()) return;
-      dirty.delete(point);
-      state.points.splice(i, 1);
-      selected = Math.min(selected, state.points.length - 1);
-      changed();
-    };
+    remove.onclick = () => removePoint(i);
     row.append(choose, fields, remove);
     list.append(row);
   });
@@ -959,12 +971,52 @@ setupPointOrder($('points'), {
     changed();
   },
 });
+/**
+ * Removes route point `index`: the list's ×, or the map (its popup, the
+ * trash zone or the Delete key).
+ */
+function removePoint(index: number) {
+  if (editBlocked() || state.points.length <= 2) return;
+  dirty.delete(state.points[index]);
+  state.points.splice(index, 1);
+  selected = Math.min(selected, state.points.length - 1);
+  changed();
+}
+/** A point can leave from the map: editing open and more than two points. */
+const removableFromMap = () =>
+  !locked && !activityCoords() && state.points.length > 2;
+/**
+ * The popup of a marker: Remove, and Move with the crosshair preference.
+ * False with only two points, which cannot be removed.
+ */
+function openPointPopup(point: Point): boolean {
+  const index = state.points.indexOf(point);
+  const move =
+    placementMode() === 'crosshair' && !locked && !activityCoords()
+      ? () => adjustPoint(point)
+      : undefined;
+  // With two points there is nothing to remove: no popup, as before.
+  if (index < 0 || !point.coord || !removableFromMap()) return false;
+  pointPopup.show({
+    coord: point.coord,
+    number: index + 1,
+    // Beside its number: a stop's place on the route, the role of a point
+    // the app named, or the name the user gave.
+    name: generatedName(point)
+      ? (stopPosition(point) ?? pointLabel(index))
+      : point.name,
+    role: pointRole(index, state.points.length),
+    remove: () => removePoint(state.points.indexOf(point)),
+    move,
+  });
+  return true;
+}
 function renderMarkers() {
   // Locking, undo or removing the point ends its placement (its callback
   // draws the markers again, so this comes before clearing them).
   if (
     crosshair.active &&
-    (locked || !adjusting || !state.points.includes(adjusting))
+    (locked || (adjusting ? !state.points.includes(adjusting) : !inserting))
   )
     crosshair.cancel();
   for (const m of markers) m.remove();
@@ -999,22 +1051,47 @@ function renderMarkers() {
         return;
       }
       selectPoint(i);
-      if (mode === 'crosshair' && !locked) adjustPoint(p);
+      // With only two points the crosshair starts at once, as before.
+      if (!openPointPopup(p) && mode === 'crosshair' && !locked) adjustPoint(p);
     });
+    // A right click on a marker opens its popup, not the map point menu.
+    m.element.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      selectPoint(i);
+      openPointPopup(p);
+    });
+    m.element.addEventListener('keydown', (event) => {
+      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+      event.preventDefault();
+      if (removableFromMap()) removePoint(i);
+    });
+    // Dropped on the trash zone, the point leaves the route.
+    let overTrash = false;
     m.on('dragstart', () => {
       dragged = true;
-      if (mode === 'loupe' && touchDrag) loupe.move(m.getCoord());
+      pointPopup.close();
+      if (removableFromMap()) trash.show();
+      if (touchDrag) loupe.move(m.getCoord());
     });
-    if (mode === 'loupe')
-      m.on('drag', () => {
-        if (touchDrag) loupe.move(m.getCoord());
-      });
+    m.on('drag', () => {
+      overTrash = trash.over(m.getCoord());
+      m.element.classList.toggle('over-trash', overTrash);
+      if (!touchDrag) return;
+      if (overTrash) loupe.hide();
+      else loupe.move(m.getCoord());
+    });
     m.on('dragend', () => {
       loupe.hide();
-      selected = i;
-      setPoint(p, i, m.getCoord());
+      trash.hide();
       // The click that may follow a mouse drag comes at once, if at all.
       setTimeout(() => (dragged = false), 0);
+      if (overTrash) {
+        removePoint(i);
+        return;
+      }
+      selected = i;
+      setPoint(p, i, m.getCoord());
     });
   });
 }
@@ -1447,6 +1524,7 @@ async function followImported(base: Route) {
 }
 function renderRoute(route: Route) {
   undoHistory.attach(route);
+  routeDrag.reset();
   // Automatic stops are named by their place on this route (#208).
   state.points.forEach((point, i) => {
     const input = optionalById<HTMLInputElement>(`location-${i}`);
@@ -1502,6 +1580,8 @@ function changed(preserveEditor = false, forceRouting = false) {
   routingFailed(false);
 
   current = null;
+  routeDrag.reset();
+  pointPopup.close();
   $<HTMLButtonElement>('download').disabled = true;
   clearTimeout(timer);
   syncUrl();
@@ -1579,6 +1659,41 @@ function changed(preserveEditor = false, forceRouting = false) {
       });
   }, 900);
 }
+/** A stop added from the route line, between the points of its leg. */
+function insertStop(index: number, coord: Coord) {
+  if (editBlocked() || state.points.length >= 50) return;
+  state.points.splice(index, 0, { name: '', coord });
+  state.points[index].name = pointLabel(index);
+  selected = index;
+  changed();
+}
+const routeDrag = setupRouteDrag(map, {
+  // Only a current route of set points takes a stop from its line.
+  route: () =>
+    current &&
+    !locked &&
+    !activityCoords() &&
+    !crosshair.active &&
+    !dirty.size &&
+    state.points.length < 50 &&
+    state.points.every((p) => p.coord)
+      ? current
+      : null,
+  points: () => state.points.map((p) => p.coord!),
+  insert: insertStop,
+  place: (index, coord) => {
+    if (placementMode() !== 'crosshair' || editBlocked()) return false;
+    const before = revision;
+    inserting = true;
+    crosshair.start(coord, index + 1, (chosen) => {
+      inserting = false;
+      // A later edit wins: the leg may not be there any more.
+      if (chosen && revision === before) insertStop(index, chosen);
+    });
+    return true;
+  },
+  loupe,
+});
 setupPointMenu(map, {
   click: (coord) => {
     if (!crosshair.active) setPoint(state.points[selected], selected, coord);
