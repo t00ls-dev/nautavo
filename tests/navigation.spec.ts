@@ -9,7 +9,7 @@ import {
   osrmFirst,
   overlapping,
 } from './app-helpers';
-import { BASEMAP_STYLE } from './map-helpers';
+import { BASEMAP_STYLE, scriptedTouches } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 // A route about 2.2 km east along a parallel, with a right turn at 1 km.
 const lat = -22.93;
@@ -480,8 +480,7 @@ test.describe('phone navigation', () => {
     // then following slides the traveler back to its place.
     const before = (await marker.boundingBox())!;
     const zoomBefore = Number(await rotor.getAttribute('data-zoom'));
-    await page.touchscreen.tap(x, y);
-    await page.touchscreen.tap(x, y);
+    await (await scriptedTouches(page)).doubleTap(x, y);
     await expect(resume).toBeVisible();
     await expect(rotor).toHaveAttribute('data-turn', '-90');
     await expect
@@ -585,7 +584,6 @@ test.describe('phone navigation', () => {
 
   test('one finger zooms in and a two-finger tap zooms out, then following comes back', async ({
     page,
-    context,
   }) => {
     await setup(page);
     const zoom = async () =>
@@ -599,19 +597,18 @@ test.describe('phone navigation', () => {
     const stage = (await page.locator('#nav-stage').boundingBox())!;
     const x = stage.x + 120,
       y = stage.y + stage.height / 3;
-    const session = await context.newCDPSession(page);
+    const touches = await scriptedTouches(page);
+    const { session, pause } = touches;
     const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', ty = y) =>
-      session.send('Input.dispatchTouchEvent', {
-        type,
-        touchPoints: type === 'touchEnd' ? [] : [{ x, y: ty }],
-      });
+      touches.touch(type, x, ty);
+    touches.gesture();
     await touch('touchStart');
     await touch('touchEnd');
-    await page.waitForTimeout(80);
+    await pause(80);
     await touch('touchStart');
     for (let step = 1; step <= 10; step++) {
       await touch('touchMove', y + 22 * step);
-      await page.waitForTimeout(30);
+      await pause(30);
     }
     await touch('touchEnd');
     await expect.poll(zoom).toBeGreaterThanOrEqual(before + 1);
