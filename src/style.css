@@ -3107,8 +3107,9 @@ input[type='range'].range-input:disabled {
   height: 16px;
 }
 /* Highest and lowest points of the Elevation row and the peaks of a
-   recorded activity: a label below the point, pointing at it (above, with
-   `.above`, where it would cover another); route point pins stand above
+   recorded activity: a label below the point, pointing at it (above, right
+   or left, with `.above`, `.right` or `.left`, where it would cover
+   another); route point pins stand above
    the route, so they never cover it. */
 .map-extreme-marker {
   overflow: visible;
@@ -4546,6 +4547,30 @@ body.activity-open #fit {
   bottom: auto;
   border-top-color: var(--extreme);
   border-bottom-color: transparent;
+}
+/* Beside the point, where both below and above would cover another label;
+   the pointer comes out of the side facing it. */
+.map-extreme.right {
+  transform: translate(12px, -50%);
+}
+.map-extreme.left {
+  transform: translate(calc(-100% - 12px), -50%);
+}
+.map-extreme.right::before,
+.map-extreme.left::before {
+  top: 50%;
+  bottom: auto;
+  border-bottom-color: transparent;
+  transform: translateY(-50%);
+}
+.map-extreme.right::before {
+  right: 100%;
+  left: auto;
+  border-right-color: var(--extreme);
+}
+.map-extreme.left::before {
+  left: 100%;
+  border-left-color: var(--extreme);
 }
 .activity-actions {
   display: flex;

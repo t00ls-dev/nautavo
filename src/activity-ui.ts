@@ -53,6 +53,17 @@ const PEAK_REACH = {
   right: 56,
 };
 
+interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+/** The area two boxes share, px². */
+const overlap = (a: Box, b: Box) =>
+  Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
+  Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+
 export function setupActivityView(deps: {
   map: PlannerMap;
   /** Route coloring, which colors the recorded track while it is open. */
@@ -110,8 +121,8 @@ export function setupActivityView(deps: {
   /**
    * The fastest point, the highest heart rate and the highest point on the
    * map, labeled with their value. The summary has them as text, so the
-   * labels are hidden from assistive technology. Two labels that would
-   * cover each other point from opposite sides of the track (`placePeaks`).
+   * labels are hidden from assistive technology. Labels that would cover
+   * each other point from different sides of the track (`placePeaks`).
    */
   function peakMarkers(activity: Activity): MapMarker[] {
     const index = indexTrack(activity.segments);
@@ -145,40 +156,47 @@ export function setupActivityView(deps: {
   }
 
   /**
-   * Each peak label below its point, or above it where it would cover a
-   * label placed before; again after every zoom or turn of the map.
+   * Each peak label below its point, else above, right or left of it, the
+   * first side where it covers no label placed before and stays on the map
+   * (or, failing that, only covers none); where every side covers one, the
+   * side that covers least. Again after every zoom or turn of the map.
    */
   function placePeaks() {
-    const placed: {
-      left: number;
-      right: number;
-      top: number;
-      bottom: number;
-    }[] = [];
+    const placed: Box[] = [];
+    const { x: width, y: height } = map.size();
     for (const { coord, chip } of peakLabels) {
       const p = map.project(coord);
       if (!p) return;
       const w = chip.offsetWidth,
         h = chip.offsetHeight;
-      const box = (top: number) => ({
-        left: p.x - w / 2,
-        right: p.x + w / 2,
+      const at = (left: number, top: number): Box => ({
+        left,
         top,
+        right: left + w,
         bottom: top + h,
       });
-      const covers = (b: (typeof placed)[number]) =>
-        placed.some(
-          (o) =>
-            b.left < o.right &&
-            o.left < b.right &&
-            b.top < o.bottom &&
-            o.top < b.bottom,
+      const sides = [
+        ['below', at(p.x - w / 2, p.y + PEAK_GAP)],
+        ['above', at(p.x - w / 2, p.y - PEAK_GAP - h)],
+        ['right', at(p.x + PEAK_GAP, p.y - h / 2)],
+        ['left', at(p.x - PEAK_GAP - w, p.y - h / 2)],
+      ] as const;
+      const covered = (box: Box) =>
+        placed.reduce((sum, other) => sum + overlap(box, other), 0);
+      const inside = (box: Box) =>
+        box.left >= 0 &&
+        box.top >= 0 &&
+        box.right <= width &&
+        box.bottom <= height;
+      const [side, box] =
+        sides.find(([, box]) => !covered(box) && inside(box)) ??
+        sides.find(([, box]) => !covered(box)) ??
+        sides.reduce((best, next) =>
+          covered(next[1]) < covered(best[1]) ? next : best,
         );
-      const below = box(p.y + PEAK_GAP),
-        above = box(p.y - PEAK_GAP - h);
-      const up = covers(below) && !covers(above);
-      chip.classList.toggle('above', up);
-      placed.push(up ? above : below);
+      for (const [name] of sides)
+        if (name !== 'below') chip.classList.toggle(name, name === side);
+      placed.push(box);
     }
   }
   map.on('zoomend', placePeaks);
