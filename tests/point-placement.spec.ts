@@ -36,6 +36,30 @@ async function panMap(page: Page) {
   await page.keyboard.press('ArrowUp');
 }
 
+/**
+ * Touches on the destination marker, through the browser's touch events: at
+ * its pin (`x`, `y`) unless another point is given.
+ */
+async function touchDestination(page: Page) {
+  const box = (await page
+    .locator('.maplibregl-marker.route-marker')
+    .last()
+    .boundingBox())!;
+  const x = box.x + box.width / 2,
+    y = box.y + 12;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    px = x,
+    py = y,
+  ) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py }],
+    });
+  return { x, y, touch };
+}
+
 test.describe('phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -101,22 +125,7 @@ test.describe('phone', () => {
   }) => {
     await setup(page);
     const loupe = page.locator('.placement-loupe');
-    const box = (await page
-      .locator('.maplibregl-marker.route-marker')
-      .last()
-      .boundingBox())!;
-    const x = box.x + box.width / 2,
-      y = box.y + 12;
-    const cdp = await page.context().newCDPSession(page);
-    const touch = (
-      type: 'touchStart' | 'touchMove' | 'touchEnd',
-      px = x,
-      py = y,
-    ) =>
-      cdp.send('Input.dispatchTouchEvent', {
-        type,
-        touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py }],
-      });
+    const { x, y, touch } = await touchDestination(page);
     await touch('touchStart');
     for (let k = 1; k <= 6; k++) await touch('touchMove', x + 6 * k, y + 4 * k);
     await expect(loupe).toBeVisible();
@@ -143,22 +152,7 @@ test.describe('phone', () => {
         true,
       );
     });
-    const box = (await page
-      .locator('.maplibregl-marker.route-marker')
-      .last()
-      .boundingBox())!;
-    const x = box.x + box.width / 2,
-      y = box.y + 12;
-    const cdp = await page.context().newCDPSession(page);
-    const touch = (
-      type: 'touchStart' | 'touchMove' | 'touchEnd',
-      px = x,
-      py = y,
-    ) =>
-      cdp.send('Input.dispatchTouchEvent', {
-        type,
-        touchPoints: type === 'touchEnd' ? [] : [{ x: px, y: py }],
-      });
+    const { x, y, touch } = await touchDestination(page);
     await touch('touchStart');
     await touch('touchEnd');
     await page.waitForTimeout(80);
