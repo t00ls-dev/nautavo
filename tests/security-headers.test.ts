@@ -4,6 +4,7 @@ import {
   headersFile,
   HSTS,
   SECURITY_HEADERS,
+  withHeadersStamp,
 } from '../src/security-headers';
 import worker from '../src/worker';
 import { readRepoFile } from './repo-files';
@@ -88,6 +89,29 @@ describe('security headers', () => {
     for (const [name, value] of Object.entries(SECURITY_HEADERS))
       if (name !== 'Strict-Transport-Security')
         expect(file).toContain(`\n  ${name}: ${value}`);
+  });
+
+  it('leave out COOP, which Chrome on iOS reads as not secure', () => {
+    // With it and headers this long, a page opened from a new tab or another
+    // site is called not secure there (tested on a device in 2026-11).
+    for (const headers of [SECURITY_HEADERS, DEV_SECURITY_HEADERS])
+      expect(Object.keys(headers)).not.toContain('Cross-Origin-Opener-Policy');
+  });
+
+  it('stamp every page, so a change to them reaches stored pages', async () => {
+    const page = readRepoFile('index.html');
+    const stamp = (html: string) =>
+      /<!-- Security headers ([0-9a-f]{16}) /.exec(html)?.[1];
+    const ours = await withHeadersStamp(page);
+    expect(stamp(ours)).toBeDefined();
+    expect(ours.indexOf('Security headers')).toBeLessThan(
+      ours.indexOf('</head>'),
+    );
+    // The same headers, the same page; others (no HSTS) change it.
+    expect(await withHeadersStamp(page)).toBe(ours);
+    expect(
+      stamp(await withHeadersStamp(page, 'https://routes.example.org/')),
+    ).not.toBe(stamp(ours));
   });
 
   it('keep Cloudflare from rewriting every page in the sitemap', () => {

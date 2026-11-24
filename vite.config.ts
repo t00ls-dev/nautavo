@@ -14,6 +14,7 @@ import {
   DEV_SECURITY_HEADERS,
   headersFile,
   SECURITY_HEADERS,
+  withHeadersStamp,
 } from './src/security-headers.ts';
 import { siteUrl, withSite } from './src/site.ts';
 import worker from './src/worker.ts';
@@ -136,6 +137,14 @@ function siteAddress(site: string): Plugin {
   };
 }
 
+/** Stamps the pages with their security headers (`withHeadersStamp`). */
+function headersStamp(site: string): Plugin {
+  return {
+    name: 'headers-stamp',
+    transformIndexHtml: (html) => withHeadersStamp(html, site),
+  };
+}
+
 /** Files in public/ that the build rewrites: the site address and the security headers. */
 const PUBLIC_REWRITES: Record<string, (text: string) => string> = {
   'sitemap.xml': (text) => withSite(text, SITE),
@@ -213,6 +222,7 @@ export default defineConfig({
   base: '/',
   plugins: [
     siteAddress(SITE),
+    headersStamp(SITE),
     publicRewrites(),
     brandAssets(),
     serviceWorkerManifest(),

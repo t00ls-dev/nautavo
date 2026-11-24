@@ -17,6 +17,7 @@ interface FetchEvent extends ExtendableEvent {
 }
 declare const self: {
   readonly location: Location;
+  readonly navigator: { readonly onLine: boolean };
   skipWaiting(): Promise<void>;
   readonly clients: { claim(): Promise<void> };
   addEventListener(
@@ -33,8 +34,6 @@ const { version, urls } = JSON.parse(BUILD) as {
   urls: string[];
 };
 const cacheName = CACHE_PREFIX + version;
-/** A slow network falls back to the cached page after this long. */
-const NAVIGATION_TIMEOUT = 4000;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -64,39 +63,18 @@ self.addEventListener('activate', (event) => {
 });
 
 /**
- * Pages come from the network first, so an online visit always gets the latest
- * deploy; the cached page (with its own build's assets) answers offline or
- * when the network takes too long. Fresh pages are never stored here: a page
- * and its assets always come from the same build.
+ * A page from the cache, without a connection only. Online, pages are not
+ * answered here: the browser loads them itself, so an online visit always
+ * gets the latest deploy, and Chrome and Brave on iOS, which call a page
+ * answered by a service worker not secure, show the connection as it is.
+ * Fresh pages are never stored here: a page and its assets always come from
+ * the same build.
  */
-function networkFirst(request: Request, key: string): Promise<Response> {
-  const cached = () =>
-    caches
-      .open(cacheName)
-      .then((cache) => cache.match(key))
-      .then((response) => response ?? Response.error());
-  return new Promise((resolve) => {
-    let settled = false;
-    const settle = (response: Promise<Response>) => {
-      if (settled) return;
-      settled = true;
-      resolve(response);
-    };
-    const timer = setTimeout(() => settle(cached()), NAVIGATION_TIMEOUT);
-    // Revalidated with the server: a page a browser or proxy kept from before
-    // a deploy names assets that are gone, so it would open without styles or
-    // scripts.
-    fetch(request, { cache: 'no-cache' }).then(
-      (response) => {
-        clearTimeout(timer);
-        settle(Promise.resolve(response));
-      },
-      () => {
-        clearTimeout(timer);
-        settle(cached());
-      },
-    );
-  });
+function cachedPage(key: string): Promise<Response> {
+  return caches
+    .open(cacheName)
+    .then((cache) => cache.match(key))
+    .then((response) => response ?? Response.error());
 }
 
 /** Hashed assets never change, so the cached copy is used when present. */
@@ -115,7 +93,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
     const key = pageKey(url.pathname, urls);
-    if (key) event.respondWith(networkFirst(request, key));
+    if (key && !self.navigator.onLine) event.respondWith(cachedPage(key));
     return;
   }
   // A page fetched by script (not a navigation) goes to the network: its

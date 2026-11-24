@@ -72,7 +72,7 @@ describe('app-shell precache', () => {
     expect(pageKey('/api/region', urls)).toBeUndefined();
   });
 
-  it('tells pages, answered network-first, from cached files', () => {
+  it('tells pages, cached for offline only, from cached files', () => {
     for (const url of ['/', '/help', '/changelog'])
       expect(isPageUrl(url)).toBe(true);
     for (const url of [

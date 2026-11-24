@@ -72,7 +72,9 @@ const headers = (csp: string): Record<string, string> => ({
   'X-Frame-Options': 'DENY',
   // The browser default, stated: the services' terms rely on the Referer.
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Cross-Origin-Opener-Policy': 'same-origin',
+  // No Cross-Origin-Opener-Policy: with it and headers this long, Chrome and
+  // Brave on iOS call a page opened from a new tab or another site not
+  // secure (any COOP value, tested on a device in 2026-11).
   'Permissions-Policy': Object.entries(PERMISSIONS)
     .map(([feature, allow]) => `${feature}=${allow}`)
     .join(', '),
@@ -104,11 +106,38 @@ export const DEV_SECURITY_HEADERS = headers(
  * host to https for a year, a choice for its owner (docs/SELF-HOSTING.md).
  */
 export function headersFile(rules: string, site = DEFAULT_SITE_URL): string {
-  const lines = Object.entries(SECURITY_HEADERS)
-    .filter(
-      ([name]) =>
-        site === DEFAULT_SITE_URL || name !== 'Strict-Transport-Security',
-    )
-    .map(([name, value]) => `  ${name}: ${value}`);
+  const lines = publishedHeaders(site).map(
+    ([name, value]) => `  ${name}: ${value}`,
+  );
   return `${rules.trimEnd()}\n\n# Security headers (src/security-headers.ts).\n/*\n${lines.join('\n')}\n`;
+}
+
+/** The security headers a build for `site` publishes, in order. */
+const publishedHeaders = (site: string): [string, string][] =>
+  Object.entries(SECURITY_HEADERS).filter(
+    ([name]) =>
+      site === DEFAULT_SITE_URL || name !== 'Strict-Transport-Security',
+  );
+
+/**
+ * A page with a stamp of the security headers its build publishes, as an
+ * HTML comment. A page whose text is unchanged is revalidated, and a browser
+ * then keeps its stored headers: one a new build removes would stay. The
+ * stamp changes the page with its headers, so every browser takes both anew.
+ */
+export async function withHeadersStamp(
+  html: string,
+  site = DEFAULT_SITE_URL,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(JSON.stringify(publishedHeaders(site))),
+  );
+  const stamp = [...new Uint8Array(digest).slice(0, 8)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return html.replace(
+    '</head>',
+    `  <!-- Security headers ${stamp} (src/security-headers.ts) -->\n  </head>`,
+  );
 }
