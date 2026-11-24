@@ -1,3 +1,4 @@
+import { SVG_NS } from './dom';
 /**
  * A profile chart over the along-track distance: one filled area per part
  * (GPX segments stay as breaks), a guide line for the cursor and the ratio
@@ -5,7 +6,6 @@
  * activity view's charts. DOM only; no data or map.
  */
 
-export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const CHART_WIDTH = 300;
 /** Height of a tick at the base of a chart, in chart units. */
 const TICK = 12;

@@ -462,7 +462,7 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-waiting')).toBeHidden();
     const rotor = page.locator('#nav-rotor'),
       resume = page.locator('#nav-resume'),
-      marker = page.locator('.nav-arrow');
+      marker = page.locator('.nav-mark');
     await expect(rotor).toHaveAttribute('data-turn', '-90');
     await expect(resume).toBeHidden();
     const stage = (await page.locator('#nav-stage').boundingBox())!;
@@ -536,7 +536,7 @@ test.describe('phone navigation', () => {
       await page.mouse.move(x + dx, y + dy, { steps: 8 });
       await page.mouse.up();
     };
-    await boxSettled(page, '.nav-arrow');
+    await boxSettled(page, '.nav-mark');
     const start = (await marker.boundingBox())!;
     await drag(-60, 80);
     // MapLibre moves the camera on its next frame, later under load.
@@ -561,7 +561,7 @@ test.describe('phone navigation', () => {
       .poll(() =>
         page.evaluate(
           () =>
-            document.querySelector<HTMLElement>('.nav-arrow')!.style.transform,
+            document.querySelector<HTMLElement>('.nav-mark')!.style.transform,
         ),
       )
       .not.toBe('rotate(0deg)');
@@ -587,7 +587,7 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-waiting')).toBeHidden();
     await expect.poll(zoom).toBeGreaterThan(0);
     const before = await zoom();
-    const marker = (await page.locator('.nav-arrow').boundingBox())!;
+    const marker = (await page.locator('.nav-mark').boundingBox())!;
     const stage = (await page.locator('#nav-stage').boundingBox())!;
     const x = stage.x + 120,
       y = stage.y + stage.height / 3;
@@ -614,7 +614,7 @@ test.describe('phone navigation', () => {
       '-90',
     );
     const back = async () => {
-      const after = (await page.locator('.nav-arrow').boundingBox())!;
+      const after = (await page.locator('.nav-mark').boundingBox())!;
       return Math.hypot(after.x - marker.x, after.y - marker.y);
     };
     await expect.poll(back).toBeLessThan(2);
@@ -742,7 +742,7 @@ test.describe('phone navigation', () => {
     const turned = async () => Number(await rotor.getAttribute('data-turn'));
     const arrow = () =>
       page
-        .locator('.nav-arrow')
+        .locator('.nav-mark')
         .evaluate((e) => (e as HTMLElement).style.transform);
     // Here magnetic north is about 23° west of true north (WMM2025).
     const declination = magneticDeclination(
@@ -1368,7 +1368,7 @@ test.describe('phone navigation', () => {
     );
     // The route ahead draws up the screen from the traveler, in its color,
     // over the neutral background.
-    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
+    const arrow = (await page.locator('.nav-mark').boundingBox())!;
     const cx = arrow.x + arrow.width / 2;
     await expect.poll(() => pixel(page, cx, arrow.y - 60)).toEqual(ROUTE_COLOR);
     expect(await pixel(page, cx + 60, arrow.y - 60)).toEqual([
@@ -1408,7 +1408,7 @@ test.describe('phone navigation', () => {
     await onLine(true);
     await expect(page.locator('#nav-no-map')).toBeHidden();
     // The route is drawn again over the new style, ahead of the traveler.
-    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
+    const arrow = (await page.locator('.nav-mark').boundingBox())!;
     await expect
       .poll(() => pixel(page, arrow.x + arrow.width / 2, arrow.y - 60))
       .toEqual(ROUTE_COLOR);
@@ -1572,9 +1572,11 @@ test.describe('phone navigation', () => {
     // ahead (west, to the left) draws in the route's color right of its
     // direction (north, above the road), beside the way out travelled (gray,
     // south of it), never under it.
-    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
+    const arrow = (await page.locator('.nav-mark').boundingBox())!;
     const x = arrow.x + arrow.width / 2 - 60,
       y = arrow.y + arrow.height / 2;
+    // The traveler's mark (#280): a sea-green dot on the position.
+    expect(await pixel(page, x + 60, y)).toEqual([0x0f, 0x7a, 0x6b]);
     await expect.poll(() => pixel(page, x, y - 6)).toEqual(ROUTE_COLOR);
     expect(await pixel(page, x, y + 6)).toEqual([0x87, 0x95, 0xa1]);
   });
@@ -2349,7 +2351,7 @@ async function replayTurns(page: Page, path: number[][]) {
             document.querySelector<HTMLInputElement>('#nav-replay-position')!
               .value,
           );
-          out.push([at, turn('.nav-arrow'), turn('#nav-compass-button svg')]);
+          out.push([at, turn('.nav-mark'), turn('#nav-compass-button svg')]);
           if (time - begin < 3500 && at < 950) requestAnimationFrame(read);
           else done(out);
         };
@@ -2439,7 +2441,7 @@ test('a playing replay greys the road right behind the arrow', async ({
   };
   for (let i = 0; i < 5; i++) {
     await page.waitForTimeout(250);
-    const arrow = (await page.locator('.nav-arrow').boundingBox())!;
+    const arrow = (await page.locator('.nav-mark').boundingBox())!;
     const x = arrow.x + arrow.width / 2;
     // Just below the arrow's circle: grey (travelled), never the route's
     // green still waiting to be redrawn.

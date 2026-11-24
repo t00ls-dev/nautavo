@@ -5,7 +5,7 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl';
 import { meters, type Coord, type Route, type State, type Step } from './core';
-import { byId as $, text } from './dom';
+import { byId as $, SVG_NS, text } from './dom';
 import { t } from './i18n';
 import { icon, iconControl, type IconName } from './icons';
 import { gpsPoint, locationError } from './location';
@@ -156,6 +156,28 @@ function roadText(step: Step): string {
   const roundabout = step.exit ? maneuverText(step) : null;
   if (roundabout && road) return `${t(roundabout)} · ${road}`;
   return road || t(maneuverText(step) ?? 'Continue');
+}
+
+/**
+ * The traveler on the navigation map (#280): a sea-green dot with a white
+ * ring and, ahead of it, a white cone with a sea-green edge that points the
+ * way (up, turned with the heading). Drawn as one SVG centered on the position;
+ * colors in `style.css`.
+ */
+function travelerMark(): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'nav-mark');
+  svg.setAttribute('viewBox', '0 0 48 48');
+  const cone = document.createElementNS(SVG_NS, 'path');
+  cone.setAttribute('class', 'nav-mark-cone');
+  cone.setAttribute('d', 'M24 2 16.5 13.5h15Z');
+  const dot = document.createElementNS(SVG_NS, 'circle');
+  dot.setAttribute('class', 'nav-mark-dot');
+  dot.setAttribute('cx', '24');
+  dot.setAttribute('cy', '24');
+  dot.setAttribute('r', '10');
+  svg.append(cone, dot);
+  return svg;
 }
 
 export function setupNavigation(deps: {
@@ -327,23 +349,23 @@ export function setupNavigation(deps: {
     // The compass shows only on a turned map and points to its north.
     compassButton.hidden = !shown;
     needle.style.transform = shown ? `rotate(${shown}deg)` : '';
-    turnArrow();
+    turnMark();
   }
   /** The map's turn and zoom, readable on the page (and by tests). */
   function report() {
     rotor.dataset.turn = String(Math.round(rotorAngle * 10) / 10 || 0);
     if (map) rotor.dataset.zoom = map.getZoom().toFixed(2);
   }
-  /** The position arrow points along the heading on the turned map. */
-  function turnArrow() {
-    const arrow = marker
+  /** The traveler's mark points its cone along the heading on the turned map. */
+  function turnMark() {
+    const mark = marker
       ?.getElement()
-      ?.querySelector<HTMLElement>('.nav-arrow');
+      ?.querySelector<SVGSVGElement>('.nav-mark');
     // A replay's map turns smoothly, so its arrow takes the direction of the
     // road's own segment under the traveler rather than the map's.
     const direction = replaying ? (replayBearing ?? heading) : heading;
     const angle = Math.round((direction + rotorAngle) * 10) / 10 || 0;
-    if (arrow) arrow.style.transform = `rotate(${angle}deg)`;
+    if (mark) mark.style.transform = `rotate(${angle}deg)`;
     turnRejoinArrow();
   }
   /** Off the route, the banner arrow points to the rejoin point on screen. */
@@ -394,12 +416,12 @@ export function setupNavigation(deps: {
   function calibrationNotice() {
     $('nav-compass').hidden = !(deviceCompass.poor() && !moving);
   }
-  /** Turns the map (while following) and the position arrow. */
+  /** Turns the map (while following) and the traveler's mark. */
   function applyHeading() {
     // A tenth of a degree is finer than the eye sees; it keeps styles short.
     const angle = Math.round(heading * 10) / 10 || 0;
     if (view === 'follow') setRotor(northUp ? 0 : -angle);
-    else turnArrow();
+    else turnMark();
   }
   const deviceCompass = navigationCompass({
     onReading() {
@@ -626,9 +648,8 @@ export function setupNavigation(deps: {
       const element = document.createElement('div');
       element.className = 'nav-position';
       element.setAttribute('aria-hidden', 'true');
-      element.innerHTML = '<span class="nav-arrow"></span>';
-      element.querySelector('.nav-arrow')!.append(icon('navigate'));
-      // Subpixel, so the arrow does not wobble against the moving map.
+      element.append(travelerMark());
+      // Subpixel, so the mark does not wobble against the moving map.
       marker = new MarkerClass({ element, subpixelPositioning: true })
         .setLngLat([last.coord[1], last.coord[0]])
         .addTo(map);
@@ -901,8 +922,8 @@ export function setupNavigation(deps: {
   }
   /**
    * A playing replay moves on while the travelled line is redrawn, so the
-   * line is drawn as far ahead as the arrow goes meanwhile, never beyond the
-   * arrow's radius: the end stays under the arrow instead of behind it.
+   * line is drawn as far ahead as the mark goes meanwhile, never beyond the
+   * mark's radius: the end stays under the mark instead of behind it.
    */
   function replayLead(): number {
     if (!replaying || !replayFrame || !map || !last) return 0;
@@ -921,7 +942,7 @@ export function setupNavigation(deps: {
    * Redraws the travelled line up to `progress` and the way ahead from it.
    * Each redraw goes through
    * MapLibre's worker; while one is under way only the latest progress waits,
-   * so a playing replay keeps the line right behind the arrow without a queue.
+   * so a playing replay keeps the line right behind the mark without a queue.
    */
   function drawTravelled(progress: number) {
     const travelled = source('travelled'),
