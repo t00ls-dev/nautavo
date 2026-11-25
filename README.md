@@ -10,7 +10,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 - **Edit:** add a stop by dragging the route line, move, remove and reorder points on the map or in the list, reverse, add a return trip, undo and lock the route.
 - **Review** distance, time from your own average speed, an itinerary with turn directions, elevation and climbs, road surface and daylight.
 - **Weather** along the route for the departure time, with wind relative to the route and risk alerts.
-- **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints.
+- **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints, or a TCX course with the turns for GPS devices and watches.
 - **Navigate** on a phone with turn directions, a heading-up map, a way back to the route and optional spoken directions.
 - **Replay** recorded activities at their own pace, with moving time, speeds, heart rate, cadence, power and temperature, charts with a shared cursor and the track colored by speed, heart rate, power or grade, apart from the route you are planning.
 - **Map layers:** standard, topographic and satellite, with route coloring by daylight, grade or surface.

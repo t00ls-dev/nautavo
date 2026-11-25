@@ -1358,8 +1358,9 @@ div.step-item {
   }
 }
 
-/* Add to home screen in More actions: phones only. */
-#add-home {
+/* Add to home screen and the TCX course take a whole row in More actions. */
+#add-home,
+#download-tcx {
   flex-basis: 100%;
 }
 @media (min-width: 760px) and (min-height: 501px) {

@@ -369,7 +369,7 @@ export function localSections(steps: Step[], threshold = 500): Step[] {
       !/rodovia|highway|motorway|freeway/i.test(s.name),
   );
 }
-function escapeXml(s: string): string {
+export function escapeXml(s: string): string {
   return s
     .replace(
       /[<>&"']/g,
@@ -408,7 +408,11 @@ export function generateGpx(
       '',
     )}<trk><name>${tag(name)}</name>${route.segments.map((s) => `<trkseg>${s.map(([lat, lon]) => `<trkpt lat="${lat}" lon="${lon}"/>`).join('')}</trkseg>`).join('')}</trk></gpx>\n`;
 }
-export function filename(points: Point[], customName = ''): string {
+export function filename(
+  points: Point[],
+  customName = '',
+  extension: 'gpx' | 'tcx' = 'gpx',
+): string {
   const clean = (s: string, limit = 48) =>
     s
       .normalize('NFKD')
@@ -418,8 +422,8 @@ export function filename(points: Point[], customName = ''): string {
       .replace(/^-|-$/g, '')
       .slice(0, limit) || 'point';
   if (customName.trim())
-    return `${clean(customName.trim().replace(/\.gpx$/i, ''), 160)}.gpx`;
-  return `${clean(points[0].name)}-to-${clean(points.at(-1)!.name)}.gpx`;
+    return `${clean(customName.trim().replace(/\.(gpx|tcx)$/i, ''), 160)}.${extension}`;
+  return `${clean(points[0].name)}-to-${clean(points.at(-1)!.name)}.${extension}`;
 }
 export function meters(a: Coord, b: Coord): number {
   const rad = Math.PI / 180,

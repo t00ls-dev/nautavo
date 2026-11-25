@@ -16,6 +16,16 @@ export const GPX_TYPES = [
 ];
 /** The type of a downloaded GPX file. */
 export const GPX_DOWNLOAD = 'application/gpx+xml;charset=utf-8';
+/** MIME types to offer for a TCX course, most specific first. */
+export const TCX_TYPES = [
+  'application/vnd.garmin.tcx+xml',
+  'application/xml',
+  'text/xml',
+  'application/octet-stream',
+  'text/plain',
+];
+/** The type of a downloaded TCX course. */
+export const TCX_DOWNLOAD = 'application/vnd.garmin.tcx+xml;charset=utf-8';
 /** MIME types to offer for a JSON backup, most specific first. */
 export const JSON_TYPES = [
   'application/json',
