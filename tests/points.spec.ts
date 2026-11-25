@@ -1723,10 +1723,53 @@ test('a TCX course carries the turns, asking an imported track for them once (#2
   expect((tcx.match(/<Trackpoint>/g) || []).length).toBe(60);
   expect(tcx).toContain('<PointType>Right</PointType>');
   expect(tcx).toContain('<Notes>Turn right · Rua B</Notes>');
-  await expect(page.locator('#status')).toHaveText('TCX downloaded.');
+  // Elevation was not opened: the status says how to include it (#290).
+  await expect(page.locator('#status')).toHaveText(
+    'File saved without elevation. Open Elevation before downloading to include it.',
+  );
   // Asked once: a second course asks nothing.
   await course();
   expect(matches).toHaveLength(3);
+});
+test('downloads carry the elevation the page already has, never asking for it (#290)', async ({
+  page,
+}) => {
+  await setup(page);
+  await mockMatch(page);
+  const asked: string[] = [];
+  await page.route('**/v1/elevation?**', (r) => {
+    asked.push(r.request().url());
+    const n = new URL(r.request().url()).searchParams
+      .get('latitude')!
+      .split(',').length;
+    return r.fulfill({
+      json: { elevation: Array.from({ length: n }, (_, i) => 100 + i) },
+    });
+  });
+  await page.goto(base);
+  await importRide(page);
+  const file = async (id: string) => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator(id).click(),
+    ]);
+    return readFile(await download.path(), 'utf8');
+  };
+  // Elevation not opened: no request, no elevation in the files.
+  expect(await file('#download')).not.toContain('<ele>');
+  expect(await file('#download-tcx')).not.toContain('<AltitudeMeters>');
+  expect(asked).toEqual([]);
+  // Opened by the user: every track point takes the loaded profile.
+  await page.locator('#elevation > summary').click();
+  await expect(page.locator('#elevation-chart svg')).toBeVisible();
+  const requests = asked.length;
+  const gpx = await file('#download');
+  expect((gpx.match(/<ele>/g) || []).length).toBe(60);
+  await expect(page.locator('#status')).toHaveText('GPX downloaded.');
+  const tcx = await file('#download-tcx');
+  expect((tcx.match(/<AltitudeMeters>/g) || []).length).toBe(60);
+  // The downloads asked nothing more.
+  expect(asked).toHaveLength(requests);
 });
 test('the TCX action fits More actions on a 320 px phone (pt)', async ({
   page,

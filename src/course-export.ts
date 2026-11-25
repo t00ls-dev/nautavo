@@ -1,4 +1,11 @@
-import { escapeXml, meters, validCoord, type Coord, type Route } from './core';
+import {
+  escapeXml,
+  knownElevation,
+  meters,
+  validCoord,
+  type Coord,
+  type Route,
+} from './core';
 import {
   maneuverPositions,
   maneuverText,
@@ -130,7 +137,16 @@ export function generateTcx(
   route: Route,
   name: string,
   cues: Cue[],
-  { speedKmh, date = new Date() }: { speedKmh: number; date?: Date },
+  {
+    speedKmh,
+    date = new Date(),
+    elevations,
+  }: {
+    speedKmh: number;
+    date?: Date;
+    /** Elevation per track point, parallel to the segments, when known. */
+    elevations?: (number | null)[][] | undefined;
+  },
 ): string {
   if (
     !route.segments.length ||
@@ -141,10 +157,13 @@ export function generateTcx(
   const start = date.getTime();
   const when = (distance: number) => time(start + (distance / speed) * 1000);
   let total = 0;
-  const tracks = route.segments.map((segment) => {
+  const tracks = route.segments.map((segment, k) => {
     const points = segment.map((coord, i) => {
       if (i) total += meters(segment[i - 1], coord);
-      return `<Trackpoint><Time>${when(total)}</Time>${position(coord)}<DistanceMeters>${total.toFixed(1)}</DistanceMeters></Trackpoint>`;
+      const ele = knownElevation(elevations?.[k]?.[i]);
+      const altitude =
+        ele === null ? '' : `<AltitudeMeters>${ele}</AltitudeMeters>`;
+      return `<Trackpoint><Time>${when(total)}</Time>${position(coord)}${altitude}<DistanceMeters>${total.toFixed(1)}</DistanceMeters></Trackpoint>`;
     });
     return `<Track>${points.join('')}</Track>`;
   });

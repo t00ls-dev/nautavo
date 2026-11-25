@@ -9,6 +9,7 @@ import {
   profileFromTrack,
   samplePlan,
   smoothProfile,
+  trackElevations,
 } from '../src/elevation';
 import {
   elevationUrl,
@@ -421,5 +422,37 @@ describe('highest and lowest points', () => {
         { at: 100, ele: 50 },
       ]),
     ).toBeNull();
+  });
+});
+
+describe('track elevations from a profile (#290)', () => {
+  // Points every ~111 m along the equator, in two segments.
+  const along = (from: number, n: number): Coord[] =>
+    Array.from({ length: n }, (_, i) => [0, +(from + i * 0.001).toFixed(3)]);
+  const segments = [along(0, 3), along(0.01, 3)];
+  const step = meters([0, 0], [0, 0.001]);
+
+  it('takes the value between the samples on either side, by distance', () => {
+    const profile = [
+      { at: 0, ele: 100 },
+      { at: 2 * step, ele: 120 },
+      { at: 4 * step, ele: 80, gap: true },
+    ];
+    const [first, second] = trackElevations(segments, profile);
+    expect(first).toEqual([100, 110, 120]);
+    // The gap adds no distance: the second segment goes on from 2 steps.
+    expect(second[0]).toBe(120);
+    expect(second[1]).toBe(100);
+    expect(second[2]).toBe(80);
+  });
+  it('holds the end values beyond the samples, and nothing without them', () => {
+    expect(trackElevations(segments, [{ at: step, ele: 50 }])).toEqual([
+      [50, 50, 50],
+      [50, 50, 50],
+    ]);
+    expect(trackElevations(segments, [])).toEqual([
+      [null, null, null],
+      [null, null, null],
+    ]);
   });
 });

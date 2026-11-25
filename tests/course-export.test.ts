@@ -150,6 +150,21 @@ describe('generateTcx', () => {
     expect(parsed.waypoints.map((w) => w.name)).toContain('Café & Bar');
   });
 
+  it('writes the elevation it is given where the schema puts it (#290)', () => {
+    const elevations = twoSegments.map((s) => s.map((_, i) => 5 + i));
+    const withAltitude = generateTcx(r, 'x', cues, {
+      speedKmh: 20,
+      elevations,
+    });
+    expect(withAltitude.match(/<AltitudeMeters>/g)).toHaveLength(
+      twoSegments.flat().length,
+    );
+    expect(withAltitude).toMatch(
+      /<\/Position><AltitudeMeters>5<\/AltitudeMeters><DistanceMeters>/,
+    );
+    expect(text).not.toContain('<AltitudeMeters>');
+  });
+
   it('refuses a route without geometry', () => {
     expect(() =>
       generateTcx(route([], [[[0, 0]]]), 'x', [], { speedKmh: 20 }),

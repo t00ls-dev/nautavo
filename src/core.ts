@@ -386,11 +386,22 @@ export function escapeXml(s: string): string {
     .filter((c) => c.charCodeAt(0) >= 32 || '\t\n\r'.includes(c))
     .join('');
 }
+/** An elevation to write in an export, or null when unknown (#290). */
+export const knownElevation = (ele?: number | null): number | null =>
+  ele === null || ele === undefined || !Number.isFinite(ele) ? null : ele;
+const trackPoint = (lat: number, lon: number, ele?: number | null) => {
+  const known = knownElevation(ele);
+  return known === null
+    ? `<trkpt lat="${lat}" lon="${lon}"/>`
+    : `<trkpt lat="${lat}" lon="${lon}"><ele>${known}</ele></trkpt>`;
+};
 export function generateGpx(
   route: Route,
   points: Point[],
   name: string,
   date = new Date(),
+  /** Elevation per track point, parallel to the segments, when known. */
+  elevations?: (number | null)[][],
 ): string {
   if (
     !route.segments.length ||
@@ -406,7 +417,7 @@ export function generateGpx(
     )
     .join(
       '',
-    )}<trk><name>${tag(name)}</name>${route.segments.map((s) => `<trkseg>${s.map(([lat, lon]) => `<trkpt lat="${lat}" lon="${lon}"/>`).join('')}</trkseg>`).join('')}</trk></gpx>\n`;
+    )}<trk><name>${tag(name)}</name>${route.segments.map((s, k) => `<trkseg>${s.map(([lat, lon], i) => trackPoint(lat, lon, elevations?.[k]?.[i])).join('')}</trkseg>`).join('')}</trk></gpx>\n`;
 }
 export function filename(
   points: Point[],
