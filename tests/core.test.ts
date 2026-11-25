@@ -449,6 +449,12 @@ describe('GPX 1.1', () => {
     expect(doc.querySelector('time')?.textContent).toBe(
       '2026-01-02T12:00:00.000Z',
     );
+    // Made by Nautavo: the creator and a link to the site, before the time.
+    expect(doc.documentElement.getAttribute('creator')).toBe('Nautavo');
+    const link = doc.querySelector('metadata > link');
+    expect(link?.getAttribute('href')).toBe('https://nautavo.com/');
+    expect(link?.querySelector('text')?.textContent).toBe('Nautavo');
+    expect(link?.nextElementSibling?.localName).toBe('time');
     expect(xml).toContain('&amp;');
     expect(xml).toContain('&lt;');
   });

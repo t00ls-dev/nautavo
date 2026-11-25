@@ -1358,9 +1358,10 @@ div.step-item {
   }
 }
 
-/* Add to home screen and the TCX course take a whole row in More actions. */
+/* Add to home screen and the courses take a whole row in More actions. */
 #add-home,
-#download-tcx {
+#download-tcx,
+#download-fit {
   flex-basis: 100%;
 }
 @media (min-width: 760px) and (min-height: 501px) {

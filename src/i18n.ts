@@ -386,6 +386,9 @@ const pt: Record<string, string> = {
   'Download TCX with turns': 'Baixar TCX com curvas',
   'Share TCX with turns': 'Compartilhar TCX com curvas',
   'TCX downloaded.': 'TCX baixado.',
+  'Download FIT with turns': 'Baixar FIT com curvas',
+  'Share FIT with turns': 'Compartilhar FIT com curvas',
+  'FIT downloaded.': 'FIT baixado.',
   'File saved without elevation. Open Elevation before downloading to include it.':
     'Arquivo salvo sem altitude. Abra a Elevação antes de baixar para incluí-la.',
   'Course exported without turns: directions are not available now.':

@@ -5,7 +5,12 @@ import {
   mockBasemap,
   overlayFeatures,
 } from './map-helpers';
-import { defaults, encodeState, encodeStateV1 } from '../src/core';
+import {
+  defaults,
+  encodeState,
+  encodeStateV1,
+  readTrackFile,
+} from '../src/core';
 import { readFile } from 'node:fs/promises';
 import { Fit, le, name, recordFields, semi } from './fit-fixture';
 import { test, expect, type Page, type Route } from '@playwright/test';
@@ -1731,6 +1736,32 @@ test('a TCX course carries the turns, asking an imported track for them once (#2
   await course();
   expect(matches).toHaveLength(3);
 });
+test('a FIT course carries the same turns, as course points', async ({
+  page,
+}) => {
+  await setup(page);
+  const matches = await mockMatch(page);
+  await page.goto(base);
+  await importRide(page);
+  await expect(page.locator('#download-fit')).toHaveText(
+    'Download FIT with turns',
+  );
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#download-fit').click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.fit$/);
+  const fit = readTrackFile(
+    new Uint8Array(await readFile(await download.path())),
+  );
+  expect(matches).toHaveLength(3);
+  expect(fit.format).toBe('FIT');
+  expect(fit.segments.flat()).toHaveLength(60);
+  expect(fit.waypoints.map((w) => w.name)).toContain('R. B');
+  await expect(page.locator('#status')).toHaveText(
+    'File saved without elevation. Open Elevation before downloading to include it.',
+  );
+});
 test('downloads carry the elevation the page already has, never asking for it (#290)', async ({
   page,
 }) => {
@@ -1771,7 +1802,7 @@ test('downloads carry the elevation the page already has, never asking for it (#
   // The downloads asked nothing more.
   expect(asked).toHaveLength(requests);
 });
-test('the TCX action fits More actions on a 320 px phone (pt)', async ({
+test('the course actions fit More actions on a 320 px phone (pt)', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 640 });
@@ -1779,13 +1810,18 @@ test('the TCX action fits More actions on a 320 px phone (pt)', async ({
   await page.goto(`${base}?lang=pt`);
   await importRide(page);
   await page.locator('#more-actions').click();
-  const action = page.locator('#download-tcx');
-  await expect(action).toBeVisible();
-  await expect(action).toContainText('Baixar TCX com curvas');
-  // One line, inside the screen.
-  const box = (await action.boundingBox())!;
-  expect(box.height).toBeLessThan(52);
-  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  for (const [id, label] of [
+    ['#download-tcx', 'Baixar TCX com curvas'],
+    ['#download-fit', 'Baixar FIT com curvas'],
+  ]) {
+    const action = page.locator(id);
+    await expect(action).toBeVisible();
+    await expect(action).toContainText(label);
+    // One line, inside the screen.
+    const box = (await action.boundingBox())!;
+    expect(box.height).toBeLessThan(52);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+  }
 });
 test('directions that fail without a connection are added once it returns', async ({
   page,

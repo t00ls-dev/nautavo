@@ -6,7 +6,8 @@ import type { Channel, Coord, Recorded } from './core';
  * sensor values (heart rate, cadence, power, temperature, speed), which only
  * the activity view reads (#156). Every other message and field (developer
  * data included) is skipped. Input is untrusted: sizes are bounded and the
- * file CRC is checked.
+ * file CRC is checked. `encodeFit` writes the messages of a FIT file, for the
+ * FIT course export (`src/course-export.ts`).
  */
 
 export interface FitTrack {
@@ -287,3 +288,119 @@ function readField(
 
 const nonInvalid = (value: number, sentinel: number) =>
   value === sentinel ? null : value;
+
+/** The messages the course export writes, by their global number. */
+export const FIT_MESSAGE = {
+  fileId: 0,
+  lap: 19,
+  record: RECORD,
+  event: 21,
+  course: COURSE,
+  coursePoint: COURSE_POINT,
+} as const;
+/** Field number of the timestamp, shared by every message. */
+export const FIT_TIMESTAMP = TIMESTAMP;
+
+/** FIT base types the encoder writes, with their size in bytes. */
+const BASE_TYPES = {
+  enum: [0x00, 1],
+  uint8: [0x02, 1],
+  uint16: [0x84, 2],
+  sint32: [0x85, 4],
+  uint32: [0x86, 4],
+} as const;
+type FitValue =
+  | readonly [num: number, type: keyof typeof BASE_TYPES, value: number]
+  | readonly [num: number, type: 'string', value: string, size: number];
+export interface FitMessage {
+  global: number;
+  fields: readonly FitValue[];
+}
+
+/** A time as FIT seconds. */
+export const fitTime = (ms: number) => Math.round((ms - FIT_EPOCH_MS) / 1000);
+/** Degrees as FIT semicircles. */
+export const semicircles = (degrees: number) =>
+  Math.round(degrees / SEMICIRCLE);
+/** Bytes a string field needs: its UTF-8 and the terminating zero. */
+export const fitStringSize = (text: string) =>
+  new TextEncoder().encode(text).length + 1;
+
+/**
+ * A FIT file of these messages, in order, little-endian, with the header
+ * and file CRCs. A message reuses the local definition of an earlier one
+ * with the same fields; at most 16 are kept, the oldest replaced first.
+ */
+export function encodeFit(messages: FitMessage[]): Uint8Array<ArrayBuffer> {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  const locals: string[] = [];
+  let next = 0,
+    size = 0;
+  const push = (chunk: Uint8Array) => {
+    chunks.push(chunk);
+    size += chunk.length;
+  };
+  for (const message of messages) {
+    const sizes = message.fields.map((f) =>
+      f[1] === 'string' ? f[3] : BASE_TYPES[f[1]][1],
+    );
+    const key = `${message.global}:${message.fields.map((f, i) => `${f[0]}.${f[1]}.${sizes[i]}`).join()}`;
+    let local = locals.indexOf(key);
+    if (local < 0) {
+      local = next;
+      next = (next + 1) % 16;
+      locals[local] = key;
+      const definition = new Uint8Array(6 + message.fields.length * 3);
+      definition.set([0x40 | local, 0, 0, message.global & 0xff]);
+      definition[4] = message.global >> 8;
+      definition[5] = message.fields.length;
+      message.fields.forEach((f, i) =>
+        definition.set(
+          [f[0], sizes[i], f[1] === 'string' ? 0x07 : BASE_TYPES[f[1]][0]],
+          6 + i * 3,
+        ),
+      );
+      push(definition);
+    }
+    const data = new Uint8Array(1 + sizes.reduce((a, b) => a + b, 0));
+    const view = new DataView(data.buffer);
+    data[0] = local;
+    let at = 1;
+    message.fields.forEach((f, i) => {
+      if (f[1] === 'string') {
+        // Cut at a character, leaving room for the terminating zero.
+        const chars = [...f[2]];
+        let bytes = encoder.encode(f[2]);
+        while (bytes.length >= f[3]) {
+          chars.pop();
+          bytes = encoder.encode(chars.join(''));
+        }
+        data.set(bytes, at);
+      } else if (f[1] === 'sint32') view.setInt32(at, f[2], true);
+      else if (f[1] === 'uint32') view.setUint32(at, f[2], true);
+      else if (f[1] === 'uint16') view.setUint16(at, f[2], true);
+      else view.setUint8(at, f[2]);
+      at += sizes[i];
+    });
+    push(data);
+  }
+  const file = new Uint8Array(14 + size + 2);
+  const view = new DataView(file.buffer);
+  // Header: protocol 1.0, which every device reads, and profile 21.00.
+  file.set([14, 0x10]);
+  view.setUint16(2, 2100, true);
+  view.setUint32(4, size, true);
+  file.set(
+    [...'.FIT'].map((c) => c.charCodeAt(0)),
+    8,
+  );
+  view.setUint16(12, crc(file, 0, 12), true);
+  let at = 14;
+  for (const chunk of chunks) {
+    file.set(chunk, at);
+    at += chunk.length;
+  }
+  view.setUint16(at, crc(file, 0, at), true);
+  return file;
+}

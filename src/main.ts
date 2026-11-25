@@ -81,13 +81,15 @@ import {
 } from './track-legs';
 import {
   exportFile,
+  FIT_DOWNLOAD,
+  FIT_TYPES,
   GPX_DOWNLOAD,
   GPX_TYPES,
   sharesFirst,
   TCX_DOWNLOAD,
   TCX_TYPES,
 } from './share-file';
-import { courseCues, generateTcx } from './course-export';
+import { courseCues, generateFit, generateTcx } from './course-export';
 import { setupPointMenu } from './point-menu';
 import { setupNavigation } from './navigation-ui';
 import { resumableNavigation } from './navigation-resume';
@@ -1903,9 +1905,9 @@ $<HTMLInputElement>('route-name').onchange = () => {
   syncUrl();
   if (current) undoHistory.attach(current);
 };
-/** The route's exports (GPX and the TCX course) follow the route shown. */
+/** The route's exports (GPX and the courses) follow the route shown. */
 function exportable(ready: boolean) {
-  for (const id of ['download', 'download-tcx'])
+  for (const id of ['download', 'download-tcx', 'download-fit'])
     $<HTMLButtonElement>(id).disabled = !ready;
 }
 const exportName = () =>
@@ -1935,11 +1937,28 @@ function gpxContent(): string {
     exportElevations(current!),
   );
 }
+/** The course formats: how each is written, shared and announced. */
+const COURSES = {
+  tcx: {
+    generate: generateTcx,
+    types: TCX_TYPES,
+    downloadType: TCX_DOWNLOAD,
+    downloaded: 'TCX downloaded.',
+  },
+  fit: {
+    generate: generateFit,
+    types: FIT_TYPES,
+    downloadType: FIT_DOWNLOAD,
+    downloaded: 'FIT downloaded.',
+  },
+};
 /**
- * The TCX course with the route's turns (#288). An imported track without
- * directions gets them as the Itinerary does, on this explicit choice.
+ * A course with the route's turns, TCX (#288) or FIT. An imported track
+ * without directions gets them as the Itinerary does, on this explicit
+ * choice.
  */
-async function exportTcx(share: boolean) {
+async function exportCourse(format: keyof typeof COURSES, share: boolean) {
+  const course = COURSES[format];
   const route = current;
   if (!route) return;
   if (missingDirections(route)) await addDirections(route);
@@ -1952,12 +1971,12 @@ async function exportTcx(share: boolean) {
     t,
   );
   const result = await exportFile(
-    generateTcx(route, exportName(), cues, {
+    course.generate(route, exportName(), cues, {
       speedKmh,
       elevations: exportElevations(route),
     }),
-    filename(state.points, state.name, 'tcx'),
-    { share, types: TCX_TYPES, downloadType: TCX_DOWNLOAD },
+    filename(state.points, state.name, format),
+    { share, types: course.types, downloadType: course.downloadType },
   );
   if (missingDirections(route))
     status(
@@ -1966,7 +1985,7 @@ async function exportTcx(share: boolean) {
     );
   else if (result === 'cancelled') return;
   else if (!exportElevations(route)) status(WITHOUT_ELEVATION);
-  else if (result === 'downloaded') status('TCX downloaded.');
+  else if (result === 'downloaded') status(course.downloaded);
 }
 function exportGpx(share: boolean) {
   if (!current) return;
@@ -1982,7 +2001,8 @@ function exportGpx(share: boolean) {
   });
 }
 $('share-gpx').onclick = () => exportGpx(true);
-$('download-tcx').onclick = () => void exportTcx(shareExports);
+$('download-tcx').onclick = () => void exportCourse('tcx', shareExports);
+$('download-fit').onclick = () => void exportCourse('fit', shareExports);
 $('download').onclick = () => exportGpx(shareExports);
 $('share').onclick = () => {
   syncUrl();
