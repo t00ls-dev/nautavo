@@ -1698,6 +1698,52 @@ test('an imported track gets directions by map matching when the itinerary opens
   await page.locator('#itinerary summary').click();
   expect(matches).toHaveLength(3);
 });
+test('a TCX course carries the turns, asking an imported track for them once (#288)', async ({
+  page,
+}) => {
+  await setup(page);
+  const matches = await mockMatch(page);
+  await page.goto(base);
+  await importRide(page);
+  // On a computer it takes its own row, named, below Download GPX.
+  await expect(page.locator('#download-tcx')).toHaveText(
+    'Download TCX with turns',
+  );
+  const course = async () => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#download-tcx').click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.tcx$/);
+    return readFile(await download.path(), 'utf8');
+  };
+  const tcx = await course();
+  // The directions come the way the Itinerary gets them, on this choice.
+  expect(matches).toHaveLength(3);
+  expect((tcx.match(/<Trackpoint>/g) || []).length).toBe(60);
+  expect(tcx).toContain('<PointType>Right</PointType>');
+  expect(tcx).toContain('<Notes>Turn right · Rua B</Notes>');
+  await expect(page.locator('#status')).toHaveText('TCX downloaded.');
+  // Asked once: a second course asks nothing.
+  await course();
+  expect(matches).toHaveLength(3);
+});
+test('the TCX action fits More actions on a 320 px phone (pt)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await setup(page);
+  await page.goto(`${base}?lang=pt`);
+  await importRide(page);
+  await page.locator('#more-actions').click();
+  const action = page.locator('#download-tcx');
+  await expect(action).toBeVisible();
+  await expect(action).toContainText('Baixar TCX com curvas');
+  // One line, inside the screen.
+  const box = (await action.boundingBox())!;
+  expect(box.height).toBeLessThan(52);
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+});
 test('directions that fail without a connection are added once it returns', async ({
   page,
   context,

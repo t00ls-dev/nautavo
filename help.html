@@ -371,44 +371,48 @@
         <p>
           Set the route name above the download button to name the file and
           track. Leave it empty to use the start and destination. Download GPX
-          exports the complete road geometry and your stops. Import GPX, FIT or
-          TCX reads GPX files, FIT courses and activities (Garmin, Wahoo and
-          similar devices) and TCX files, detected by content, up to 10 MB, also
-          compressed as .gz (such as Strava original files) or in a .zip (such
-          as Garmin Connect exports). A file whose points carry recorded times
-          (an activity from a bike computer, watch or app) opens as a recorded
-          activity: see Recorded activities. Imported as a route, only the
-          track, its name, waypoints or course points and recorded elevation are
-          kept, in your browser; heart rate, power, times and other sensor data
-          are left out. In FIT files, a stretch without positions longer than 1
-          km starts a new track segment; in TCX files each track (for example
-          each lap) is a segment. Downloads are always GPX. Import preserves the
-          original geometry. A track without waypoints gets stops where its
-          shape needs them (loops, out-and-back sections and large bends), each
-          named by its place on the route, for example Stop · km 12.3. After the
-          import, the track is checked once against the roads (Valhalla map
-          matching, by car and, where a road is closed to cars, by bicycle):
-          wherever the road matches the recording closely, the track is aligned
-          to the road actually taken, without GPS noise, glitches or the
-          straight line to where the recording started indoors, and the summary
-          says Track aligned to the roads, with Keep the recorded track to undo
-          it (Undo does the same). Elsewhere the recording stays, with only its
-          GPS glitches corrected. Stretches no road follows, such as an unmapped
-          path or off-road, stay as recorded and are listed as places where the
-          route cannot be followed exactly, highlighted on the map; choose one
-          to see it. Stretches the matching cannot check stay as recorded with
-          no warning, and a result that would leave out any part of the track is
-          never used. Without a connection the check runs when it returns.
-          Editing a point recalculates only about 1 km of track on each side of
-          it; the rest of the imported track stays exact. Removing a stop,
-          Reverse and Round trip reuse the imported track without a new request;
-          a recalculated section joins any gap between track segments. On an
-          imported track, Calculate route keeps that same track and adds
-          directions from the roads it follows; it never takes another road in
-          its place or adds distance you did not cover. Shared links store
-          points and settings, then recalculate against current road data; they
-          do not embed an imported track, so Copy link says so: share the GPX
-          for the exact track.
+          exports the complete road geometry and your stops. Download TCX with
+          turns, in More actions, exports a TCX course for GPS devices and
+          watches that announce turns: the same track with a point at each turn
+          and at each route point. An imported track first gets its turns as the
+          Itinerary does. Import GPX, FIT or TCX reads GPX files, FIT courses
+          and activities (Garmin, Wahoo and similar devices) and TCX files,
+          detected by content, up to 10 MB, also compressed as .gz (such as
+          Strava original files) or in a .zip (such as Garmin Connect exports).
+          A file whose points carry recorded times (an activity from a bike
+          computer, watch or app) opens as a recorded activity: see Recorded
+          activities. Imported as a route, only the track, its name, waypoints
+          or course points and recorded elevation are kept, in your browser;
+          heart rate, power, times and other sensor data are left out. In FIT
+          files, a stretch without positions longer than 1 km starts a new track
+          segment; in TCX files each track (for example each lap) is a segment.
+          Downloads are always GPX. Import preserves the original geometry. A
+          track without waypoints gets stops where its shape needs them (loops,
+          out-and-back sections and large bends), each named by its place on the
+          route, for example Stop · km 12.3. After the import, the track is
+          checked once against the roads (Valhalla map matching, by car and,
+          where a road is closed to cars, by bicycle): wherever the road matches
+          the recording closely, the track is aligned to the road actually
+          taken, without GPS noise, glitches or the straight line to where the
+          recording started indoors, and the summary says Track aligned to the
+          roads, with Keep the recorded track to undo it (Undo does the same).
+          Elsewhere the recording stays, with only its GPS glitches corrected.
+          Stretches no road follows, such as an unmapped path or off-road, stay
+          as recorded and are listed as places where the route cannot be
+          followed exactly, highlighted on the map; choose one to see it.
+          Stretches the matching cannot check stay as recorded with no warning,
+          and a result that would leave out any part of the track is never used.
+          Without a connection the check runs when it returns. Editing a point
+          recalculates only about 1 km of track on each side of it; the rest of
+          the imported track stays exact. Removing a stop, Reverse and Round
+          trip reuse the imported track without a new request; a recalculated
+          section joins any gap between track segments. On an imported track,
+          Calculate route keeps that same track and adds directions from the
+          roads it follows; it never takes another road in its place or adds
+          distance you did not cover. Shared links store points and settings,
+          then recalculate against current road data; they do not embed an
+          imported track, so Copy link says so: share the GPX for the exact
+          track.
         </p>
         <p>
           Round trip adds the return itinerary. On divided roads, check that
@@ -1262,22 +1266,26 @@
         <p>
           Defina Nome da rota acima do botão de download para nomear o arquivo e
           o trajeto. Se ficar vazio, usa início e destino. O botão Baixar GPX
-          exporta o trajeto completo e suas paradas. Importar GPX, FIT ou TCX lê
-          arquivos GPX, cursos e atividades FIT (aparelhos Garmin, Wahoo e
-          similares) e arquivos TCX, reconhecidos pelo conteúdo, até 10 MB,
-          também compactados em .gz (como os arquivos originais do Strava) ou em
-          .zip (como as exportações do Garmin Connect). Um arquivo cujos pontos
-          têm horários gravados (uma atividade de ciclocomputador, relógio ou
-          app) abre como atividade gravada: veja Atividades gravadas. Importado
-          como rota, só ficam o trajeto, o nome, as paradas ou pontos do curso e
-          a elevação gravada, no seu navegador; frequência cardíaca, potência,
-          horários e outros dados de sensores ficam de fora. Em arquivos FIT, um
-          trecho sem posições maior que 1 km inicia um novo segmento; em
-          arquivos TCX, cada trajeto (por exemplo, cada volta) é um segmento. Os
-          downloads são sempre GPX. Importar preserva a geometria original. Um
-          trajeto sem paradas ganha paradas onde o formato precisa delas (laços,
-          idas e voltas e curvas grandes), cada uma com o nome do seu lugar na
-          rota, por exemplo Parada · km 12,3. Depois da importação, o trajeto é
+          exporta o trajeto completo e suas paradas. Baixar TCX com curvas, em
+          Mais ações, exporta um curso TCX para aparelhos GPS e relógios que
+          avisam as curvas: o mesmo trajeto com um ponto em cada curva e em cada
+          ponto da rota. Uma trilha importada antes busca as curvas, como o
+          Itinerário faz. Importar GPX, FIT ou TCX lê arquivos GPX, cursos e
+          atividades FIT (aparelhos Garmin, Wahoo e similares) e arquivos TCX,
+          reconhecidos pelo conteúdo, até 10 MB, também compactados em .gz (como
+          os arquivos originais do Strava) ou em .zip (como as exportações do
+          Garmin Connect). Um arquivo cujos pontos têm horários gravados (uma
+          atividade de ciclocomputador, relógio ou app) abre como atividade
+          gravada: veja Atividades gravadas. Importado como rota, só ficam o
+          trajeto, o nome, as paradas ou pontos do curso e a elevação gravada,
+          no seu navegador; frequência cardíaca, potência, horários e outros
+          dados de sensores ficam de fora. Em arquivos FIT, um trecho sem
+          posições maior que 1 km inicia um novo segmento; em arquivos TCX, cada
+          trajeto (por exemplo, cada volta) é um segmento. Os downloads são
+          sempre GPX. Importar preserva a geometria original. Um trajeto sem
+          paradas ganha paradas onde o formato precisa delas (laços, idas e
+          voltas e curvas grandes), cada uma com o nome do seu lugar na rota,
+          por exemplo Parada · km 12,3. Depois da importação, o trajeto é
           conferido uma vez com as ruas (map matching do Valhalla, por carro e,
           onde uma via é fechada a carros, por bicicleta): onde a rua acompanha
           a gravação de perto, o trajeto é alinhado à rua realmente percorrida,

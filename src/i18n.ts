@@ -383,6 +383,11 @@ const pt: Record<string, string> = {
   'Searching…': 'Buscando…',
   'Choose a place.': 'Escolha um lugar.',
   'GPX downloaded.': 'GPX baixado.',
+  'Download TCX with turns': 'Baixar TCX com curvas',
+  'Share TCX with turns': 'Compartilhar TCX com curvas',
+  'TCX downloaded.': 'TCX baixado.',
+  'Course exported without turns: directions are not available now.':
+    'Curso exportado sem as curvas: as instruções não estão disponíveis agora.',
   'Link copied.': 'Link copiado.',
   'Link copied. Opening it recalculates the route, which can differ from the imported track; share the GPX for the exact track.':
     'Link copiado. Ao abrir, a rota é recalculada e pode diferir da trilha importada; compartilhe o GPX para a trilha exata.',
@@ -509,6 +514,8 @@ const pt: Record<string, string> = {
   'Turn right': 'Vire à dir.',
   'Slight right': 'Leve à dir.',
   Straight: 'Em frente',
+  Left: 'Esquerda',
+  Right: 'Direita',
   'Slight left': 'Leve à esq.',
   'Turn left': 'Vire à esq.',
   'Sharp left': 'Forte à esq.',

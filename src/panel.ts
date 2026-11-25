@@ -67,6 +67,10 @@ export function setupPanel(map: PlannerMap): void {
   iconControl($('share'), 'link', 'Copy link');
   $('share').title = 'Copy route link';
   iconControl($('share-gpx'), 'share', 'Share GPX');
+  // A course with its turns, for GPS devices and watches (#288).
+  if (sharesFirst())
+    iconControl($('download-tcx'), 'share', 'Share TCX with turns');
+  else iconControl($('download-tcx'), 'download', 'Download TCX with turns');
   iconControl($('more-actions'), 'more', 'More actions', true);
   iconControl($('open-settings'), 'settings', 'Settings', true);
   iconControl($('close-settings'), 'close', 'Close settings', true);
