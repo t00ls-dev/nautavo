@@ -55,25 +55,37 @@ const favorite = (name = 'Home'): Favorite => ({
 it('roundtrips complete saved geometry, state and names in a portable backup', () => {
   expect(roundtrip([record()])).toEqual([record()]);
 });
-it('keeps favorites in a version 2 backup, and still reads version 1', () => {
+it('keeps favorites in a backup, and reads one without them', () => {
   const text = exportLibraryBackup({
     routes: [record()],
     favorites: [favorite()],
   });
-  expect((JSON.parse(text) as { version: number }).version).toBe(2);
+  expect(JSON.parse(text)).toMatchObject({
+    format: 'nautavo-library',
+    version: 1,
+  });
   expect(parseLibraryBackup(text)).toEqual({
     routes: [record()],
     favorites: [favorite()],
   });
-  const v1 = JSON.stringify({
-    format: 'route-gpx-library',
+  const routesOnly = JSON.stringify({
+    format: 'nautavo-library',
     version: 1,
     routes: [record()],
   });
-  expect(parseLibraryBackup(v1)).toEqual({
+  expect(parseLibraryBackup(routesOnly)).toEqual({
     routes: [record()],
     favorites: [],
   });
+});
+it('refuses a backup of another format, the former route-gpx-library included', () => {
+  const backup = JSON.parse(
+    exportLibraryBackup({ routes: [record()], favorites: [] }),
+  ) as { format: string };
+  backup.format = 'route-gpx-library';
+  expect(() => parseLibraryBackup(JSON.stringify(backup))).toThrow(
+    'Invalid route backup.',
+  );
 });
 it('rejects the whole backup when one favorite is malformed', () => {
   const backup = JSON.parse(
@@ -165,7 +177,7 @@ it('validates every imported record before allowing a batch import', () => {
   expect(() =>
     parseLibraryBackup(
       JSON.stringify({
-        format: 'route-gpx-library',
+        format: 'nautavo-library',
         version: 1,
         routes: [record(), invalid],
       }),

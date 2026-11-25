@@ -2,6 +2,7 @@ import { expect, type BrowserContext, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { encodePolyline } from '../src/road-attributes';
 import { REGION_PATH } from '../src/region';
+import { LIBRARY_DATABASE } from '../src/saved-routes';
 
 /** The development server Playwright starts (playwright.config.ts). */
 export const base = 'http://127.0.0.1:5173/';
@@ -157,23 +158,25 @@ export async function boxSettled(page: Page, selector: string) {
 }
 
 /**
- * A saved route or favorite as the app's IndexedDB holds it (`route-gpx`,
- * store `routes` or `favorites`), or null when there is none.
+ * A saved route or favorite as the app's IndexedDB holds it (store `routes`
+ * or `favorites`), or null when there is none; without `id`, every entry of
+ * the store.
  */
 export function libraryEntry(
   page: Page,
   store: 'routes' | 'favorites',
-  id: string,
+  id?: string,
 ): Promise<unknown> {
   return page.evaluate(
-    ([name, key]) =>
+    ([database, name, key]) =>
       new Promise<unknown>((resolve, reject) => {
-        const request = indexedDB.open('route-gpx');
+        const request = indexedDB.open(database);
         request.onerror = () =>
           reject(request.error ?? new Error('IndexedDB request failed'));
         request.onsuccess = () => {
           const db = request.result;
-          const read = db.transaction(name).objectStore(name).get(key);
+          const objects = db.transaction(name).objectStore(name);
+          const read = key === null ? objects.getAll() : objects.get(key);
           read.onerror = () =>
             reject(read.error ?? new Error('IndexedDB request failed'));
           read.onsuccess = () => {
@@ -182,7 +185,7 @@ export function libraryEntry(
           };
         };
       }),
-    [store, id] as const,
+    [LIBRARY_DATABASE, store, id ?? null] as const,
   );
 }
 

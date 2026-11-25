@@ -10,7 +10,7 @@ The mark is a compass whose needle is a route: a curve from an orange start poin
 | Navy        | Wordmark                                    | `#102a43` |
 | Signal      | The start point of the mark, never for text | `#e8603c` |
 
-The project was called route-gpx until 2026-11; identifiers stored in browsers and backups keep that name (see `AGENTS.md`).
+The project was called route-gpx until 2026-11; identifiers stored in browsers and backups took the new name later that month, without migration (see `AGENTS.md`).
 
 | Role                    | Token                    | Color     |
 | ----------------------- | ------------------------ | --------- |
@@ -45,7 +45,7 @@ A copy published at another domain root needs no edit: build it with `SITE_URL` 
 
 ## Name and writing
 
-The name is **Nautavo**, a proper noun with a capital N in every text: page titles, metadata, help, What's new, README, documentation, alternative text, accessible names and the GPX `creator`. Only the drawn wordmark is lowercase (it is a logo, not text), and so are the domain, URLs and identifiers (`nautavo.com`, the npm package, the Workers). Stored names from before the rename keep `route-gpx` (see `AGENTS.md`).
+The name is **Nautavo**, a proper noun with a capital N in every text: page titles, metadata, help, What's new, README, documentation, alternative text, accessible names and the GPX `creator`. Only the drawn wordmark is lowercase (it is a logo, not text), and so are the domain, URLs and identifiers (`nautavo.com`, the npm package, the Workers). Names stored in browsers and backups use `nautavo` too (see `AGENTS.md`).
 
 Page titles read `Nautavo: <subject>` in both languages (`Nautavo: Route Planner & GPX Export`, `Nautavo: Novidades`), the same in the initial HTML and `src/seo.ts`.
 

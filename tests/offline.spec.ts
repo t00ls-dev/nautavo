@@ -239,7 +239,7 @@ test('a new deploy replaces the cached build', async ({ page, context }) => {
     await r.fulfill({ response, body });
   });
   await controlled(page);
-  expect(await cacheKeys(page)).toEqual(['route-gpx-shell-0000000000000000']);
+  expect(await cacheKeys(page)).toEqual(['nautavo-shell-0000000000000000']);
   await context.unroute('**/sw.js');
   // The new build takes over and the untouched page reloads into it.
   await Promise.all([
@@ -251,9 +251,7 @@ test('a new deploy replaces the cached build', async ({ page, context }) => {
   // Only the new build's cache is left.
   await expect
     .poll(() => cacheKeys(page))
-    .toEqual([
-      expect.stringMatching(/^route-gpx-shell-(?!0{16})[0-9a-f]{16}$/),
-    ]);
+    .toEqual([expect.stringMatching(/^nautavo-shell-(?!0{16})[0-9a-f]{16}$/)]);
   await page.reload();
   await expect(page.locator('#location-0')).toBeVisible();
 });
@@ -300,7 +298,7 @@ test('a page shown again after a deploy reloads into the new build, once untouch
   );
   await expect
     .poll(() => cacheKeys(page))
-    .toEqual([expect.stringMatching(/^route-gpx-shell-(?!0{16})/)]);
+    .toEqual([expect.stringMatching(/^nautavo-shell-(?!0{16})/)]);
   await page.waitForTimeout(500);
   expect(await marked()).toBe(true);
   // Shown again, untouched: it reloads into the new build, once.

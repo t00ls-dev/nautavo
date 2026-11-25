@@ -53,16 +53,16 @@ const storageError = (error: unknown): Error =>
     ? error
     : new Error('Local route storage is unavailable in this browser.');
 
+/** The IndexedDB database of saved routes and favorites. */
+export const LIBRARY_DATABASE = 'nautavo';
 let connection: Promise<IDBDatabase> | undefined;
 function database(): Promise<IDBDatabase> {
   if (!connection)
     connection = new Promise<IDBDatabase>((resolve, reject) => {
-      // Version 2 adds favorites; an upgrade keeps the saved routes.
-      const request = indexedDB.open('route-gpx', 2);
+      const request = indexedDB.open(LIBRARY_DATABASE, 1);
       request.onupgradeneeded = () => {
         for (const store of ['routes', 'favorites'] as const)
-          if (!request.result.objectStoreNames.contains(store))
-            request.result.createObjectStore(store, { keyPath: 'id' });
+          request.result.createObjectStore(store, { keyPath: 'id' });
       };
       request.onsuccess = () => {
         request.result.onversionchange = () => {
@@ -316,7 +316,7 @@ export const deleteFavorite = (id: string) => take<Favorite>('favorites', id);
 export const restoreFavorite = (record: Favorite) =>
   putBack('favorites', record);
 
-/** A backup's contents: saved routes and, from version 2, favorites. */
+/** A backup's contents: saved routes and favorites. */
 export interface Library {
   routes: SavedRoute[];
   favorites: Favorite[];
@@ -324,8 +324,8 @@ export interface Library {
 export function exportLibraryBackup(library: Library): string {
   return JSON.stringify(
     {
-      format: 'route-gpx-library',
-      version: 2,
+      format: 'nautavo-library',
+      version: 1,
       exportedAt: new Date().toISOString(),
       routes: library.routes,
       favorites: library.favorites,
@@ -334,10 +334,7 @@ export function exportLibraryBackup(library: Library): string {
     2,
   );
 }
-/**
- * Reads a backup, version 1 (routes only) or 2 (routes and favorites), and
- * validates all of it before anything is written.
- */
+/** Reads a backup and validates all of it before anything is written. */
 export function parseLibraryBackup(text: string): Library {
   if (text.length > 50_000_000)
     throw new Error('Choose a backup smaller than 50 MB.');
@@ -345,15 +342,13 @@ export function parseLibraryBackup(text: string): Library {
     format?: string;
     version?: number;
     routes?: unknown[];
-    favorites?: unknown;
+    favorites?: unknown[];
   };
   if (
-    backup?.format !== 'route-gpx-library' ||
-    (backup.version !== 1 && backup.version !== 2) ||
+    backup?.format !== 'nautavo-library' ||
+    backup.version !== 1 ||
     !Array.isArray(backup.routes) ||
-    (backup.version === 2 &&
-      backup.favorites !== undefined &&
-      !Array.isArray(backup.favorites))
+    (backup.favorites !== undefined && !Array.isArray(backup.favorites))
   )
     throw new Error('Invalid route backup.');
   const now = new Date().toISOString();
@@ -382,11 +377,7 @@ export function parseLibraryBackup(text: string): Library {
       updatedAt: date(row.updatedAt),
     };
   });
-  const favorites = (
-    backup.version === 2 && Array.isArray(backup.favorites)
-      ? backup.favorites
-      : []
-  ).map((item) => {
+  const favorites = (backup.favorites ?? []).map((item) => {
     const row = (item ?? {}) as Favorite;
     if (
       !validName(row.name) ||
