@@ -108,6 +108,33 @@ export function samplePlan(
     }));
 }
 
+/**
+ * The elevation of every track point, from a profile sampled along it: each
+ * point takes the value between the samples on either side, by distance, and
+ * points before the first or after the last sample take its value. Used by
+ * the exports (GPX `<ele>`, TCX `AltitudeMeters`) with no request.
+ */
+export function trackElevations(
+  segments: Coord[][],
+  profile: ProfilePoint[],
+): (number | null)[][] {
+  let total = 0,
+    k = 0;
+  return segments.map((segment) =>
+    segment.map((coord, i) => {
+      if (i) total += meters(segment[i - 1], coord);
+      if (!profile.length) return null;
+      while (k < profile.length - 1 && profile[k + 1].at <= total) k++;
+      const a = profile[k],
+        b = profile[Math.min(k + 1, profile.length - 1)];
+      if (total <= a.at || b.at <= a.at) return round(a.ele);
+      if (total >= b.at) return round(b.ele);
+      return round(a.ele + ((b.ele - a.ele) * (total - a.at)) / (b.at - a.at));
+    }),
+  );
+}
+const round = (ele: number) => Math.round(ele * 10) / 10;
+
 /** Profile from recorded vertex elevations (GPX `<ele>`), skipping gaps in data. */
 export function profileFromTrack(
   segments: Coord[][],

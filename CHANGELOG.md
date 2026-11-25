@@ -8,6 +8,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Added
 
+- Downloaded GPX and TCX files include the elevation of every point when the page already has it: recorded in an imported file, or the profile loaded by opening Elevation. Nothing more is requested for it; a file saved without it says so, and how to include it.
 - Download TCX with turns, in More actions: a TCX course for GPS devices and watches that announce turns, with the complete track and a point at each turn and each route point. An imported track first gets its turns as the Itinerary does. Download GPX is unchanged.
 - Drag the route line to add a stop: a handle appears on the line under the pointer, or where you tap it on a touch screen, and dragging or tapping it adds a stop between the two route points of that part of the route, so the route takes the road you choose without adding a stop and moving it in the list. With three points or more, a point leaves the route from the map too: drag it onto the trash that appears at the bottom of the map, or tap it (right click on a computer) and choose Remove; Undo brings it back.
 - Turn directions name the route number and first destination on the road's sign where it is mapped, such as RJ-071 toward Ilha do Governador, in the Itinerary, the list of turns ahead and the navigation banner, so ramps and forks without a road name say where they lead. Spoken directions are unchanged.

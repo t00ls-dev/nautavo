@@ -223,7 +223,10 @@ test('full geometry survives drawing and share uses the same GPX and custom file
     page.locator('#share-gpx').click(),
   ]);
   expect(fallback.suggestedFilename()).toBe('custom-file.gpx');
-  await expect(page.locator('#status')).toHaveText('GPX downloaded.');
+  // No elevation loaded: the status says how to include it (#290).
+  await expect(page.locator('#status')).toHaveText(
+    'File saved without elevation. Open Elevation before downloading to include it.',
+  );
 });
 test('sharing is hidden without file support', async ({ page }) => {
   await page.addInitScript(() =>

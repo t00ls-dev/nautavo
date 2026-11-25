@@ -452,6 +452,23 @@ describe('GPX 1.1', () => {
     expect(xml).toContain('&amp;');
     expect(xml).toContain('&lt;');
   });
+  it('writes the elevation it is given, point by point (#290)', () => {
+    const elevations = route.segments.map((segment) =>
+      segment.map((_, i) => (i === 0 ? null : 10 + i)),
+    );
+    const xml = generateGpx(
+      route,
+      defaults().points,
+      'With elevation',
+      undefined,
+      elevations,
+    );
+    const eles = [...xml.matchAll(/<ele>([^<]+)<\/ele>/g)].map((m) => +m[1]);
+    expect(eles).toEqual(elevations.flat().filter((e) => e !== null));
+    expect(generateGpx(route, defaults().points, 'None')).not.toContain(
+      '<ele>',
+    );
+  });
   it('keeps original geometry during import, including separate segments', () => {
     const result = importGpx(generateGpx(route, defaults().points, 'Imported'));
     expect(result.route.segments).toEqual(route.segments);

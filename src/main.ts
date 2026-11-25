@@ -95,7 +95,7 @@ import { setupHomeScreen } from './home-screen';
 import { setupElevation } from './elevation-ui';
 import { setupSurface } from './surface-ui';
 import { SURFACE_KINDS } from './surface';
-import { gradeRanges } from './elevation';
+import { gradeRanges, trackElevations } from './elevation';
 import { setupRouteOverlays } from './route-overlays';
 import {
   repeatsFor,
@@ -1910,8 +1910,30 @@ function exportable(ready: boolean) {
 }
 const exportName = () =>
   state.name || `${state.points[0].name} to ${state.points.at(-1)!.name}`;
+/**
+ * Elevation of every track point for the exports, from what the page already
+ * has: recorded in the imported file, else the profile Elevation loaded for
+ * this route. Never a request (#290).
+ */
+function exportElevations(route: Route) {
+  const recorded = recordedElevation.get(route);
+  if (recorded) return recorded;
+  const loaded = elevation.profile();
+  return loaded?.source === 'terrain'
+    ? trackElevations(route.segments, loaded.profile)
+    : undefined;
+}
+/** Elevation is never requested for an export: say how to include it. */
+const WITHOUT_ELEVATION =
+  'File saved without elevation. Open Elevation before downloading to include it.';
 function gpxContent(): string {
-  return generateGpx(current!, state.points, exportName());
+  return generateGpx(
+    current!,
+    state.points,
+    exportName(),
+    undefined,
+    exportElevations(current!),
+  );
 }
 /**
  * The TCX course with the route's turns (#288). An imported track without
@@ -1930,7 +1952,10 @@ async function exportTcx(share: boolean) {
     t,
   );
   const result = await exportFile(
-    generateTcx(route, exportName(), cues, { speedKmh }),
+    generateTcx(route, exportName(), cues, {
+      speedKmh,
+      elevations: exportElevations(route),
+    }),
     filename(state.points, state.name, 'tcx'),
     { share, types: TCX_TYPES, downloadType: TCX_DOWNLOAD },
   );
@@ -1939,6 +1964,8 @@ async function exportTcx(share: boolean) {
       'Course exported without turns: directions are not available now.',
       true,
     );
+  else if (result === 'cancelled') return;
+  else if (!exportElevations(route)) status(WITHOUT_ELEVATION);
   else if (result === 'downloaded') status('TCX downloaded.');
 }
 function exportGpx(share: boolean) {
@@ -1949,7 +1976,9 @@ function exportGpx(share: boolean) {
     types: GPX_TYPES,
     downloadType: GPX_DOWNLOAD,
   }).then((result) => {
-    if (result === 'downloaded') status('GPX downloaded.');
+    if (result === 'cancelled') return;
+    if (!exportElevations(current!)) status(WITHOUT_ELEVATION);
+    else if (result === 'downloaded') status('GPX downloaded.');
   });
 }
 $('share-gpx').onclick = () => exportGpx(true);
