@@ -9,7 +9,7 @@ import {
   holdMap,
   overlayCount,
 } from './map-helpers';
-import { base, openAdvancedSettings } from './app-helpers';
+import { base, libraryEntry, openAdvancedSettings } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
 async function setup(
@@ -1342,18 +1342,13 @@ test('departure persists but forecasts and samples do not; reload refreshes; GPX
   await page.locator('#route-name').fill('Weather saved');
   await page.locator('#save-route').click();
   await expect(page.locator('#saved-count')).toHaveText('(1)');
-  const stored = await page.evaluate(async () => {
-    const db = await new Promise<IDBDatabase>((resolve) => {
-      const r = indexedDB.open('route-gpx');
-      r.onsuccess = () => resolve(r.result);
-    });
-    const rows = await new Promise<unknown[]>((resolve) => {
-      const r = db.transaction('routes').objectStore('routes').getAll();
-      r.onsuccess = () => resolve(r.result);
-    });
-    db.close();
-    return { local: { ...localStorage }, session: { ...sessionStorage }, rows };
-  });
+  const stored = {
+    ...(await page.evaluate(() => ({
+      local: { ...localStorage },
+      session: { ...sessionStorage },
+    }))),
+    rows: (await libraryEntry(page, 'routes')) as { state: typeof state }[],
+  };
   for (const word of [
     'temperature',
     'precipitation',
@@ -1363,7 +1358,7 @@ test('departure persists but forecasts and samples do not; reload refreshes; GPX
     '0.500',
   ])
     expect(JSON.stringify(stored)).not.toContain(word);
-  expect((stored.rows[0] as { state: typeof state }).state).toEqual({
+  expect(stored.rows[0].state).toEqual({
     ...state,
     name: 'Weather saved',
   });

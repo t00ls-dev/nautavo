@@ -18,6 +18,7 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Saved routes, favorite places and backups use Nautavo's name now. Routes and places saved before this change, and backups exported before it, do not carry over: save them again.
 - While navigating, traveling the route or playing an activity, your position is a green dot with a cone pointing the way, in Nautavo's colors, instead of a blue arrow.
 - The Itinerary shows each step's instruction on its own line, with the road and its distance below it, so on a phone a long road name no longer hides the instruction or the distance.
 - Zooming the map while navigating, traveling the route or playing an activity works as on the route planner: a pinch or a double tap zooms around your fingers, and a tap with two fingers zooms out. When you let go, the map slides back to your position and keeps following you.

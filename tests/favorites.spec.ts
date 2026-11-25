@@ -218,10 +218,11 @@ test('favorites travel in the backup and import on another device', async ({
   ]);
   const backup = await readFile(await download.path());
   const json = JSON.parse(backup.toString()) as {
+    format: string;
     version: number;
     favorites: { name: string }[];
   };
-  expect(json.version).toBe(2);
+  expect([json.format, json.version]).toEqual(['nautavo-library', 1]);
   expect(json.favorites.map((f) => f.name)).toEqual(['Home']);
   // A fresh browser profile, as another device.
   const other = await browser.newPage();
@@ -240,65 +241,6 @@ test('favorites travel in the backup and import on another device', async ({
   );
   await expect(other.locator('#favorite-count')).toHaveText('(1)');
   await other.close();
-});
-
-test('saved routes stay when the library upgrades to hold favorites', async ({
-  page,
-}) => {
-  // The library as an earlier version left it: version 1, routes only.
-  await page.goto(base + 'help');
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('route-gpx', 1);
-        request.onupgradeneeded = () =>
-          request.result.createObjectStore('routes', { keyPath: 'id' });
-        request.onsuccess = () => {
-          const tx = request.result.transaction('routes', 'readwrite');
-          tx.objectStore('routes').put({
-            id: 'old',
-            name: 'Old',
-            state: {
-              version: 1,
-              points: [
-                { name: 'A', coord: [-22.9, -43.2] },
-                { name: 'B', coord: [-22.95, -43.25] },
-              ],
-              prefer: false,
-              name: 'Old',
-              osrm: 'https://router.project-osrm.org',
-              valhalla: 'https://valhalla1.openstreetmap.de',
-              nominatim: 'https://nominatim.openstreetmap.org',
-            },
-            route: {
-              segments: [
-                [
-                  [-22.9, -43.2],
-                  [-22.95, -43.25],
-                ],
-              ],
-              steps: [],
-              distance: 7000,
-              duration: 600,
-              provider: 'OSRM',
-            },
-            createdAt: '2026-01-01T00:00:00Z',
-            updatedAt: '2026-01-01T00:00:00Z',
-          });
-          tx.oncomplete = () => {
-            request.result.close();
-            resolve();
-          };
-          tx.onerror = () =>
-            reject(tx.error ?? new Error('IndexedDB request failed'));
-        };
-        request.onerror = () =>
-          reject(request.error ?? new Error('IndexedDB request failed'));
-      }),
-  );
-  await page.goto(base);
-  await expect(page.locator('#saved-count')).toHaveText('(1)');
-  await expect(page.locator('#favorite-count')).toHaveText('(0)');
 });
 
 for (const [width, language] of [

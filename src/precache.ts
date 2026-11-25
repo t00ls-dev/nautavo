@@ -54,4 +54,4 @@ export function pageKey(
 }
 
 /** Cache names belong to one build, so an update never mixes files of two builds. */
-export const CACHE_PREFIX = 'route-gpx-shell-';
+export const CACHE_PREFIX = 'nautavo-shell-';

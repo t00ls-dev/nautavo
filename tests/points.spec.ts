@@ -1394,7 +1394,7 @@ test('a route saved before turn directions gets them once, keeping its geometry'
     ],
   ];
   const backup = {
-    format: 'route-gpx-library',
+    format: 'nautavo-library',
     version: 1,
     routes: [
       {
@@ -1456,19 +1456,10 @@ test('a route saved before turn directions gets them once, keeping its geometry'
   // The saved entry now has the directions: reopening asks nothing. Wait for
   // the entry to be written before leaving the page.
   await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const db = await new Promise<IDBDatabase>((resolve) => {
-          const r = indexedDB.open('route-gpx');
-          r.onsuccess = () => resolve(r.result);
-        });
-        const rows = await new Promise<unknown[]>((resolve) => {
-          const r = db.transaction('routes').objectStore('routes').getAll();
-          r.onsuccess = () => resolve(r.result);
-        });
-        db.close();
-        return JSON.stringify(rows).includes('"modifier":"left"');
-      }),
+    .poll(async () =>
+      JSON.stringify(await libraryEntry(page, 'routes')).includes(
+        '"modifier":"left"',
+      ),
     )
     .toBe(true);
   // A fresh page without the route link, which would calculate the linked
@@ -1531,7 +1522,7 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
     { name: 'End', coord: [-22.9, -43.1] },
   ];
   const backup = {
-    format: 'route-gpx-library',
+    format: 'nautavo-library',
     version: 1,
     routes: [
       {

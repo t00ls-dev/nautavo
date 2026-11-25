@@ -34,7 +34,7 @@ export const PREFERENCE = {
    * When this browser last searched Nominatim, to space searches across tabs
    * (a time, no location). The only prefixed key, kept for compatibility.
    */
-  lastSearch: 'route-gpx-last-search',
+  lastSearch: 'nautavo-last-search',
 } as const;
 export type PreferenceKey = (typeof PREFERENCE)[keyof typeof PREFERENCE];
 

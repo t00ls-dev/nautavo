@@ -54,7 +54,9 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith(CACHE_PREFIX) && key !== cacheName)
+            // The app shell is this origin's only cache: any other name is
+            // an older build's, or one from before the prefix was renamed.
+            .filter((key) => key !== cacheName)
             .map((key) => caches.delete(key)),
         ),
       )

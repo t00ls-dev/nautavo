@@ -43,10 +43,11 @@ it('writes the name Nautavo in text; lowercase only in the wordmark, domain and 
     matches(
       lowercase,
       (line) =>
-        // The drawn wordmark, described, the npm package's identifier and
-        // this rule's own pattern.
+        // The drawn wordmark, described, the npm package's and the saved
+        // routes database's identifiers and this rule's own pattern.
         line.includes('The wordmark is **nautavo**') ||
         line.includes('"name": "nautavo"') ||
+        line.includes("LIBRARY_DATABASE = 'nautavo'") ||
         line.includes('const lowercase = '),
     ),
   ).toEqual([]);

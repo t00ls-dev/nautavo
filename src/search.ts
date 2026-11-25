@@ -45,7 +45,7 @@ export async function searchAddress(
       return d;
     };
     return navigator.locks
-      ? navigator.locks.request('route-gpx-nominatim', request)
+      ? navigator.locks.request('nautavo-nominatim', request)
       : request();
   });
 }
