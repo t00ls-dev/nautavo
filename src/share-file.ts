@@ -26,6 +26,15 @@ export const TCX_TYPES = [
 ];
 /** The type of a downloaded TCX course. */
 export const TCX_DOWNLOAD = 'application/vnd.garmin.tcx+xml;charset=utf-8';
+/** MIME types to offer for a FIT course, most specific first. */
+export const FIT_TYPES = [
+  'application/vnd.ant.fit',
+  'application/octet-stream',
+];
+/** The type of a downloaded FIT course. */
+export const FIT_DOWNLOAD = 'application/vnd.ant.fit';
+/** A text file, or the bytes of a binary one (FIT). */
+type Content = string | Uint8Array<ArrayBuffer>;
 /** MIME types to offer for a JSON backup, most specific first. */
 export const JSON_TYPES = [
   'application/json',
@@ -35,7 +44,7 @@ export const JSON_TYPES = [
 
 /** The content as a File of the first type the browser can share, or null. */
 export function shareFile(
-  content: string,
+  content: Content,
   name: string,
   canShare: (data: ShareData) => boolean,
   types: readonly string[] = GPX_TYPES,
@@ -62,7 +71,7 @@ export function sharesFirst(): boolean {
   return matchMedia('(pointer: coarse)').matches && canShareFiles();
 }
 
-function downloadFile(content: string, name: string, type: string) {
+function downloadFile(content: Content, name: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement('a');
   a.href = url;
@@ -79,7 +88,7 @@ export type ExportResult = 'shared' | 'cancelled' | 'downloaded';
  * share failure falls back to the download.
  */
 export async function exportFile(
-  content: string,
+  content: Content,
   name: string,
   options: {
     share: boolean;

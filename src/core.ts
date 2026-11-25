@@ -409,7 +409,7 @@ export function generateGpx(
   )
     throw new Error('No valid route geometry to export.');
   const tag = (s: string) => escapeXml(s);
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Nautavo"><metadata><name>${tag(name)}</name><time>${date.toISOString()}</time><keywords>Nautavo</keywords></metadata>${points
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Nautavo"><metadata><name>${tag(name)}</name><link href="${tag(import.meta.env.SITE_URL)}"><text>Nautavo</text></link><time>${date.toISOString()}</time><keywords>Nautavo</keywords></metadata>${points
     .filter((p) => p.coord)
     .map(
       (p) =>
@@ -422,7 +422,7 @@ export function generateGpx(
 export function filename(
   points: Point[],
   customName = '',
-  extension: 'gpx' | 'tcx' = 'gpx',
+  extension: 'gpx' | 'tcx' | 'fit' = 'gpx',
 ): string {
   const clean = (s: string, limit = 48) =>
     s
@@ -433,7 +433,7 @@ export function filename(
       .replace(/^-|-$/g, '')
       .slice(0, limit) || 'point';
   if (customName.trim())
-    return `${clean(customName.trim().replace(/\.(gpx|tcx)$/i, ''), 160)}.${extension}`;
+    return `${clean(customName.trim().replace(/\.(gpx|tcx|fit)$/i, ''), 160)}.${extension}`;
   return `${clean(points[0].name)}-to-${clean(points.at(-1)!.name)}.${extension}`;
 }
 export function meters(a: Coord, b: Coord): number {
