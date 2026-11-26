@@ -110,7 +110,9 @@ test.describe('desktop', () => {
     const tip = await onPage(page, value);
     expect(Math.abs(tip.x - (box.x + 75))).toBeLessThan(1.5);
     expect(Math.abs(tip.y - (box.y + 35 + 21))).toBeLessThan(1.5);
-    // A click sets the selected point where it was clicked.
+    // A click sets the point chosen in the list where it was clicked.
+    await page.getByRole('button', { name: 'Select point 2' }).click();
+    await mapIdle(page);
     await page.mouse.click(700, 420);
     const clicked = (await page.locator('#location-1').inputValue())
       .split(',')

@@ -148,8 +148,10 @@ test.describe('bottom sheet', () => {
     await page.goto(base);
     const message =
       'Route imported. Edits recalculate only the changed sections.';
+    // Calculate route as after a failed calculation, when it shows (#296).
     await page.evaluate((text) => {
       document.getElementById('status')!.textContent = text;
+      document.getElementById('calculate')!.hidden = false;
     }, message);
     const peek = page.locator('#peek-status');
     await expect(peek).toHaveText(message);
@@ -909,6 +911,10 @@ test.describe('touch accessibility at 320 px', () => {
   });
   test('a disabled Calculate route keeps 4.5:1 contrast', async ({ page }) => {
     await page.goto(base);
+    // It shows disabled after a failure while a point is being edited (#296).
+    await page.evaluate(
+      () => (document.getElementById('calculate')!.hidden = false),
+    );
     await expect(page.locator('#calculate')).toBeDisabled();
     const ratio = await page.locator('#calculate').evaluate((button) => {
       const rgb = (color: string) => color.match(/[\d.]+/g)!.map(Number);

@@ -482,8 +482,9 @@ export function setupWeather(
         : '';
 
       const severity = risks[0]?.severity ?? 0;
-      // The badge names the main risk (#215); no badge without one.
-      const main = severity ? risks[0].text : null;
+      // The badge names the main risk (#215), or light rain likely in the
+      // card's neutral color (#300); no badge without either.
+      const main = risks[0]?.text ?? null;
       const item = document.createElement('li');
       const detail = document.createElement('button');
       detail.type = 'button';
@@ -594,6 +595,7 @@ export function setupWeather(
       // Line 4, only with other risks than the badge's, the sky's and UV's.
       const extraRisks = risks.filter(
         (risk) =>
+          risk.severity > 0 &&
           risk.text !== main &&
           risk.text !== weather.text &&
           !UV_RISKS.has(risk.text),

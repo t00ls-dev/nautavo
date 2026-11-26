@@ -29,6 +29,13 @@ export function rememberLanguage(lang: Language): void {
 export function preferredLanguage(): Language {
   return storedLanguage() ?? detectLanguage();
 }
+/**
+ * Portuguese translations. Glossary (one term per concept, #212, #298):
+ * Partida is the departure time, Saída a roundabout exit, Início / Destino /
+ * Parada the route points, Clima the weather; "elevation" (the data, the
+ * profile, gain and loss) is always Elevação and "altitude" (a value of a
+ * recorded activity) Altitude, as in English.
+ */
 const pt: Record<string, string> = {
   'Add to home screen': 'Adicionar à tela inicial',
   'Open Nautavo from an icon, like an app. It opens in your browser, and saved routes open even without a connection.':
@@ -91,7 +98,7 @@ const pt: Record<string, string> = {
   'Terrain Tiles by Mapzen on AWS Open Data':
     'Terrain Tiles da Mapzen no AWS Open Data',
   'Elevation sources: SRTM, GMTED2010, ETOPO1 and others':
-    'Fontes de altitude: SRTM, GMTED2010, ETOPO1 e outras',
+    'Fontes de elevação: SRTM, GMTED2010, ETOPO1 e outras',
   'This browser cannot draw the map. Follow the directions.':
     'Este navegador não consegue desenhar o mapa. Siga as indicações.',
   'Back to route': 'Volte à rota',
@@ -231,6 +238,7 @@ const pt: Record<string, string> = {
   Thunderstorm: 'Trovoada',
   'Heavy rain': 'Chuva forte',
   'Rain risk': 'Risco de chuva',
+  'Light rain likely': 'Garoa provável',
   'Fog / low visibility': 'Neblina / baixa visibilidade',
   'Strong wind gusts': 'Rajadas de vento fortes',
   'Cold / possible ice': 'Frio / possível gelo',
@@ -390,7 +398,7 @@ const pt: Record<string, string> = {
   'Share FIT with turns': 'Compartilhar FIT com curvas',
   'FIT downloaded.': 'FIT baixado.',
   'File saved without elevation. Open Elevation before downloading to include it.':
-    'Arquivo salvo sem altitude. Abra a Elevação antes de baixar para incluí-la.',
+    'Arquivo salvo sem elevação. Abra a Elevação antes de baixar para incluí-la.',
   'Course exported without turns: directions are not available now.':
     'Curso exportado sem as curvas: as instruções não estão disponíveis agora.',
   'Link copied.': 'Link copiado.',
@@ -560,7 +568,7 @@ const pt: Record<string, string> = {
   'Elevation service returned an invalid response.':
     'O serviço de elevação retornou uma resposta inválida.',
   'No elevation data for this route.': 'Sem dados de elevação para esta rota.',
-  'Elevation estimated from terrain.': 'Altitude estimada pelo relevo.',
+  'Elevation estimated from terrain.': 'Elevação estimada pelo relevo.',
   'See the help.': 'Veja a ajuda.',
   'Recorded in the imported file.': 'Gravada no arquivo importado.',
   'Elevation here': 'Elevação aqui',
@@ -816,14 +824,21 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
       `${n} ${n === '1' ? 'amostra' : 'amostras'} a mais aqui${none ? ', nenhuma pior' : ''}`,
   ],
   [/^(\d+) of (\d+) with alerts$/, (a, b) => `${a} de ${b} com alerta`],
-  [/^Check road positions: (.*?)$/, (p) => `Confira os pontos nas vias: ${p}`],
+  [
+    /^Off the road: (.*?)\. The route uses the nearest road\.$/,
+    (p) =>
+      `Fora da via: ${p.replace(/point (\d+)/g, 'ponto $1')}. A rota usa a via mais próxima.`,
+  ],
 
-  [/^1 road section to review$/, () => '1 trecho para conferir'],
+  [/^1 local road section · (.+)$/, (d) => `1 trecho em via local · ${d}`],
   [
     /^This route cannot be followed exactly in (\d+) places:$/,
     (n) => `Esta rota não pode ser seguida exatamente em ${n} trechos:`,
   ],
-  [/^(\d+) road sections to review$/, (n) => `${n} trechos para conferir`],
+  [
+    /^(\d+) local road sections · (.+)$/,
+    (n, d) => `${n} trechos em vias locais · ${d}`,
+  ],
   [/^Itinerary \((\d+)\)$/, (n) => `Itinerário (${n})`],
 
   [/^(\d+) points$/, (n) => `${n} pontos`],

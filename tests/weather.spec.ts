@@ -350,7 +350,7 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
     'Ganho de elevação 3.281 ft',
   );
   await expect(page.locator('#elevation-stats')).toContainText(
-    'Altitude estimada pelo relevo. Veja a ajuda.',
+    'Elevação estimada pelo relevo. Veja a ajuda.',
   );
   expect(requests).toHaveLength(count);
 });
@@ -938,6 +938,16 @@ test('the highest and lowest points are marked on the map while Elevation is ope
   const lowBox = (await lowest.boundingBox())!,
     highBox = (await highest.boundingBox())!;
   expect(lowBox.x).toBeLessThan(highBox.x);
+  // Its route point dragged to the map's edge, a label slides inside the map
+  // instead of being cut (#297).
+  const mapBox = (await page.locator('#map').boundingBox())!;
+  await page.mouse.move(lowBox.x + lowBox.width / 2, lowBox.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(mapBox.x + 4, lowBox.y + 60, { steps: 8 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await lowest.boundingBox())!.x)
+    .toBeGreaterThanOrEqual(mapBox.x);
   await chooseUnits(page, { distance: 'imperial' });
   await expect(highest).toHaveText(/\sft$/);
   await page.locator('#elevation > summary').click();
@@ -983,7 +993,7 @@ for (const mobile of [false, true])
     await expect(popup.locator('.elevation-point-value')).toHaveText(
       'Cerca de 812 m',
     );
-    await expect(popup).toContainText('Altitude estimada pelo relevo.');
+    await expect(popup).toContainText('Elevação estimada pelo relevo.');
     // Exactly one request, for one point.
     expect(requests).toHaveLength(1);
     expect(requests[0].searchParams.get('latitude')!.split(',')).toHaveLength(
@@ -1960,7 +1970,7 @@ for (const [severity, color] of [
         const values = row.hourly;
         values.temperature_2m.fill(location % 2 ? 23 : 20);
         values.precipitation_probability.fill(severity === 1 ? 80 : 0);
-        values.precipitation.fill(severity === 3 ? 12 : 0);
+        values.precipitation.fill(severity === 3 ? 12 : severity === 1 ? 2 : 0);
         values.weather_code.fill(severity === 3 ? 65 : 0);
         values.wind_gusts_10m.fill(severity === 2 ? 65 : 10);
       }
@@ -2523,7 +2533,7 @@ for (const speed of [99.9, 160.7])
     await check(kmh.replace('.', ','), 'km/h');
   });
 
-test('automatic routing reuses recent geometry while Calculate route requests a fresh result', async ({
+test('automatic routing reuses recent geometry, and Calculate route shows only where it does something', async ({
   page,
 }) => {
   let calls = 0;
@@ -2540,9 +2550,8 @@ test('automatic routing reuses recent geometry while Calculate route requests a 
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled();
   expect(calls).toBe(2);
-  await page.locator('#calculate').click();
-  await expect.poll(() => calls).toBe(3);
-  await expect(page.locator('#download')).toBeEnabled();
+  // A ready route needs no button (#296): routing runs after every edit.
+  await expect(page.locator('#calculate')).toBeHidden();
 });
 
 test('weather markers leave route endpoint controls clickable', async ({

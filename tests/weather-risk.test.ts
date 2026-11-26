@@ -21,7 +21,7 @@ const normal: WeatherHour = {
   uv: 0,
 };
 it.each([
-  ['probability', T.rainProbability, 'Rain risk'],
+  ['probability', T.rainProbability, 'Light rain likely'],
   ['precipitation', T.rain, 'Rain risk'],
   ['precipitation', T.heavyRain, 'Heavy rain'],
   ['gusts', T.strongGusts, 'Strong wind gusts'],
@@ -51,6 +51,17 @@ it.each([
   expect(
     classifyWeather([{ ...normal, [field]: value + 0.01 }]).map((r) => r.text),
   ).not.toContain(text);
+});
+it('names likely light rain without an alert, and only when no rain alert does (#300)', () => {
+  expect(
+    classifyWeather([{ ...normal, probability: 90, precipitation: 0.2 }]),
+  ).toEqual([{ text: 'Light rain likely', severity: 0 }]);
+  expect(
+    classifyWeather([
+      { ...normal, probability: 90, precipitation: 0.2 },
+      { ...normal, probability: 90, precipitation: 2 },
+    ]).map((r) => r.text),
+  ).toEqual(['Rain risk']);
 });
 it.each([95, 96, 99])('recognizes thunderstorm code %i', (code) =>
   expect(classifyWeather([{ ...normal, code }])[0]).toEqual({

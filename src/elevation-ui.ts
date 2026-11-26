@@ -2,6 +2,7 @@ import {
   highlightLayers,
   lineFeature,
   MapPopup,
+  outsideMap,
   RANK,
   type MapMarker,
   type PlannerMap,
@@ -109,6 +110,25 @@ export function setupElevation(
   // Highest and lowest points of the profile, while the row is open: labels
   // below the route (route point pins stand above it), over the chosen climb.
   const extremesLayer = group();
+  /** The labels on the map, slid sideways to stay inside it (#297). */
+  let extremeChips: HTMLElement[] = [];
+  function keepExtremesInside() {
+    for (const chip of extremeChips) {
+      chip.style.removeProperty('--shift');
+      const { dx } = outsideMap(map, chip, 8);
+      if (dx) chip.style.setProperty('--shift', `${-dx}px`);
+    }
+  }
+  // Measured in the next frame: markers take their new place after this
+  // listener runs.
+  let framed = 0;
+  map.on('move', () => {
+    if (!extremeChips.length || framed) return;
+    framed = requestAnimationFrame(() => {
+      framed = 0;
+      keepExtremesInside();
+    });
+  });
   let selected = -1,
     settle: ReturnType<typeof setTimeout> | undefined,
     cancelWait = () => {},
@@ -364,6 +384,7 @@ export function setupElevation(
    */
   function showExtremes(index: ReturnType<typeof indexTrack>) {
     extremesLayer.clearLayers();
+    extremeChips = [];
     const extremes = profile && details.open && elevationExtremes(profile);
     if (!extremes) return;
     for (const [kind, point] of [
@@ -377,6 +398,7 @@ export function setupElevation(
       const text = document.createElement('span');
       text.textContent = elevationLabel(point.ele, units(), locale());
       chip.append(icon('summit'), text);
+      extremeChips.push(chip);
       extremesLayer.add(
         map.marker(at.coord, {
           className: 'map-extreme-marker',
@@ -387,6 +409,7 @@ export function setupElevation(
         }),
       );
     }
+    keepExtremesInside();
   }
 
   /**

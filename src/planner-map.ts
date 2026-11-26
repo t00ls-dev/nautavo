@@ -700,6 +700,29 @@ export function highlightLayers(
 }
 
 /**
+ * How far an element on the map reaches past the map's edges, keeping
+ * `margin` px from them and clear of the tool column on the right: negative
+ * past the left or top, positive past the right or bottom, else 0.
+ */
+export function outsideMap(
+  map: PlannerMap,
+  element: Element,
+  margin = 16,
+): { dx: number; dy: number } {
+  const box = element.getBoundingClientRect(),
+    edges = map.container.getBoundingClientRect();
+  const tools = optionalById('map-corner-top-right')?.offsetWidth ?? 0;
+  return {
+    dx:
+      Math.min(0, box.left - edges.left - margin) ||
+      Math.max(0, box.right - edges.right + margin + tools),
+    dy:
+      Math.min(0, box.top - edges.top - margin) ||
+      Math.max(0, box.bottom - edges.bottom + margin),
+  };
+}
+
+/**
  * A popup above a map point: a box with a tip, kept inside the map by
  * panning it into view when it opens.
  */
@@ -742,22 +765,11 @@ export class MapPopup {
     this.marker.element.style.pointerEvents = '';
     requestAnimationFrame(() => this.inView());
   }
-  /**
-   * Pans the map so the whole popup shows, 16 px from the edges and clear of
-   * the tool column on the right.
-   */
+  /** Pans the map so the whole popup shows (`outsideMap`). */
   private inView() {
     const gl = this.map.gl();
     if (!gl || !this.marker) return;
-    const box = this.element.getBoundingClientRect(),
-      map = this.map.container.getBoundingClientRect();
-    const tools = optionalById('map-corner-top-right')?.offsetWidth ?? 0;
-    const dx =
-      Math.min(0, box.left - map.left - 16) ||
-      Math.max(0, box.right - map.right + 16 + tools);
-    const dy =
-      Math.min(0, box.top - map.top - 16) ||
-      Math.max(0, box.bottom - map.bottom + 16);
+    const { dx, dy } = outsideMap(this.map, this.element);
     if (dx || dy) gl.panBy([dx, dy]);
   }
   close() {
