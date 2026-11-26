@@ -1,7 +1,13 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASEMAP_STYLE, mockBasemap, mapCanvas } from './map-helpers';
 import { readFile } from 'node:fs/promises';
-import { base, openAdvancedSettings, mockRegion } from './app-helpers';
+import {
+  base,
+  openAdvancedSettings,
+  mockRegion,
+  exportAs,
+  saveRoute,
+} from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
   await mockBasemap(page);
@@ -353,14 +359,14 @@ test('GPX bytes remain identical across map layers and saved state contains no l
     await page.getByRole('menuitemradio', { name, exact: true }).click();
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('#download').click(),
+      exportAs(page, 'download'),
     ]);
     const xml = await readFile(await download.path(), 'utf8');
     if (!original) original = xml;
     else expect(xml).toBe(original);
   }
   await page.locator('#route-name').fill('Layer-independent');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   const [backup] = await Promise.all([
     page.waitForEvent('download'),

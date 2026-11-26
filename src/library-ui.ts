@@ -65,6 +65,8 @@ export function setupLibrary(deps: {
   generatedName: (point: Point) => boolean;
   /** A point took a favorite's name: the address and the editor follow. */
   pointNamed: () => void;
+  /** The route takes this name, as the Route name field gives it. */
+  rename: (name: string) => void;
   map: PlannerMap;
   photonUrl: () => string;
   /** Exports share first on this device (`sharesFirst`). */
@@ -77,18 +79,13 @@ export function setupLibrary(deps: {
     $('share-gpx').hidden = deps.shareExports || !canShareFiles();
     $<HTMLButtonElement>('share-gpx').disabled =
       !deps.route() || deps.pending();
-    const button = $<HTMLButtonElement>('save-route');
-    button.disabled =
-      savingRoute ||
-      !deps.route() ||
-      !deps.state().name.trim() ||
-      deps.pending();
-    button.textContent = savedEntries.some(
-      (r) => r.id === libraryKey(deps.state().name),
-    )
-      ? 'Update saved route'
-      : 'Save route';
+    // The name is asked in the save sheet (#301).
+    $<HTMLButtonElement>('save-route').disabled =
+      savingRoute || !deps.route() || deps.pending();
   }
+  /** A saved route already has this name: saving replaces it. */
+  const savedAs = (name: string) =>
+    savedEntries.some((r) => r.id === libraryKey(name));
   /** Favorite places (#52), kept on this device next to the saved routes. */
   let favoriteEntries: Favorite[] = [];
   const editFavoriteSheet = favoriteDialog({
@@ -408,7 +405,46 @@ export function setupLibrary(deps: {
     $('backup-status').textContent = message;
     $('backup-status').classList.toggle('error', error);
   }
+  // Save route asks for the name in its own sheet (#301), filled with the
+  // route's name; one already saved is replaced, and the sheet says so.
+  const saveSheet = $<HTMLDialogElement>('save-dialog'),
+    saveName = $<HTMLInputElement>('save-name'),
+    saveError = $('save-error'),
+    saveConfirm = $('save-confirm');
+  const describeSave = () => {
+    saveConfirm.textContent = savedAs(saveName.value.trim())
+      ? 'Update saved route'
+      : 'Save';
+  };
+  saveName.oninput = () => {
+    saveError.hidden = true;
+    saveName.removeAttribute('aria-invalid');
+    describeSave();
+  };
   $('save-route').onclick = () => {
+    if (!deps.route() || deps.pending()) return;
+    saveName.value = deps.state().name;
+    saveError.hidden = true;
+    saveName.removeAttribute('aria-invalid');
+    describeSave();
+    saveSheet.showModal();
+  };
+  $('save-cancel').onclick = () => saveSheet.close();
+  $('save-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = saveName.value.trim();
+    if (!name) {
+      saveError.textContent = 'Name the route to save it.';
+      saveError.hidden = false;
+      saveName.setAttribute('aria-invalid', 'true');
+      saveName.focus();
+      return;
+    }
+    saveSheet.close();
+    deps.rename(name);
+    saveRoute();
+  });
+  function saveRoute() {
     if (!deps.route() || !deps.state().name.trim() || deps.pending()) return;
     const snapshot = structuredClone(deps.state());
     const route = structuredClone(deps.route()!);
@@ -429,7 +465,7 @@ export function setupLibrary(deps: {
         savingRoute = false;
         updateSaveButton();
       });
-  };
+  }
   if (deps.shareExports) $('backup-routes').textContent = 'Share backup';
   $('backup-routes').onclick = () => {
     if (!savedEntries.length && !favoriteEntries.length) return;

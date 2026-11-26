@@ -8,6 +8,7 @@ import {
   mockRegion,
   parisRegion,
   regionRoute,
+  saveRoute,
 } from './app-helpers';
 import { weatherResponse } from './weather-fixture';
 import { REGION_PATH } from '../src/region';
@@ -103,7 +104,7 @@ test('granted GPS centers the marker and accuracy circle without storing or tran
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled();
   await page.locator('#route-name').fill('GPS approximate start');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   await noExactStorage(page);
   expect(sent.join('\n')).not.toContain(String(position.latitude));

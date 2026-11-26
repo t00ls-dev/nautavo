@@ -1,3 +1,4 @@
+import { openTripOptions } from './app-helpers';
 import { expect, type Page } from '@playwright/test';
 import { speedNotches } from '../src/travel-time';
 
@@ -29,5 +30,6 @@ export async function setSpeed(
 ): Promise<void> {
   const index = speedNotches(units).indexOf(speed);
   if (index < 0) throw new Error(`${speed} is not a speed notch`);
+  await openTripOptions(page);
   await page.locator('#average-speed').fill(String(index));
 }

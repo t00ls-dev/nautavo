@@ -2,7 +2,7 @@ import { mapCanvas, mapIdle } from './map-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { chooseUnits } from './unit-settings';
-import { base } from './app-helpers';
+import { base, openTripOptions } from './app-helpers';
 
 // A winding road of about 390 km, so the whole-route view clusters markers.
 const road: [number, number][] = [];
@@ -79,6 +79,7 @@ async function open(page: Page, language: 'en' | 'pt') {
   await page.goto(base + encodeState(state));
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   await page.locator('#weather-section > summary').click();
+  await openTripOptions(page);
   await page.locator('#departure').fill('2026-11-08T10:00');
   await page.locator('#departure').press('Tab');
   await expect(page.locator('.weather-card')).toHaveCount(11);
@@ -293,6 +294,7 @@ test('a loop with stops that comes back near itself shows no overlapping markers
   await page.goto(base + encodeState(state));
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   await page.locator('#weather-section > summary').click();
+  await openTripOptions(page);
   await page.locator('#departure').fill('2026-11-08T10:00');
   await page.locator('#departure').press('Tab');
   await expect(page.locator('.weather-card').first()).toBeVisible();

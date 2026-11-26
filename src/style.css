@@ -826,6 +826,27 @@ header button.icon-control {
 .trip-options[open] {
   padding-bottom: 6px;
 }
+/* Closed, it reads as one line of what it holds (#303). */
+.trip-options > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  padding: 6px 0;
+}
+.trip-options > summary::after {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+}
+.trip-line {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+.trip-options[open] .trip-line,
+.trip-line:empty {
+  display: none;
+}
 /* The label sits above the field, which takes the full width. */
 .departure-field {
   display: flex;
@@ -893,6 +914,44 @@ header button.icon-control {
   display: flex;
   flex-direction: column;
 }
+/* The route's ends, and Navigate on phones (#301, #302). */
+.summary-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+#summary-title {
+  display: -webkit-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+#summary-title .button-icon {
+  display: inline;
+  width: 16px;
+  height: 16px;
+  margin: 0 4px;
+  vertical-align: -2px;
+}
+/* Ascent loads on a tap (#302): the button sits where the value goes. */
+.stats .ascent-show {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .stats {
   display: flex;
   flex-wrap: wrap;
@@ -911,6 +970,7 @@ header button.icon-control {
 }
 .stats dt {
   font-size: 13px;
+  line-height: 18px;
   color: var(--color-text-muted);
 }
 .stats dd {
@@ -918,6 +978,9 @@ header button.icon-control {
 }
 .stats strong {
   font-size: 20px;
+  /* Whole pixels: the cards' height changes with the arrival's second line,
+     and the panel keeps the field below in place by whole pixels. */
+  line-height: 26px;
   font-weight: 650;
   letter-spacing: -0.3px;
   white-space: nowrap;
@@ -925,6 +988,7 @@ header button.icon-control {
 .stats dd span {
   display: block;
   font-size: 13px;
+  line-height: 18px;
   color: var(--color-text-muted);
 }
 .stats-basis {
@@ -1271,8 +1335,10 @@ div.step-item {
   }
 }
 
-/* Export actions, always in view below the scrolling panel. */
+/* Route actions, always in view below the scrolling panel (#301): the route
+   name, then Save route and Export, whose menu opens above the bar. */
 .action-bar {
+  position: relative;
   display: flex;
   flex: none;
   flex-direction: column;
@@ -1282,98 +1348,86 @@ div.step-item {
   background: var(--color-surface);
   box-shadow: 0 -4px 12px #1b29340f;
 }
-.more-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .gpx-name label {
+  display: block;
   margin: 0 0 4px;
   font-size: 13px;
   color: var(--color-text-muted);
 }
-.save-name,
-.export-actions,
-.secondary-actions {
+.gpx-name input {
+  width: 100%;
+}
+.export-actions {
   display: flex;
   gap: 8px;
 }
-.save-name input {
+.export-actions > button {
   flex: 1 1 0;
-  width: 0;
+  white-space: nowrap;
+}
+#export[aria-expanded='true'],
+#more-actions[aria-expanded='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-soft);
+}
+.export-menu {
+  position: absolute;
+  z-index: 20;
+  right: 16px;
+  bottom: calc(100% - 4px);
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  /* Clear of the header on short screens (a phone in landscape): the
+     choices scroll instead. */
+  max-height: calc(100dvh - 180px - var(--safe-top, 0px));
+  overflow-y: auto;
+}
+.export-menu > button {
+  flex: none;
+  justify-content: flex-start;
+  text-align: left;
+}
+.export-menu .button-label {
+  display: flex;
+  flex-direction: column;
+}
+/* Each export says what it is for, below its name. */
+.export-note {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+button:disabled .export-note {
+  color: inherit;
+}
+/* More actions holds Import and Add to home screen on phones only; wide
+   screens import beside Saved routes. */
+.more-panel,
+#more-actions {
+  display: none;
 }
 .secondary-actions {
+  display: flex;
   flex-wrap: wrap;
+  gap: 8px;
 }
 .secondary-actions > * {
-  flex: 1 1 auto;
+  flex: 1 1 100%;
 }
-#download {
-  flex: 1 1 0;
+#library-import {
+  margin: 0 0 8px;
 }
-/* Guided navigation is offered in the phone layout only (see below). */
+/* Guided navigation is offered in the phone layout only, in the summary
+   (#301): planning comes first. */
 #navigate {
   display: none;
-}
-#more-actions,
-.label-long {
-  display: none;
-}
-/* Wide screens: name and save on one line, every export action on the next. */
-@media (min-width: 760px) and (min-height: 501px) {
-  .action-bar {
-    flex-flow: row wrap;
-  }
-  .more-panel,
-  .secondary-actions,
-  .export-actions {
-    display: contents;
-  }
-  .gpx-name {
-    flex: 1 1 100%;
-  }
-  #download {
-    order: 1;
-  }
-  #share {
-    order: 2;
-  }
-  .secondary-actions > * {
-    flex: 0 0 auto;
-    order: 3;
-  }
-  /* Download GPX keeps its label on one line in the sidebar's width; the
-     other export actions are square icon buttons, named by aria-label and
-     title, as in the phone's action bar. */
-  #download {
-    white-space: nowrap;
-  }
-  #share,
-  #share-gpx,
-  .secondary-actions .file-button {
-    flex: 0 0 auto;
-    justify-content: center;
-    width: 52px;
-    padding: 0;
-  }
-  #share .button-label,
-  #share-gpx .button-label,
-  .secondary-actions .file-button .label-short,
-  .secondary-actions .file-button .label-long {
-    display: none;
-  }
-}
-
-/* Add to home screen and the courses take a whole row in More actions. */
-#add-home,
-#download-tcx,
-#download-fit {
-  flex-basis: 100%;
-}
-@media (min-width: 760px) and (min-height: 501px) {
-  #add-home {
-    display: none;
-  }
 }
 
 /* Settings dialog. */
@@ -1902,54 +1956,26 @@ dialog.settings::backdrop {
     display: flex;
     padding: 10px 16px max(12px, env(safe-area-inset-bottom, 0px));
   }
-  .more-panel {
+  /* The name is asked when saving, in its own sheet. */
+  .gpx-name {
     display: none;
   }
   .more-open .more-panel {
     display: flex;
+    flex-direction: column;
   }
-  #more-actions,
-  .label-long {
+  #more-actions {
     display: inline-flex;
-  }
-  .label-short {
-    display: none;
-  }
-  #more-actions[aria-expanded='true'] {
-    border-color: var(--color-primary);
-    background: var(--color-soft);
-  }
-  #share,
-  #download {
+    flex: 0 0 auto;
     width: var(--control);
-    padding: 0;
   }
-  #share .button-label,
-  #download .button-label {
-    display: none;
-  }
-  /* Navigate is the main action on phones; Download becomes an icon. */
   #navigate {
     display: inline-flex;
-    flex: 1 1 0;
+    flex: none;
   }
-  #download {
-    flex: 0 0 auto;
-  }
-  #download.primary {
-    border-color: var(--color-border-strong);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font-weight: 550;
-  }
-  #download.primary:hover:not(:disabled) {
-    background: var(--color-subtle);
-    color: var(--color-text);
-  }
-  #download.primary:disabled {
-    border-color: var(--color-border);
-    background: #e8edf1;
-    color: var(--color-text-disabled);
+  /* Room for wider fonts on the narrowest phones. */
+  .export-actions > button {
+    padding-inline: 10px;
   }
   .map-note,
   .planner.panel-closed .map-note {
@@ -3481,8 +3507,24 @@ dialog.home-dialog::backdrop {
   box-shadow: 0 0 0 12px var(--color-surface);
 }
 #nav-resume-dismiss,
-#favorite-cancel {
+#favorite-cancel,
+#save-cancel {
   margin-top: 8px;
+}
+/* Save route sheet (#301): the name the route is saved under. */
+.save-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.save-dialog label[for='save-name'] {
+  display: block;
+  margin: 0 0 6px;
+  font-weight: 650;
+}
+#save-name {
+  width: 100%;
+  margin: 0 0 12px;
+  font-size: 16px;
 }
 /* Favorite place sheet (#52): icon choice, name and the place it keeps. */
 .favorite-dialog h2 {
@@ -3559,7 +3601,7 @@ dialog.home-dialog::backdrop {
   margin: 0 0 6px;
   font-weight: 650;
 }
-.favorite-error {
+.dialog-error {
   margin: -4px 0 12px;
   color: var(--color-danger);
 }
@@ -4600,9 +4642,11 @@ dialog:modal:not(.nav-screen) {
 .activity[hidden],
 body.activity-open #route-panel > :not(#activity),
 body.activity-open .more-panel,
+body.activity-open .gpx-name,
+body.activity-open .export-menu,
 body.activity-open #navigate,
-body.activity-open #download,
-body.activity-open #share,
+body.activity-open #save-route,
+body.activity-open #export,
 body.activity-open #more-actions,
 body.activity-open #map-note,
 body.activity-open #undo,
@@ -4941,4 +4985,15 @@ body.activity-open #fit {
   min-height: 44px;
   padding: 0 8px;
   white-space: nowrap;
+}
+/* The narrowest phones keep the route's ends readable: Navigate shows its
+   icon, named by its label. */
+@media (max-width: 359px) {
+  #navigate {
+    width: var(--control);
+    padding: 0;
+  }
+  #navigate .button-label {
+    display: none;
+  }
 }

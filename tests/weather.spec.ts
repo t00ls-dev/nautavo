@@ -9,7 +9,14 @@ import {
   holdMap,
   overlayCount,
 } from './map-helpers';
-import { base, libraryEntry, openAdvancedSettings } from './app-helpers';
+import {
+  base,
+  libraryEntry,
+  openAdvancedSettings,
+  exportAs,
+  saveRoute,
+  openTripOptions,
+} from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
 async function setup(
@@ -76,6 +83,7 @@ async function setup(
   await page.locator('#weather-section > summary').click();
 }
 async function date(page: Page, value = '2026-11-08T10:00') {
+  await openTripOptions(page);
   await page.locator('#departure').fill(value);
   await page.locator('#departure').press('Tab');
 }
@@ -195,10 +203,12 @@ test('daylight shows today without a departure, dark sections for an evening dep
   // 1 h 51 min at the 60 km/h set by the test, after a 16:30 UTC departure.
   await expect(page.locator('#summary dt')).toHaveText([
     'Distance',
-    'Time',
+    'Ascent',
     'Arrival',
   ]);
-  await expect(page.locator('#summary dd').nth(2)).toHaveText('06:21 PM');
+  await expect(page.locator('#summary dd').nth(2).locator('strong')).toHaveText(
+    '06:21 PM',
+  );
   await expect(page.locator('#summary')).toContainText('At 60 km/h · no stops');
   await expect(details).toContainText(
     /Daylight at the start from \d\d:\d\d [AP]M\./,
@@ -400,7 +410,7 @@ test('the automatic departure follows the next half hour until the user chooses 
   await expect(page.locator('#auto-departure')).toBeChecked();
   await expect(page.locator('#summary dt')).toHaveText([
     'Distance',
-    'Time',
+    'Ascent',
     'Arrival',
   ]);
   await page.locator('#weather-section > summary').click();
@@ -416,6 +426,7 @@ test('the automatic departure follows the next half hour until the user chooses 
   expect(forecasts).toHaveLength(2);
 
   // Choosing the same time fixes it: it no longer moves.
+  await openTripOptions(page);
   await page.locator('#departure').fill('2026-11-07T11:00');
   await page.locator('#departure').press('Tab');
   await expect(page.locator('#auto-departure')).not.toBeChecked();
@@ -476,6 +487,7 @@ test('departure changes keep the field in place without scroll anchoring', async
   await page.addStyleTag({
     content: '* { overflow-anchor: none !important; }',
   });
+  await openTripOptions(page);
   const box = page.locator('#auto-departure');
   await box.scrollIntoViewIfNeeded();
   const top = (locator = box) =>
@@ -499,6 +511,7 @@ test('the automatic departure can be turned off on the device', async ({
   // setup opened Weather; the automatic departure already requested it.
   await expect(page.locator('#departure')).toHaveValue('2026-11-07T10:00');
   await expect(page.locator('#weather-result')).toBeVisible();
+  await openTripOptions(page);
   await page.locator('#auto-departure').uncheck();
   await expect(page.locator('#departure')).toHaveValue('');
   await expect(page.locator('#weather-result')).toBeHidden();
@@ -1173,7 +1186,61 @@ test('recorded GPX elevations need no request', async ({ page }) => {
   await expect(page.locator('#elevation-stats')).toContainText(
     'Recorded in the imported file.',
   );
+  // The summary's Ascent shows it at once (#302): it costs nothing.
+  await expect(page.locator('#summary-ascent')).toHaveText('100 m');
   expect(requests).toHaveLength(0);
+});
+test('the summary asks for the ascent only on a tap, then keeps showing it (#302)', async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await setup(page, true);
+  await page.route('**/v1/elevation?**', (r) => {
+    requests.push(r.request().url());
+    const lons = new URL(r.request().url()).searchParams
+      .get('longitude')!
+      .split(',')
+      .map(Number);
+    return r.fulfill({
+      json: { elevation: lons.map((lon) => 100 + 400 * lon) },
+    });
+  });
+  const ascent = page.locator('#summary-ascent');
+  await expect(
+    ascent.getByRole('button', { name: 'Show ascent' }),
+  ).toBeVisible();
+  await page.waitForTimeout(2500);
+  expect(requests).toHaveLength(0);
+  await ascent.getByRole('button', { name: 'Show ascent' }).click();
+  await expect(ascent).toHaveText(/^4\d\d\sm$/);
+  expect(requests.length).toBeGreaterThan(0);
+  // In miles and feet, without asking again.
+  const asked = requests.length;
+  await chooseUnits(page, { distance: 'imperial' });
+  await expect(ascent).toHaveText(/\sft$/);
+  expect(requests).toHaveLength(asked);
+  await page.locator('#language').selectOption('pt');
+  await expect(
+    page.locator('#summary dt').filter({ hasText: 'Subida' }),
+  ).toBeVisible();
+});
+test('Trip options folds into one line once the route shows (#303)', async ({
+  page,
+}) => {
+  await setup(page, true);
+  const options = page.locator('#trip-options');
+  await expect(options).not.toHaveAttribute('open', '');
+  await expect(page.locator('#trip-line')).toHaveText(
+    'No departure · 60 km/h · Main roads',
+  );
+  await page.locator('#language').selectOption('pt');
+  await expect(page.locator('#trip-line')).toHaveText(
+    'Sem partida · 60 km/h · Vias principais',
+  );
+  // Opened by the user, it stays open.
+  await options.locator('summary').click();
+  await expect(page.locator('#departure')).toBeVisible();
+  await expect(page.locator('#trip-line')).toBeHidden();
 });
 test('no date or invalid dates never request weather', async ({ page }) => {
   await setup(page);
@@ -1194,7 +1261,7 @@ test('no date or invalid dates never request weather', async ({ page }) => {
   }
   await date(page, '');
   await page.locator('#route-name').fill('No weather');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   expect(calls).toBe(0);
 });
@@ -1336,7 +1403,7 @@ test('departure persists but forecasts and samples do not; reload refreshes; GPX
   const download = async () => {
     const [d] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('#download').click(),
+      exportAs(page, 'download'),
     ]);
     return readFile(await d.path(), 'utf8');
   };
@@ -1350,7 +1417,7 @@ test('departure persists but forecasts and samples do not; reload refreshes; GPX
     [...Object.keys(defaults()), 'departure', 'language'].sort(),
   );
   await page.locator('#route-name').fill('Weather saved');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   const stored = {
     ...(await page.evaluate(() => ({

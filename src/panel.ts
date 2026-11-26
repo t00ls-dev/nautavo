@@ -1,6 +1,6 @@
 import type { PlannerMap } from './planner-map';
-import { icon, iconControl } from './icons';
-import { byId as $ } from './dom';
+import { type IconName, icon, iconControl } from './icons';
+import { byId as $, text } from './dom';
 import { sharesFirst } from './share-file';
 import { readSession, SESSION, writeSession } from './preferences';
 import { swallowNextClick } from './touch-click';
@@ -61,31 +61,60 @@ export function setupPanel(map: PlannerMap): void {
   iconControl($('reverse'), 'swap', 'Reverse');
   iconControl($('roundtrip'), 'roundtrip', 'Round trip');
   iconControl($('calculate'), 'refresh', 'Calculate route');
-  // Touch devices that can share files share the GPX instead (main.ts).
-  if (sharesFirst()) iconControl($('download'), 'share', 'Share GPX');
-  else iconControl($('download'), 'download', 'Download GPX');
-  iconControl($('share'), 'link', 'Copy link');
-  $('share').title = 'Copy route link';
-  iconControl($('share-gpx'), 'share', 'Share GPX');
-  // Courses with their turns, for GPS devices and watches (#288).
+  // The Export menu (#301): touch devices that can share files share them
+  // instead (main.ts); each choice says what it is for.
   const shares = sharesFirst();
   const exportIcon = shares ? 'share' : 'download';
-  iconControl(
-    $('download-tcx'),
+  const exportChoice = (
+    id: string,
+    name: IconName,
+    label: string,
+    note?: string,
+  ) => {
+    const control = $(id);
+    iconControl(control, name, label);
+    if (note)
+      control
+        .querySelector('.button-label')!
+        .append(text('span', note, 'export-note'));
+  };
+  exportChoice(
+    'download',
+    exportIcon,
+    shares ? 'Share GPX' : 'Download GPX',
+    'The complete track, for any app or device',
+  );
+  // Courses with their turns, for GPS devices and watches (#288).
+  exportChoice(
+    'download-tcx',
     exportIcon,
     shares ? 'Share TCX with turns' : 'Download TCX with turns',
+    'A course that announces the turns on GPS devices',
   );
-  iconControl(
-    $('download-fit'),
+  exportChoice(
+    'download-fit',
     exportIcon,
     shares ? 'Share FIT with turns' : 'Download FIT with turns',
+    'A course for Garmin, Wahoo and similar devices',
   );
+  exportChoice('share-gpx', 'share', 'Share GPX');
+  exportChoice(
+    'share',
+    'link',
+    'Copy link',
+    'Opening it calculates the route again',
+  );
+  $('share').title = 'Copy route link';
+  iconControl($('save-route'), 'bookmark', 'Save route');
+  iconControl($('export'), exportIcon, 'Export');
   iconControl($('more-actions'), 'more', 'More actions', true);
   iconControl($('open-settings'), 'settings', 'Settings', true);
   iconControl($('close-settings'), 'close', 'Close settings', true);
   document
     .querySelector('.secondary-actions .file-button')!
     .prepend(icon('upload'));
+  iconControl($('library-import'), 'upload', 'Import GPX, FIT or TCX');
+  $('library-import').onclick = () => $('import').click();
 
   const sheet = $('sheet'),
     handle = $('panel-toggle'),
@@ -268,7 +297,39 @@ export function setupPanel(map: PlannerMap): void {
     const expanded = more.getAttribute('aria-expanded') !== 'true';
     more.setAttribute('aria-expanded', String(expanded));
     document.body.classList.toggle('more-open', expanded);
+    if (expanded) showExports(false);
   };
+  // Export opens its menu above the action bar; a choice, a click elsewhere
+  // or Escape closes it.
+  const exports = $('export'),
+    exportMenu = $('export-menu');
+  const showExports = (open: boolean) => {
+    exports.setAttribute('aria-expanded', String(open));
+    exportMenu.hidden = !open;
+  };
+  exports.onclick = () => {
+    const open = exportMenu.hasAttribute('hidden');
+    showExports(open);
+    if (!open) return;
+    more.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('more-open');
+    exportMenu
+      .querySelector<HTMLButtonElement>('button:not(:disabled)')
+      ?.focus();
+  };
+  exportMenu.addEventListener('click', (event) => {
+    if ((event.target as Element).closest('button')) showExports(false);
+  });
+  document.addEventListener('click', (event) => {
+    const target = event.target as Element;
+    if (!exportMenu.hidden && !target.closest('#export, #export-menu'))
+      showExports(false);
+  });
+  exportMenu.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    showExports(false);
+    exports.focus();
+  });
 
   // The closed sheet still shows the latest status message.
   const mirror = () => {

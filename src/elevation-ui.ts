@@ -78,6 +78,8 @@ export function setupElevation(
     wanted?: () => boolean;
     /** Called when a profile arrives or is reset, so its users redraw. */
     onProfile?: () => void;
+    /** Called when the loading message changes (loading, failed, done). */
+    onStatus?: () => void;
   },
 ) {
   const details = $<HTMLDetailsElement>('elevation'),
@@ -160,6 +162,7 @@ export function setupElevation(
     status.classList.toggle('error', error);
     status.removeAttribute('aria-busy');
     retry.hidden = !error;
+    deps.onStatus?.();
   }
 
   async function load() {
@@ -737,6 +740,12 @@ export function setupElevation(
       const source: ElevationSource = fromService ? 'terrain' : 'recorded';
       return { profile, source };
     },
+    /** The profile of the current route is being asked for. */
+    loading: () =>
+      !!route &&
+      !profile &&
+      status.textContent !== '' &&
+      !status.classList.contains('error'),
     /** A user of the profile was turned on: load it now if still missing. */
     want() {
       if (route && !profile && needed()) {

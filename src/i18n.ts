@@ -302,6 +302,21 @@ const pt: Record<string, string> = {
     'Localização indisponível. Confira as configurações de localização do aparelho ou escolha um ponto no mapa.',
   Help: 'Ajuda',
   'Save route': 'Salvar rota',
+  Export: 'Exportar',
+  Ascent: 'Subida',
+  Show: 'Mostrar',
+  'Show ascent': 'Mostrar a subida',
+  'No departure': 'Sem partida',
+  'Main roads': 'Vias principais',
+  to: 'até',
+  'Name the route to save it.': 'Dê um nome à rota para salvá-la.',
+  'The complete track, for any app or device':
+    'A trilha completa, para qualquer app ou aparelho',
+  'A course that announces the turns on GPS devices':
+    'Um curso que avisa as curvas em aparelhos GPS',
+  'A course for Garmin, Wahoo and similar devices':
+    'Um curso para Garmin, Wahoo e aparelhos parecidos',
+  'Opening it calculates the route again': 'Quem abrir calcula a rota de novo',
   'Update saved route': 'Atualizar rota',
   'Saved routes': 'Rotas salvas',
   'No saved routes.': 'Nenhuma rota salva.',

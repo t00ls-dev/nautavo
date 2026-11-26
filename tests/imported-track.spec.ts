@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { encodePolyline } from '../src/road-attributes';
-import { base, gpxPoints } from './app-helpers';
+import { base, gpxPoints, exportAs } from './app-helpers';
 import { at, north, road } from './local-frame';
 import { mapReady, mockBasemap, overlayCount } from './map-helpers';
 const gpx = (points: [number, number][]) =>
@@ -60,7 +60,7 @@ const importTrack = (page: Page, points: [number, number][]) =>
 async function exported(page: Page) {
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   return gpxPoints(await readFile(await download.path(), 'utf8'));
 }
@@ -182,7 +182,7 @@ for (const language of ['en', 'pt'] as const)
     if (language === 'pt') await page.locator('#language').selectOption('pt');
     await importTrack(page, road(0, 3000));
     await expect(page.locator('#download')).toBeEnabled();
-    await page.locator('#share').click();
+    await exportAs(page, 'share');
     await expect(page.locator('#status')).toHaveText(
       language === 'pt'
         ? 'Link copiado. Ao abrir, a rota é recalculada e pode diferir da trilha importada; compartilhe o GPX para a trilha exata.'
