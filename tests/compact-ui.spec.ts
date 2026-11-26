@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
-import { base, boxSettled, mockRegion } from './app-helpers';
+import { base, boxSettled, mockRegion, setLanguage } from './app-helpers';
 test.use({ isMobile: true, hasTouch: true });
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -21,7 +21,7 @@ for (const width of [320, 360, 390, 430]) {
         colorScheme: language === 'pt' ? 'dark' : 'light',
       });
       await page.goto(base);
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       const smallInputs = await page
         .locator(
           'input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea, select',
@@ -211,9 +211,7 @@ for (const width of [320, 360, 390, 430]) {
           .locator('aside')
           .evaluate((el) => el.scrollWidth <= el.clientWidth),
       ).toBe(true);
-      await page
-        .locator('#language')
-        .selectOption(language === 'pt' ? 'en' : 'pt');
+      await setLanguage(page, language === 'pt' ? 'en' : 'pt');
       await expect(toggle).toHaveAttribute(
         'aria-label',
         language === 'pt' ? 'Map credits' : 'Créditos do mapa',

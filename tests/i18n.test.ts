@@ -121,8 +121,12 @@ describe('translation coverage', () => {
     // Required map attribution, kept as written.
     '© OpenStreetMap',
     'Language / Idioma',
+    // Language codes in the help and What's new headers, and each language
+    // named in itself in Settings.
     'EN',
     'PT',
+    'English',
+    'Português',
     'km',
     'mi',
     'Celsius',

@@ -7,6 +7,7 @@ import {
   mockRegion,
   exportAs,
   saveRoute,
+  setLanguage,
 } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -206,7 +207,7 @@ test('without the style or WebGL the route still draws with a notice', async ({
   await page.locator('#import').setInputFiles('docs/example.gpx');
   await expect(page.locator('.route-marker').first()).toBeVisible();
   // The longer Portuguese notice stays clear of the hint and the map tools.
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   const notice = (await page.locator('#map-no-style').boundingBox())!;
   // The hint itself hides once every point is set (#295).
   await expect(page.locator('#map-note')).toBeHidden();
@@ -218,7 +219,7 @@ test('without the style or WebGL the route still draws with a notice', async ({
         notice.y + notice.height <= other.y,
     ).toBe(true);
   }
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await page.addInitScript(() => {
     HTMLCanvasElement.prototype.getContext = () => null;
   });
@@ -236,7 +237,7 @@ test('without the style or WebGL the route still draws with a notice', async ({
   ])
     await expect(page.locator(tool)).toBeHidden();
   await expect(page.locator('#undo')).toBeVisible();
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#map-no-gl')).toContainText(
     'Este navegador não consegue desenhar o mapa',
   );
@@ -288,9 +289,9 @@ test('menu works by keyboard, closes outside and translates both ways', async ({
   await page.locator('#layers-toggle').click();
   await page.locator('#fit').click();
   await expect(page.locator('#layers-menu')).toBeHidden();
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#layers-toggle')).toContainText('Camadas do mapa');
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(page.locator('#layers-toggle')).toContainText('Map layers');
 });
 test('blocked localStorage does not prevent layer switching', async ({

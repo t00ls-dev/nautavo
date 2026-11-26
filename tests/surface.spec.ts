@@ -3,7 +3,7 @@ import { defaults, encodeState, meters } from '../src/core';
 import { decodePolyline } from '../src/routing';
 import { chooseUnits } from './unit-settings';
 import { coloringKinds, overlayCount } from './map-helpers';
-import { base } from './app-helpers';
+import { base, setLanguage } from './app-helpers';
 
 /**
  * A mocked Valhalla `/trace_attributes`: one edge between each pair of sent
@@ -120,7 +120,7 @@ test('surface is asked only when opened, totals and stretches translate and conv
   );
   await chooseUnits(page, { distance: 'imperial' });
   await expect(totals.nth(1)).toContainText(' mi · 20%');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(totals.nth(1)).toContainText('Sem asfalto');
   await expect(sections.first()).toContainText('Sem asfalto');
   await expect(page.locator('#surface > summary')).toHaveText('Pavimento');
@@ -243,7 +243,7 @@ for (const width of [320, 360, 390, 430, 1280])
       await setup(page);
       await mockTrace(page);
       await chooseUnits(page, { distance: 'imperial' });
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       if (width < 760 && !(await page.locator('#route-panel').isVisible()))
         await page.locator('#panel-toggle').click();
       await page.locator('#surface > summary').click();
@@ -287,7 +287,7 @@ for (const width of [320, 390])
       timeout: 15000,
     });
     for (const language of ['pt', 'en']) {
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await expect(legend).toContainText(
         language === 'pt' ? 'Sem dados' : 'Unknown',
       );

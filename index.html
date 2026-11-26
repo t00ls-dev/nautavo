@@ -137,12 +137,6 @@
               height="20"
               alt=""
               aria-hidden="true" /></a
-          ><label class="language-control"
-            ><span class="sr-only">Language / Idioma</span
-            ><select id="language" aria-label="Language / Idioma">
-              <option value="en">EN</option>
-              <option value="pt">PT</option>
-            </select></label
           ><button
             id="open-settings"
             type="button"
@@ -522,6 +516,13 @@
         <button id="close-settings" type="button">Close</button>
       </div>
       <div class="dialog-body">
+        <section class="settings-section" aria-labelledby="settings-language">
+          <h3 id="settings-language">Language / Idioma</h3>
+          <select id="language" aria-labelledby="settings-language">
+            <option value="en" lang="en">English</option>
+            <option value="pt" lang="pt">Português</option>
+          </select>
+        </section>
         <section class="settings-section" aria-labelledby="settings-units">
           <h3 id="settings-units">Units</h3>
           <label for="distance-units">Distance units</label
@@ -545,24 +546,6 @@
             <option value="crosshair">Tap, then move the map</option>
           </select>
         </section>
-        <section class="settings-section" aria-labelledby="settings-navigation">
-          <h3 id="settings-navigation">Navigation</h3>
-          <label class="check"
-            ><input id="nav-notice-setting" type="checkbox" checked /><span
-              >Show the notice when navigation starts</span
-            ></label
-          >
-          <label class="check"
-            ><input id="auto-reroute-setting" type="checkbox" checked /><span
-              >Recalculate the route automatically while navigating</span
-            ></label
-          >
-          <label class="check"
-            ><input id="voice-setting" type="checkbox" /><span
-              >Speak the directions while navigating</span
-            ></label
-          >
-        </section>
         <section
           class="settings-section settings-backup"
           aria-labelledby="backup-title"
@@ -583,6 +566,24 @@
             /></label>
           </div>
           <p id="backup-status" class="hint" role="status"></p>
+        </section>
+        <section class="settings-section" aria-labelledby="settings-navigation">
+          <h3 id="settings-navigation">Navigation</h3>
+          <label class="check"
+            ><input id="nav-notice-setting" type="checkbox" checked /><span
+              >Show the start notice</span
+            ></label
+          >
+          <label class="check"
+            ><input id="auto-reroute-setting" type="checkbox" checked /><span
+              >Recalculate off route</span
+            ></label
+          >
+          <label class="check"
+            ><input id="voice-setting" type="checkbox" /><span
+              >Speak the directions</span
+            ></label
+          >
         </section>
         <details class="settings-advanced">
           <summary>Advanced</summary>
@@ -654,7 +655,7 @@
       </ul>
       <label class="check"
         ><input id="nav-notice-reroute" type="checkbox" checked /><span
-          >Recalculate the route automatically</span
+          >Recalculate off route</span
         ></label
       >
       <label class="check"

@@ -1,7 +1,7 @@
 import { mockBasemap, mapCanvas } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockRouting } from './app-helpers';
+import { base, mockRouting, setLanguage } from './app-helpers';
 
 const destination = '-23.050160, -43.535240';
 
@@ -19,7 +19,7 @@ async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
   await page.goto(
     `${base}${lang === 'pt' ? '?lang=pt' : ''}${encodeState(state)}`,
   );
-  if (lang === 'en') await page.locator('#language').selectOption('en');
+  if (lang === 'en') await setLanguage(page, 'en');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
 }
 async function chooseCrosshair(page: Page) {

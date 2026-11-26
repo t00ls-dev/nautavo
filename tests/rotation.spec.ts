@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { holdMap, mapIdle, mapReady, mockBasemap } from './map-helpers';
-import { base, mockRouting } from './app-helpers';
+import { base, mockRouting, setLanguage } from './app-helpers';
 
 /** Turning the planner map (#133): gestures, compass and a turned map. */
 const start = '-22.9068, -43.1729',
@@ -81,7 +81,7 @@ test.describe('desktop', () => {
     await page.mouse.click(700, 300, { button: 'right' });
     await expect(page.locator('#point-menu')).toBeVisible();
     await page.keyboard.press('Escape');
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await expect(compass).toHaveAccessibleName('Norte para cima');
     await compass.click();
     await expect.poll(() => bearing(page)).toBe(0);
@@ -228,7 +228,7 @@ test.describe('phone', () => {
     }) => {
       await page.setViewportSize({ width, height: 700 });
       await setup(page);
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await page.locator('#panel-toggle').click();
       await turn(page, 45);
       const compass = page.locator('#compass');

@@ -7,6 +7,7 @@ import {
   openAdvancedSettings,
   mockRegion,
   overlapping,
+  setLanguage,
 } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -54,7 +55,7 @@ test('settings open in a dialog, report errors inside it and close when applied'
   await page.locator('#save-settings').click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('#status')).toHaveText('Settings applied.');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#open-settings')).toHaveAccessibleName(
     'Configurações',
   );
@@ -62,6 +63,7 @@ test('settings open in a dialog, report errors inside it and close when applied'
 
 for (const [width, language] of [
   [320, 'pt'],
+  [320, 'en'],
   [1280, 'en'],
 ] as const)
   test(`settings come in sections with Advanced folded at ${width}px in ${language}`, async ({
@@ -69,15 +71,42 @@ for (const [width, language] of [
   }) => {
     await page.setViewportSize({ width, height: 700 });
     await page.goto(base);
-    await page.locator('#language').selectOption(language);
+    await setLanguage(page, language);
     await page.locator('#open-settings').click();
     const dialog = page.locator('#settings-dialog');
     // What applies at once comes first, in sections (#211).
     await expect(dialog.locator('.settings-section h3')).toHaveText(
       language === 'pt'
-        ? ['Unidades', 'Mapa e pontos', 'Navegação', 'Cópia de segurança']
-        : ['Units', 'Map and points', 'Navigation', 'Backup'],
+        ? [
+            'Language / Idioma',
+            'Unidades',
+            'Mapa e pontos',
+            'Cópia de segurança',
+            'Navegação',
+          ]
+        : [
+            'Language / Idioma',
+            'Units',
+            'Map and points',
+            'Backup',
+            'Navigation',
+          ],
     );
+    // The language lives here, not in the header (#304), and the
+    // Navigation switches keep to one line each.
+    await expect(page.locator('header #language')).toHaveCount(0);
+    await expect(page.locator('#language')).toBeVisible();
+    const lines = await dialog
+      .locator('[aria-labelledby="settings-navigation"] .check span')
+      .evaluateAll((spans) =>
+        spans.map((e) =>
+          Math.round(
+            e.getBoundingClientRect().height /
+              parseFloat(getComputedStyle(e).lineHeight),
+          ),
+        ),
+      );
+    expect(lines).toEqual([1, 1, 1]);
     // Servers and their Apply button wait folded in Advanced.
     await expect(page.locator('.settings-advanced')).not.toHaveAttribute(
       'open',
@@ -378,7 +407,7 @@ test.describe('phone summary', () => {
     });
     await page.addInitScript(() => localStorage.setItem('average-speed', '25'));
     await page.goto(base);
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#location-0').fill('-22.591897, -43.416001');
     await page.locator('#location-1').fill('-22.692000, -43.459000');
     await page.locator('#location-1').press('Tab');
@@ -447,7 +476,7 @@ for (const [width, language] of [
   }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.goto(base);
-    await page.locator('#language').selectOption(language);
+    await setLanguage(page, language);
     // Help left the header for the footer; Settings is a gear.
     await expect(page.locator('header #help')).toHaveCount(0);
     await expect(
@@ -501,7 +530,7 @@ for (const width of [320, 390, 1280])
     await page.setViewportSize({ width, height: 800 });
     await page.goto(base);
     for (const language of ['en', 'pt']) {
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await expect(page.locator('#points > li')).toHaveCount(2);
       const [rendered, reserved] = await page.evaluate(() => {
         const list = document.getElementById('points')!;

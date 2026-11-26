@@ -1484,7 +1484,8 @@ dialog.settings::backdrop {
   font-size: 13px;
   font-weight: 650;
 }
-.settings-section > .check:first-of-type {
+.settings-section > .check:first-of-type,
+.settings-section > h3 + select {
   margin-top: 8px;
 }
 .settings-advanced {
@@ -1852,12 +1853,6 @@ dialog.settings::backdrop {
     width: 26px;
     height: 26px;
     margin-right: 6px;
-  }
-  .planner .language-control select {
-    min-height: 44px;
-    padding: 4px;
-    border-color: transparent;
-    background: none;
   }
   #panel-toggle,
   .planner.panel-closed #panel-toggle {

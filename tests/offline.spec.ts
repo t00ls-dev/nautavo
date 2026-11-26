@@ -5,6 +5,7 @@ import {
   osrmAnswer,
   exportAs,
   saveRoute,
+  setLanguage,
 } from './app-helpers';
 // The app-shell service worker only runs in production builds: these tests
 // use the preview server started by playwright.config.ts.
@@ -57,7 +58,7 @@ async function goOffline(context: BrowserContext, offline: boolean) {
 
 /** A routed pair of points, ready to download. */
 async function routedPair(page: Page) {
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await page.locator('#location-0').fill(start);
   await page.locator('#location-1').fill(end);
   await page.locator('#location-1').press('Tab');
@@ -98,7 +99,7 @@ test("after one online visit, the app, help and What's new open offline", async 
   await page.reload();
   await expect(page.locator('#location-0')).toBeVisible();
   await expect(page.locator('#offline-notice')).toBeVisible();
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#offline-notice')).toContainText(
     'Você está sem conexão',
   );
@@ -327,7 +328,7 @@ for (const width of [320, 1280])
     await context.setOffline(true);
     await page.reload();
     for (const language of ['en', 'pt']) {
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       const notice = page.locator('#offline-notice');
       await expect(notice).toBeVisible();
       const fit = await notice.evaluate((element) => {

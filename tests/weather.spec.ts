@@ -16,6 +16,7 @@ import {
   exportAs,
   saveRoute,
   openTripOptions,
+  setLanguage,
 } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
@@ -154,7 +155,7 @@ for (const mobile of [false, true])
     await expect(page.locator('#weather-section')).toHaveAttribute('open', '');
     await expect(page.locator('#route-panel')).toBeVisible();
     await expect(page.locator('.weather-tooltip,.map-popup')).toHaveCount(0);
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await expect(page.locator('#weather-details').first()).toContainText(
       'Chuva forte',
     );
@@ -167,7 +168,7 @@ for (const mobile of [false, true])
     await expect(page.locator('#summary .stats-basis')).toHaveText(
       'A 60 km/h · sem paradas',
     );
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     await expect(page.locator('#summary .stats-basis')).toHaveText(
       'At 60 km/h · no stops',
     );
@@ -216,7 +217,7 @@ test('daylight shows today without a departure, dark sections for an evening dep
   await date(page, '2026-11-08T10:00');
   await expect(line).toContainText('None in the dark');
   await expect(details).not.toContainText('Dark from');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(line).toContainText(
     /Nascer do sol \d\d:\d\d Pôr do sol \d\d:\d\d · Nada no escuro/,
   );
@@ -225,7 +226,7 @@ test('daylight shows today without a departure, dark sections for an evening dep
   await expect(details).toContainText(
     /Saia até .+ para chegar antes do pôr do sol\./,
   );
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(line).toContainText('None in the dark');
   expect(routes).toBe(0);
 });
@@ -263,7 +264,7 @@ test('route coloring by daylight needs a departure, colors dark stretches, persi
   // Reopening the link routes once, as always; coloring adds no request.
   routes = 0;
   await expect.poll(() => coloringKinds(page)).toContain('night');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('.route-legend')).toHaveText(
     /Dia\s*Crepúsculo\s*Escuro/,
   );
@@ -288,7 +289,7 @@ for (const width of [320, 360, 390, 430])
     await page.locator('#panel-toggle').click();
     const legend = page.locator('.route-legend');
     for (const language of ['pt', 'en']) {
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await expect(legend).toBeVisible();
       const layout = await legend.evaluate((box) => {
         const items = [...box.children].map((c) => c.getBoundingClientRect());
@@ -354,7 +355,7 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
   );
   await chooseUnits(page, { distance: 'imperial' });
   await expect(page.locator('#elevation-stats')).toContainText('Max 3,281 ft');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#elevation-stats')).toContainText('Mín 0 ft');
   await expect(page.locator('#elevation-stats')).toContainText(
     'Ganho de elevação 3.281 ft',
@@ -549,7 +550,7 @@ test('routes with more than 20 stops still get weather', async ({ page }) => {
   await expect(page.locator('#weather-status')).toHaveText(
     'Weather sampled at 20 of 25 stops.',
   );
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#weather-status')).toHaveText(
     'Clima amostrado em 20 de 25 paradas.',
   );
@@ -593,11 +594,11 @@ test('weather and elevation that fail without a connection load once it returns'
   // Waiting, not failed: no Try again while there is no connection.
   await expect(page.locator('#weather-retry')).toBeHidden();
   await expect(page.locator('#elevation-retry')).toBeHidden();
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#weather-status')).toHaveText(
     'Sem conexão. O clima será carregado quando a conexão voltar.',
   );
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   // Nothing more is asked while offline: no retry loop.
   const asked = { ...network };
   await page.waitForTimeout(1500);
@@ -697,7 +698,7 @@ test('the Grade coloring requests elevation on its own choice and draws every cl
   await page.locator('[data-coloring="grade"]').click();
   await expect.poll(() => coloringKinds(page)).toContain('up');
   await page.keyboard.press('Escape');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('.route-legend .sr-only').last()).toHaveText(
     'Subida íngreme (8%+)',
   );
@@ -745,7 +746,7 @@ for (const width of [320, 360, 390, 430, 1280])
           .map(Number);
         return r.fulfill({ json: { elevation: lons.map(rolling) } });
       });
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await page.locator('#layers-toggle').click();
       await page.locator('[data-coloring="grade"]').click();
       await page.keyboard.press('Escape');
@@ -881,7 +882,7 @@ test('climbs are listed, shaded in the chart and shown on the map', async ({
   // Units and language re-render without a new request.
   await chooseUnits(page, { distance: 'imperial' });
   await expect(climbs.first()).toContainText('mi 2');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('.climbs-heading')).toHaveText('Subidas (1)');
   await expect(climbs.first()).toContainText('máx');
   // The hardest climb: a summit icon on the row, its name for screen readers.
@@ -988,7 +989,7 @@ for (const mobile of [false, true])
       const count = url.searchParams.get('latitude')!.split(',').length;
       return r.fulfill({ json: { elevation: Array(count).fill(812.4) } });
     });
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     if (mobile) {
       // The sheet closed shows the map; a long press opens the menu.
       if (await page.locator('#route-panel').isVisible())
@@ -1037,7 +1038,7 @@ for (const mobile of [false, true])
     await expect(popup.locator('.elevation-point-value')).toHaveText(
       'Cerca de 2.665 ft',
     );
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     await expect(popup.locator('.elevation-point-value')).toHaveText(
       'About 2,665 ft',
     );
@@ -1146,7 +1147,7 @@ test('a usage limit counts down, retries once by itself, then offers the button'
   expect(requests).toHaveLength(2);
   await page.locator('#elevation-retry').click();
   await expect(page.locator('#elevation-stats')).toContainText('Min 70 m');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#elevation-stats')).toContainText('Mín 70 m');
 });
 test('a flat route has no climbs', async ({ page }) => {
@@ -1219,7 +1220,7 @@ test('the summary asks for the ascent only on a tap, then keeps showing it (#302
   await chooseUnits(page, { distance: 'imperial' });
   await expect(ascent).toHaveText(/\sft$/);
   expect(requests).toHaveLength(asked);
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(
     page.locator('#summary dt').filter({ hasText: 'Subida' }),
   ).toBeVisible();
@@ -1233,7 +1234,7 @@ test('Trip options folds into one line once the route shows (#303)', async ({
   await expect(page.locator('#trip-line')).toHaveText(
     'No departure · 60 km/h · Main roads',
   );
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#trip-line')).toHaveText(
     'Sem partida · 60 km/h · Vias principais',
   );
@@ -1482,7 +1483,7 @@ for (const width of [320, 360, 390, 430])
       await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
       await page.emulateMedia({ colorScheme: 'dark' });
       await setup(page, true, 60, true);
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await date(page);
       await fetchWeather(page);
       const overflow = await page.evaluate(() => {
@@ -1529,7 +1530,7 @@ for (const language of ['en', 'pt'])
       }
       return route.fulfill({ json: rows });
     });
-    await page.locator('#language').selectOption(language);
+    await setLanguage(page, language);
     await date(page);
     await fetchWeather(page);
     const card = page.locator('.weather-card').first();
@@ -1644,7 +1645,7 @@ test('weather icons can be hidden from the map, keeping the cards and the foreca
   await fetchWeather(page);
   await expect(page.locator('.weather-card')).toHaveCount(cards);
   await expect(page.locator('.weather-marker').first()).toBeHidden();
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await page.locator('#layers-toggle').click();
   await expect(page.locator('label:has(#marks-weather)')).toHaveText(
     'Clima no mapa',
@@ -1766,7 +1767,7 @@ test('consecutive samples with equivalent weather share one card and one marker'
   await expect(merged).toHaveAttribute('aria-label', /9\.3–101\.9\skm/);
   await page.locator('.weather-marker').nth(1).click();
   await expect(merged).toHaveAttribute('aria-current', 'true');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(merged.locator('.weather-card-place')).toContainText(
     '9,3–101,9 km',
   );
@@ -1948,7 +1949,7 @@ test('a road used both ways labels outbound and return, with both markers visibl
   await expect(last).toHaveAttribute('aria-current', 'true');
   await start.click();
   await expect(first).toHaveAttribute('aria-current', 'true');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(first.locator('.weather-card-place')).toContainText('Ida');
   await expect(last.locator('.weather-card-place')).toContainText('Volta');
   // Labels come from the route itself: no extra weather request.
@@ -1981,7 +1982,7 @@ test('temperature units switch the weather card to °F and inches without anothe
   await expect(card.locator('.weather-card-rain')).toHaveText('13% · 0.5 in');
   // Distance units are a separate choice.
   await expect(card.locator('.weather-card-place')).toContainText('km');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(card.locator('.weather-card-rain')).toHaveText('13% · 0,5 in');
   await expect(card).toHaveAttribute('aria-label', /Chuva 13% · 0,5\sin/);
   expect(calls).toBe(requests);
@@ -2017,7 +2018,7 @@ test('a UV alert shows on the UV line as the range up to the worst hour of its w
   // One UV line: the alert is not repeated as a separate warning.
   await expect(card.locator('.weather-card-risks')).toHaveCount(0);
   await expect(card).toHaveAttribute('aria-label', /UV 7–8 · Very high/);
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(uv).toHaveText('UV 7–8 · muito alto');
 });
 
@@ -2178,11 +2179,11 @@ for (const mixed of [false, true])
         '2026-08-08T23:00',
       );
     await expect(page.locator('.weather-card')).toHaveCount(7);
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await expect(page.locator('#weather-section > summary')).toHaveText(
       'Clima',
     );
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     await expect(page.locator('#weather-section > summary')).toHaveText(
       'Weather',
     );
@@ -2312,7 +2313,7 @@ test('wind follows bends, translates and switches units without another weather 
   expect(requests[0].searchParams.get('hourly')).toContain(
     'wind_direction_10m',
   );
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('.weather-card-wind').first()).toHaveText(
     'Vento contra · 20 km/h',
   );
@@ -2323,7 +2324,7 @@ test('wind follows bends, translates and switches units without another weather 
   await expect(page.locator('.weather-card-wind').first()).toHaveText(
     'Vento contra · 12,4 mph',
   );
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(page.locator('.weather-card-wind').first()).toHaveText(
     'Headwind · 12.4 mph',
   );
@@ -2594,7 +2595,7 @@ for (const speed of [99.9, 160.7])
     await check(kmh, 'km/h');
     await chooseUnits(page, { distance: 'imperial' });
     await check(mph, 'mph');
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await check(mph.replace('.', ','), 'mph');
     await chooseUnits(page, { distance: 'metric' });
     await check(kmh.replace('.', ','), 'km/h');

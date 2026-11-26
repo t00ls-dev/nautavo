@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, boxSettled } from './app-helpers';
+import { base, boxSettled, setLanguage } from './app-helpers';
 
 const coords = [
   '-22.930929, -43.238286',
@@ -41,7 +41,7 @@ async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
   await page.goto(
     `${base}${lang === 'pt' ? '?lang=pt' : ''}${encodeState(state)}`,
   );
-  if (lang === 'en') await page.locator('#language').selectOption('en');
+  if (lang === 'en') await setLanguage(page, 'en');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
 }
 const values = (page: Page) =>

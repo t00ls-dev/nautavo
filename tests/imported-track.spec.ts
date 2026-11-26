@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { encodePolyline } from '../src/road-attributes';
-import { base, gpxPoints, exportAs } from './app-helpers';
+import { base, gpxPoints, exportAs, setLanguage } from './app-helpers';
 import { at, north, road } from './local-frame';
 import { mapReady, mockBasemap, overlayCount } from './map-helpers';
 const gpx = (points: [number, number][]) =>
@@ -127,7 +127,7 @@ for (const [width, language] of [
   }) => {
     await page.setViewportSize({ width, height: 800 });
     await setup(page);
-    if (language === 'pt') await page.locator('#language').selectOption('pt');
+    if (language === 'pt') await setLanguage(page, 'pt');
     await importTrack(page, withPath);
     const warning = page.locator('#summary-notes .unfollowable');
     await expect(warning).toContainText(
@@ -179,7 +179,7 @@ for (const language of ['en', 'pt'] as const)
   }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await setup(page);
-    if (language === 'pt') await page.locator('#language').selectOption('pt');
+    if (language === 'pt') await setLanguage(page, 'pt');
     await importTrack(page, road(0, 3000));
     await expect(page.locator('#download')).toBeEnabled();
     await exportAs(page, 'share');

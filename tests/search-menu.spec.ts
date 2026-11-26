@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, boxSettled } from './app-helpers';
+import { base, boxSettled, setLanguage } from './app-helpers';
 
 const start = '-22.900000, -43.100000';
 
@@ -53,7 +53,7 @@ async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
   await page.goto(
     `${base}${lang === 'pt' ? '?lang=pt' : ''}${encodeState(state)}`,
   );
-  if (lang === 'en') await page.locator('#language').selectOption('en');
+  if (lang === 'en') await setLanguage(page, 'en');
   await expect(page.locator('#location-0')).toHaveValue(start);
 }
 
@@ -183,7 +183,7 @@ test.describe('phone', () => {
     await setup(page);
     // A new route: Start is empty and the sheet starts low, as on a first visit.
     await page.goto(base);
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     const field = page.locator('#location-0');
     await field.tap();
     await field.pressSequentially('posto');

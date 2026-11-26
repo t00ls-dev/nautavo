@@ -28,6 +28,7 @@ import {
   mockRegion,
   exportAs,
   saveRoute,
+  setLanguage,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
@@ -52,7 +53,7 @@ async function setup(page: Page) {
     ],
   });
   await page.goto(base);
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await mapReady(page);
 }
 async function fillPair(page: Page) {
@@ -260,7 +261,7 @@ test('route marks: arrows by default, parallel lines on a round trip, persisted 
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   await mapReady(page);
   expect(await arrows()).toBe(0);
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await page.locator('#layers-toggle').click();
   await expect(page.locator('#marks-heading')).toHaveText('Marcas da rota');
   await expect(page.locator('label:has(#marks-arrows)')).toHaveText(
@@ -358,7 +359,7 @@ test('the status names the point still to set', async ({ page }) => {
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   await page.locator('#add').click();
   await expect(page.locator('#status')).toHaveText('Set point 2.');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#status')).toHaveText('Defina o ponto 2.');
 });
 test('undo restores a moved marker and a removed stop', async ({ page }) => {
@@ -503,10 +504,10 @@ test('the itinerary shows turn directions in both languages', async ({
     'aria-hidden',
     'true',
   );
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(items.nth(1)).toContainText('Vire à esq. R. B');
   await expect(items.nth(2)).toContainText('Rotatória, 2ª saída');
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(items.nth(1)).toContainText('Turn left R. B');
 });
 for (const language of ['en', 'pt'] as const)
@@ -592,7 +593,7 @@ test('imports FIT and TCX files by content and reports damaged files', async ({
   expect(requests).toEqual([]);
 
   // TCX detected by content even with another extension, in Portuguese.
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   const point = (lon: number) =>
     `<Trackpoint><Position><LatitudeDegrees>-22.95</LatitudeDegrees><LongitudeDegrees>${lon}</LongitudeDegrees></Position></Trackpoint>`;
   await page.locator('#import').setInputFiles({
@@ -699,11 +700,11 @@ test('editing an imported track reroutes only the track around the edit', async 
   for (const stop of stops) expect(stop).toMatch(/^Stop · km\s\d+\.\d$/);
   const kms = stops.map((s) => Number(s.split('km ')[1]));
   expect(kms).toEqual([...kms].sort((a, b) => a - b));
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#location-1')).toHaveValue(
     /^Parada · km\s\d+,\d$/,
   );
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
 
   await page.locator('#route-name').fill('Renamed spur');
   await openAdvancedSettings(page);
@@ -975,7 +976,7 @@ test.describe('a browser set to American English', () => {
     await page.locator('#distance-units').selectOption('metric');
     await page.locator('#close-settings').click();
     await expect(page.locator('#summary')).toContainText('42 km');
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#open-settings').click();
     await expect(page.locator('#distance-units option[value=auto]')).toHaveText(
       'Automático (mi)',
@@ -1165,7 +1166,7 @@ test('the edit lock disables and enables opening saved routes, however the list 
   await page.locator('#lock').click();
   await expect(open).toBeDisabled();
   // A language change while locked draws the list again, still disabled.
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#saved-list .library-open')).toBeDisabled();
   await page.locator('#unlock').click();
   await expect(page.locator('#saved-list .library-open')).toBeEnabled();
@@ -1197,7 +1198,7 @@ for (const language of ['en', 'pt'] as const)
     await page.setViewportSize({ width: 320, height: 640 });
     await page.clock.install();
     await setup(page);
-    await page.locator('#language').selectOption(language);
+    await setLanguage(page, language);
     await fillPair(page);
     await saveRoute(page, 'Weekend route');
     await expect(page.locator('#status')).toHaveText(say.saved);
@@ -1905,7 +1906,7 @@ test('the chosen language survives the logo link, undo, reloads and shared links
   await setup(page);
   await fillPair(page);
   const routeStart = await page.locator('#location-0').inputValue();
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
   await page.locator('a.brand').click();
   await expect(page.locator('#location-0')).toHaveValue('');

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
-import { base, libraryEntry, mockRouting } from './app-helpers';
+import { base, libraryEntry, mockRouting, setLanguage } from './app-helpers';
 import { mockBasemap } from './map-helpers';
 
 const start = '-22.930929, -43.238286',
@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 /** A routed pair of points, then the point menu of field `i` opened. */
 async function routed(page: Page) {
   await page.goto(base);
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await page.locator('#location-0').fill(start);
   await page.locator('#location-1').fill(end);
   await page.locator('#location-1').press('Tab');
@@ -229,7 +229,7 @@ test('favorites travel in the backup and import on another device', async ({
   await other.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await mockBasemap(other);
   await other.goto(base);
-  await other.locator('#language').selectOption('en');
+  await setLanguage(other, 'en');
   await other.locator('#open-settings').click();
   await other.locator('#restore-routes').setInputFiles({
     name: 'backup.json',
@@ -252,7 +252,7 @@ for (const [width, language] of [
   }) => {
     await page.setViewportSize({ width, height: 800 });
     await routed(page);
-    if (language === 'pt') await page.locator('#language').selectOption('pt');
+    if (language === 'pt') await setLanguage(page, 'pt');
     const long = 'Casa da avó na Estrada das Paineiras, depois do mirante';
     await saveFavorite(page, 0, long, language === 'pt' ? 'Salvar' : 'Save');
     await expect(page.locator('#favorite-count')).toHaveText('(1)');

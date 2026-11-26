@@ -9,6 +9,7 @@ import {
   parisRegion,
   regionRoute,
   saveRoute,
+  setLanguage,
 } from './app-helpers';
 import { weatherResponse } from './weather-fixture';
 import { REGION_PATH } from '../src/region';
@@ -360,11 +361,11 @@ for (const mobile of [false, true]) {
       page.viewportSize()!.width,
     );
     await page.locator('#fullscreen').click();
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await expect(page.locator('#locate')).toHaveAccessibleName(
       'Usar minha localização',
     );
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     await expect(page.locator('#locate')).toHaveAccessibleName(
       'Use my location',
     );
@@ -730,7 +731,7 @@ for (const width of [320, 390, 1280])
     );
     await page.goto(base);
     for (const language of ['en', 'pt']) {
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await locate(page);
       const notice = page.locator('#location-notice');
       await expect(notice).toBeVisible();
