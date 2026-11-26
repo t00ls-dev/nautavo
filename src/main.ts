@@ -20,6 +20,7 @@ import {
   rememberSpeedKmh,
 } from './travel-time';
 import {
+  distanceLabel,
   milepostLabel,
   shortDistanceLabel,
   stepDistanceLabel,
@@ -158,6 +159,11 @@ $('changelog').prepend(icon('news'));
 $('github').prepend(icon('github'));
 let state: State = defaults(),
   selected = 0,
+  // A point chosen in the list (its number or field) for the next map click
+  // (#295): with every point set, a click elsewhere on the map moves nothing.
+  placing = false,
+  // The last calculation failed: Calculate route offers Try again (#296).
+  routeFailed = false,
   current: Route | null = null,
   revision = 0,
   // The route a load asked to frame; edits keep the user's view (#117).
@@ -612,6 +618,7 @@ function pointLabel(i: number): string {
 }
 function selectPoint(i: number, showMap = false) {
   selected = i;
+  placing = true;
   updateSelection();
   renderMarkers();
   if (showMap) {
@@ -636,9 +643,11 @@ function updateSelection() {
         ? 'the destination'
         : `stop ${selected}`;
   // Phones set points by typing or by moving markers, so their map has no
-  // hint unless the route is locked.
+  // hint unless the route is locked; on desktop it shows while a click
+  // would set a point.
   const note = $('map-note');
-  note.hidden = !locked && matchMedia('(pointer: coarse)').matches;
+  note.hidden =
+    !locked && (matchMedia('(pointer: coarse)').matches || !clickPlaces());
   note.textContent = locked
     ? 'Route locked. Unlock editing to change it.'
     : `Set ${target} on the map`;
@@ -647,6 +656,8 @@ function updateSelection() {
   $<HTMLButtonElement>('calculate').disabled =
     locked || state.points.some((p) => !p.coord) || dirty.size > 0;
 }
+/** Whether a desktop map click sets the selected point (#295). */
+const clickPlaces = () => placing || !state.points[selected]?.coord;
 function setPoint(
   point: Point,
   index: number,
@@ -656,6 +667,7 @@ function setPoint(
 ) {
   point.coord = coord;
   if (name) point.name = name;
+  placing = false;
   drafts.delete(point);
   dirty.delete(point);
   const next = state.points.findIndex((p, i) => i > index && !p.coord);
@@ -1115,6 +1127,7 @@ function drawRoute(route: Route) {
   );
 }
 function clearSummary() {
+  showCalculate(null);
   $('summary').hidden = true;
   $('route-details').hidden = true;
   $('peek-main').textContent = '';
@@ -1232,6 +1245,8 @@ async function addDirections(route: Route) {
   if (current === route) renderSummary(route);
 }
 
+/** Meters from a route point to the road the route uses, above which it warns. */
+const FAR_FROM_ROAD = 500;
 /** Route summary card; departure, units, speed and language changes only re-render this. */
 function renderSummary(route: Route) {
   const locale = state.language === 'pt' ? 'pt-BR' : 'en';
@@ -1292,13 +1307,19 @@ function renderSummary(route: Route) {
     roads.append(
       text('p', 'Highlighted roads are local sections to review.', 'hint'),
     );
-    // The warning stays visible on the card and leads to the first section.
+    // Information, not a warning (#299): with Prefer main roads, the local
+    // roads left on the route; the line leads to the first one.
+    const length = distanceLabel(
+      local.reduce((sum, step) => sum + step.distance, 0),
+      distanceUnits(),
+      locale,
+    );
     const review = text(
       'button',
       local.length === 1
-        ? '1 road section to review'
-        : `${local.length} road sections to review`,
-      'warning review-link',
+        ? `1 local road section · ${length}`
+        : `${local.length} local road sections · ${length}`,
+      'warning info review-link',
     ) as HTMLButtonElement;
     review.type = 'button';
     review.onclick = () => {
@@ -1321,12 +1342,16 @@ function renderSummary(route: Route) {
         index: i,
       }))
       .filter((p) => p.distance > 100);
+    // Points placed away from a road (a park, a building) are routed from
+    // the nearest one: information, a warning only when that is far (#299).
     if (far.length)
       notes.append(
         text(
           'p',
-          `Check road positions: ${far.map((p) => `${p.index + 1} (${shortDistanceLabel(p.distance, distanceUnits())})`).join(', ')}`,
-          'warning',
+          `Off the road: ${far.map((p) => `point ${p.index + 1} (${shortDistanceLabel(p.distance, distanceUnits())})`).join(', ')}. The route uses the nearest road.`,
+          far.some((p) => p.distance > FAR_FROM_ROAD)
+            ? 'warning'
+            : 'warning info',
         ),
       );
   }
@@ -1533,6 +1558,7 @@ async function followImported(base: Route) {
   status('Route calculated along the imported track.');
 }
 function renderRoute(route: Route) {
+  showCalculate(route);
   undoHistory.attach(route);
   routeDrag.reset();
   // Automatic stops are named by their place on this route (#208).
@@ -1576,10 +1602,23 @@ function missingPoint(): string | null {
  * message (#210): the same action on the same queue, never automatic.
  */
 function routingFailed(failed: boolean) {
+  routeFailed = failed;
   iconControl(
     $('calculate'),
     'refresh',
     failed ? 'Try again' : 'Calculate route',
+  );
+  showCalculate(current);
+}
+/**
+ * Calculate route shows only where it does something (#296): Try again after
+ * a failed calculation, and on an imported track, which it matches to the
+ * roads again. Routing runs on its own after every edit otherwise.
+ */
+function showCalculate(route: Route | null) {
+  $('calculate').hidden = !(
+    routeFailed ||
+    (route !== null && isImportedRoute(route))
   );
 }
 /** A route that failed offline is calculated when the connection returns, once. */
@@ -1706,7 +1745,8 @@ const routeDrag = setupRouteDrag(map, {
 });
 setupPointMenu(map, {
   click: (coord) => {
-    if (!crosshair.active) setPoint(state.points[selected], selected, coord);
+    if (!crosshair.active && clickPlaces())
+      setPoint(state.points[selected], selected, coord);
   },
   editable: () => !editBlocked() && !crosshair.active,
   elevation: (coord) => elevation.queryPoint(coord),

@@ -181,6 +181,28 @@
           <h3 data-kind="Changed">Changed</h3>
           <ul>
             <li>
+              Calculate route shows only where it does something: as Try again
+              after a calculation fails, and on an imported track, which it
+              matches to the roads again. The route is still calculated on its
+              own after every change.
+            </li>
+            <li>
+              With Prefer main roads, the summary counts the local roads left on
+              the route with their length (15 local road sections · 6.2 km) in a
+              neutral line instead of a warning, and a route point placed away
+              from a road says how far it is and that the route uses the nearest
+              road; it is a warning only beyond 500 m.
+            </li>
+            <li>
+              Weather cards no longer raise a rain alert for light rain that is
+              only likely: below 1 mm an hour, a high chance of rain is named
+              Light rain likely, in the card's neutral color.
+            </li>
+            <li>
+              Portuguese uses Elevação for elevation everywhere, as the
+              Elevation section does.
+            </li>
+            <li>
               Saved routes, favorite places and backups use Nautavo's name now.
               Routes and places saved before this change, and backups exported
               before it, do not carry over: save them again.
@@ -237,6 +259,16 @@
           </ul>
           <h3 data-kind="Fixed">Fixed</h3>
           <ul>
+            <li>
+              The highest and lowest point labels of the elevation profile stay
+              inside the map near its edges instead of being cut.
+            </li>
+            <li>
+              On a computer, a click on the map no longer moves the start of a
+              route whose points are all set: it sets the next empty point, or
+              the point whose number you chose in the list, and the hint on the
+              map shows only while a click would set one.
+            </li>
             <li>
               In Chrome and Brave on iPhone and iPad, Nautavo's pages no longer
               say the connection is not secure. The connection always was
@@ -1041,6 +1073,28 @@
           <h3 data-kind="Changed">Alterado</h3>
           <ul>
             <li>
+              Calcular rota aparece só quando faz algo: como Tentar novamente
+              depois de um cálculo que falhou, e numa trilha importada, que ele
+              volta a ajustar às vias. A rota continua sendo calculada sozinha
+              após cada mudança.
+            </li>
+            <li>
+              Com Preferir vias principais, o resumo conta as vias locais que
+              restam na rota com o comprimento (15 trechos em vias locais · 6,2
+              km), numa linha neutra em vez de um aviso, e um ponto da rota
+              colocado longe de uma via diz a que distância está e que a rota
+              usa a via mais próxima; vira aviso só acima de 500 m.
+            </li>
+            <li>
+              Os cartões de clima não dão mais alerta de chuva para chuva fraca
+              apenas provável: abaixo de 1 mm por hora, uma chance alta de chuva
+              aparece como Garoa provável, na cor neutra do cartão.
+            </li>
+            <li>
+              O português usa Elevação para a elevação em todos os textos, como
+              a seção Elevação.
+            </li>
+            <li>
               Rotas salvas, lugares favoritos e backups agora usam o nome
               Nautavo. Rotas e lugares salvos antes desta mudança, e backups
               exportados antes dela, não passam para a versão nova: salve-os de
@@ -1098,6 +1152,16 @@
           </ul>
           <h3 data-kind="Fixed">Corrigido</h3>
           <ul>
+            <li>
+              Os rótulos do ponto mais alto e mais baixo do perfil de elevação
+              ficam dentro do mapa perto das bordas, em vez de cortados.
+            </li>
+            <li>
+              No computador, um clique no mapa não move mais o início de uma
+              rota com todos os pontos definidos: ele define o próximo ponto
+              vazio, ou o ponto cujo número você escolheu na lista, e a dica no
+              mapa só aparece quando um clique definiria um ponto.
+            </li>
             <li>
               No Chrome e no Brave do iPhone e do iPad, as páginas do Nautavo
               não dizem mais que a conexão não é segura. A conexão sempre foi

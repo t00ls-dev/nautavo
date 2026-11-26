@@ -344,7 +344,11 @@ test('Calculate route without a connection keeps the route on screen and its dow
 }) => {
   await mockServices(context);
   await controlled(page);
+  // A planned route needs no button (#296); an imported track shows it.
   await routedPair(page);
+  await expect(page.locator('#calculate')).toBeHidden();
+  await page.locator('#import').setInputFiles('docs/example.gpx');
+  await expect(page.locator('#calculate')).toBeVisible();
   await goOffline(context, true);
   const before = network.routing;
   await page.locator('#calculate').click();
@@ -353,7 +357,7 @@ test('Calculate route without a connection keeps the route on screen and its dow
   );
   await expect(page.locator('#status')).not.toHaveClass(/error/);
   await expect(page.locator('#download')).toBeEnabled();
-  await expect(page.locator('#summary')).toContainText('42 km');
+  await expect(page.locator('#summary')).toBeVisible();
   expect(network.routing).toBe(before);
   const [download] = await Promise.all([
     page.waitForEvent('download'),

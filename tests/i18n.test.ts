@@ -79,9 +79,9 @@ it('translates generated stop names and short status messages', () => {
   expect(t('Keep default servers')).toBe('Manter servidores padrão');
   expect(t('Stop 2')).toBe('Parada 2');
   expect(t('Return to start')).toBe('Volta ao início');
-  expect(t('Check road positions: 2 (150 m)')).toBe(
-    'Confira os pontos nas vias: 2 (150 m)',
-  );
+  expect(
+    t('Off the road: point 2 (150 m). The route uses the nearest road.'),
+  ).toBe('Fora da via: ponto 2 (150 m). A rota usa a via mais próxima.');
   setLanguage('en');
   expect(t('Stop 2')).toBe('Stop 2');
 });
@@ -197,8 +197,12 @@ describe('translation coverage', () => {
 
   it('uses singular forms', () => {
     setLanguage('pt');
-    expect(t('1 road section to review')).toBe('1 trecho para conferir');
-    expect(t('3 road sections to review')).toBe('3 trechos para conferir');
+    expect(t('1 local road section · 0.8 km')).toBe(
+      '1 trecho em via local · 0.8 km',
+    );
+    expect(t('3 local road sections · 6,2 km')).toBe(
+      '3 trechos em vias locais · 6,2 km',
+    );
     expect(t('Imported 1 route. Existing names were kept.')).toBe(
       '1 rota importada. Os nomes existentes foram mantidos.',
     );
@@ -230,4 +234,13 @@ it('translates usage-limit waits for weather and elevation', () => {
   expect(
     translate('Weather usage limit reached. Try again in 2 min.', 'pt'),
   ).toBe('Limite de uso do clima atingido. Tente em 2 min.');
+});
+it('calls elevation Elevação in Portuguese, never altitude (#298)', () => {
+  const entries = [
+    ...read('src/i18n.ts').matchAll(/'([^']*levation[^']*)':\s*'([^']*)'/g),
+  ];
+  expect(entries.length).toBeGreaterThan(5);
+  expect(
+    entries.filter(([, , pt]) => /altitude/i.test(pt)).map(([, en]) => en),
+  ).toEqual([]);
 });

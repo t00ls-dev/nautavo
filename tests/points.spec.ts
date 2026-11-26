@@ -1,6 +1,7 @@
 import {
   holdMap,
   mapCanvas,
+  mapIdle,
   mapReady,
   mockBasemap,
   overlayFeatures,
@@ -119,6 +120,21 @@ for (const mobile of [false, true]) {
       await page.locator('#map').click({ position: { x: 210, y: 140 } });
       await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
       await expect(page.locator('.route-marker')).toHaveCount(2);
+      // With every point set, a stray click moves nothing (#295) and the
+      // hint leaves; choosing a point's number sets it with the next click.
+      await expect(page.locator('#map-note')).toBeHidden();
+      const first = await page.locator('#location-0').inputValue();
+      await page.locator('#map').click({ position: { x: 170, y: 220 } });
+      await page.waitForTimeout(300);
+      await expect(page.locator('#location-0')).toHaveValue(first);
+      await page.getByRole('button', { name: 'Select point 1' }).click();
+      await expect(page.locator('#map-note')).toHaveText(
+        'Set the start on the map',
+      );
+      await mapIdle(page);
+      await page.locator('#map').click({ position: { x: 170, y: 220 } });
+      await expect(page.locator('#location-0')).not.toHaveValue(first);
+      await expect(page.locator('#map-note')).toBeHidden();
     });
     test('the edit lock blocks route edits while viewing and download keep working', async ({
       page,
@@ -323,7 +339,8 @@ test('a failed route says so in plain words and offers Try again', async ({
   await expect(page.locator('#status')).toHaveText('Route ready.', {
     timeout: 15000,
   });
-  await expect(page.locator('#calculate')).toHaveText('Calculate route');
+  // A route ready again needs no button (#296).
+  await expect(page.locator('#calculate')).toBeHidden();
 });
 test('the status names the point still to set', async ({ page }) => {
   await setup(page);
@@ -1084,8 +1101,6 @@ test.describe('servers suggested by a link', () => {
     await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
     await page.locator('#keep-default-servers').click();
     await expect(page.locator('#server-notice')).toBeHidden();
-    await page.locator('#calculate').click();
-    await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
     expect(hosts.every((host) => host === 'router.project-osrm.org')).toBe(
       true,
     );

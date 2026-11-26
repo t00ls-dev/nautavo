@@ -299,6 +299,12 @@ label[for] {
   font-size: 14px;
   line-height: 1.5;
 }
+/* Information in the same shape, neutral (#299). */
+.warning.info {
+  border-color: var(--color-border);
+  background: var(--color-subtle);
+  color: var(--color-text);
+}
 .notice p {
   margin: 0;
 }
@@ -3162,7 +3168,9 @@ input[type='range'].range-input:disabled {
   font-weight: 700;
   line-height: 18px;
   white-space: nowrap;
-  transform: translate(-50%, 12px);
+  /* --shift slides the label inside the map near its edges (#297); the
+     pointer stays on the route point. */
+  transform: translate(calc(-50% + var(--shift, 0px)), 12px);
 }
 /* Trimmed to the digits' cap height, so they centre on the icon and the
    border whatever the font's ascent and descent. */
@@ -3173,7 +3181,7 @@ input[type='range'].range-input:disabled {
 .map-extreme::before {
   position: absolute;
   bottom: 100%;
-  left: 50%;
+  left: clamp(10px, calc(50% - var(--shift, 0px)), calc(100% - 10px));
   width: 0;
   height: 0;
   border: 6px solid transparent;

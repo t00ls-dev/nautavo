@@ -202,7 +202,9 @@ test('without the style or WebGL the route still draws with a notice', async ({
   // The longer Portuguese notice stays clear of the hint and the map tools.
   await page.locator('#language').selectOption('pt');
   const notice = (await page.locator('#map-no-style').boundingBox())!;
-  for (const selector of ['#map-note', '#locate', '#layers-toggle']) {
+  // The hint itself hides once every point is set (#295).
+  await expect(page.locator('#map-note')).toBeHidden();
+  for (const selector of ['#locate', '#layers-toggle']) {
     const other = (await page.locator(selector).boundingBox())!;
     expect(
       notice.x + notice.width <= other.x ||

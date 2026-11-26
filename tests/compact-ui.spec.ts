@@ -167,8 +167,10 @@ for (const width of [320, 360, 390, 430]) {
       );
       expect(remove.x).toBeGreaterThanOrEqual(input.x + input.width);
       // Add stop, Reverse and Round trip: equal tiles below the list, on the
-      // same edges as the list and Calculate route.
+      // same edges as the list and Calculate route, shown as after a failed
+      // calculation (#296).
       const tiles = await page.evaluate(() => {
+        document.getElementById('calculate')!.hidden = false;
         const box = (e: Element) => e.getBoundingClientRect();
         // Rounded, without negative zero.
         const px = (value: number) => Math.round(value) || 0;

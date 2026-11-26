@@ -13,6 +13,7 @@ export const WEATHER_THRESHOLDS = {
   extremeUv: 11,
 } as const;
 export interface WeatherRisk {
+  /** 0 names the conditions without an alert (Light rain likely). */
   severity: number;
   text: string;
 }
@@ -24,11 +25,11 @@ export function classifyWeather(hours: WeatherHour[]): WeatherRisk[] {
     if ([95, 96, 99].includes(h.code ?? -1)) add('Thunderstorm', 3);
     if (h.precipitation !== null && h.precipitation >= t.heavyRain)
       add('Heavy rain', 3);
-    else if (
-      (h.probability !== null && h.probability >= t.rainProbability) ||
-      (h.precipitation !== null && h.precipitation >= t.rain)
-    )
+    else if (h.precipitation !== null && h.precipitation >= t.rain)
       add('Rain risk', 1);
+    // Likely but light (#300): named on the card, not an alert.
+    else if (h.probability !== null && h.probability >= t.rainProbability)
+      add('Light rain likely', 0);
     if (
       [45, 48].includes(h.code ?? -1) ||
       (h.visibility !== null && h.visibility <= t.fogVisibility)
@@ -51,6 +52,9 @@ export function classifyWeather(hours: WeatherHour[]): WeatherRisk[] {
     )
       add('Some weather data unavailable', 1);
   }
+  // Rain the alerts already name needs no second word.
+  if (risks.has('Rain risk') || risks.has('Heavy rain'))
+    risks.delete('Light rain likely');
   return [...risks]
     .map(([text, severity]) => ({ text, severity }))
     .sort((a, b) => b.severity - a.severity || a.text.localeCompare(b.text));

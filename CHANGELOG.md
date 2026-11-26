@@ -18,6 +18,10 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- Calculate route shows only where it does something: as Try again after a calculation fails, and on an imported track, which it matches to the roads again. The route is still calculated on its own after every change.
+- With Prefer main roads, the summary counts the local roads left on the route with their length (15 local road sections · 6.2 km) in a neutral line instead of a warning, and a route point placed away from a road says how far it is and that the route uses the nearest road; it is a warning only beyond 500 m.
+- Weather cards no longer raise a rain alert for light rain that is only likely: below 1 mm an hour, a high chance of rain is named Light rain likely, in the card's neutral color.
+- Portuguese uses Elevação for elevation everywhere, as the Elevation section does.
 - Saved routes, favorite places and backups use Nautavo's name now. Routes and places saved before this change, and backups exported before it, do not carry over: save them again.
 - While navigating, traveling the route or playing an activity, your position is a green dot with a cone pointing the way, in Nautavo's colors, instead of a blue arrow.
 - The Itinerary shows each step's instruction on its own line, with the road and its distance below it, so on a phone a long road name no longer hides the instruction or the distance.
@@ -30,6 +34,8 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Fixed
 
+- The highest and lowest point labels of the elevation profile stay inside the map near its edges instead of being cut.
+- On a computer, a click on the map no longer moves the start of a route whose points are all set: it sets the next empty point, or the point whose number you chose in the list, and the hint on the map shows only while a click would set one.
 - In Chrome and Brave on iPhone and iPad, Nautavo's pages no longer say the connection is not secure. The connection always was secure; two things confused those browsers: a security header that isolates the page from other windows, now removed, and pages answered by the copy kept for offline use, which now answers only without a connection.
 - While navigating, the way ahead always draws above the way travelled, so on a road the route uses both ways it no longer disappears under the gray; close up, the two passes draw side by side, as on the planning map, and with the whole route in view the lines are thinner and the way travelled lighter.
 - A point menu opened on the map right after the page opens, with a right click or the keyboard, stays open; before, the map could still move to your approximate region and close it.
