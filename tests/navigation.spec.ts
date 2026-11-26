@@ -9,6 +9,8 @@ import {
   osrmFirst,
   overlapping,
   setLanguage,
+  openTab,
+  travelRoute,
 } from './app-helpers';
 import { BASEMAP_STYLE, scriptedTouches } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
@@ -1716,9 +1718,9 @@ test.describe('phone navigation', () => {
       const toward = language === 'pt' ? 'em direção a' : 'toward';
       // The itinerary: the route number and first destination stand in for
       // the nameless road, and go on a third line under a named one.
-      if (!(await page.locator('#itinerary').isVisible()))
+      if (await page.locator('body.panel-closed').count())
         await page.locator('#panel-toggle').click();
-      await page.locator('#itinerary summary').click();
+      await openTab(page, 'itinerary');
       const rows = page.locator('#itinerary li');
       await expect(rows.nth(1).locator('.step-road')).toHaveText(
         `RJ-071 ${toward} Ilha do Governador`,
@@ -2173,12 +2175,11 @@ test.describe('replay on the navigation screen', () => {
     page.on('request', (r) => {
       if (/\/route\/v1\/|valhalla/.test(r.url())) routing++;
     });
-    // Travel the route opens like the other summary rows, with a note and
-    // a button to simulate navigation.
-    await page.locator('#travel-details > summary').click();
+    // Travel the route: in More actions on phones, below the route's actions
+    // on wide screens (#305).
     const travel = page.locator('#travel-route');
-    await expect(travel).toHaveText('Simulate navigation');
-    await travel.click();
+    await expect(travel).toHaveText('Travel the route');
+    await travelRoute(page);
     const screen = page.getByRole('dialog', { name: 'Navigation' });
     await expect(screen).toBeVisible();
     // It opens paused at the start.
@@ -2229,7 +2230,7 @@ test.describe('replay on the navigation screen', () => {
     // Left halfway, it begins at the start again too.
     await page.locator('#nav-replay-position').fill('450');
     await page.getByRole('button', { name: 'End navigation' }).click();
-    await expect(travel).toHaveText('Simulate navigation');
+    await expect(travel).toHaveText('Travel the route');
     await travel.click();
     await expect(page.locator('#nav-replay-position')).toHaveValue('0');
   });
@@ -2245,11 +2246,12 @@ test.describe('replay on the navigation screen', () => {
       await page.setViewportSize({ width, height: width > 1000 ? 800 : 640 });
       await setup(page);
       await setLanguage(page, language);
-      await page.locator('#travel-details > summary').click();
+      if (await page.locator('#travel-route').isHidden())
+        await page.locator('#more-actions').click();
       // The button's label stays on one line inside it.
       const label = page.locator('#travel-route');
       await expect(label).toHaveText(
-        language === 'pt' ? 'Simular navegação' : 'Simulate navigation',
+        language === 'pt' ? 'Percorrer a rota' : 'Travel the route',
       );
       expect(
         await label.evaluate(
@@ -2274,8 +2276,7 @@ for (const [width, height] of LANDSCAPE)
     // A drawn map, to see it follow the screen as it turns.
     await page.route('**/styles/**', (r) => r.fulfill({ json: BASEMAP_STYLE }));
     await setLanguage(page, 'pt');
-    await page.locator('#travel-details > summary').click();
-    await page.locator('#travel-route').click();
+    await travelRoute(page);
     await expect(page.locator('#nav-map canvas')).toBeVisible();
     await page.setViewportSize({ width, height });
     await page.locator('#nav-replay-position').fill('300');
@@ -2347,8 +2348,7 @@ test('a playing replay turns the map smoothly on a road with small bends', async
   await page.locator('#location-1').fill(`${bends[299][1]}, ${bends[299][0]}`);
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await page.locator('#travel-details > summary').click();
-  await page.locator('#travel-route').click();
+  await travelRoute(page);
   await page
     .getByRole('dialog', { name: 'Navigation' })
     .getByRole('button', { name: 'Play' })
@@ -2426,8 +2426,7 @@ async function replayTurns(page: Page, path: number[][]) {
   await page.locator('#location-1').fill(`${path[last][1]}, ${path[last][0]}`);
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await page.locator('#travel-details > summary').click();
-  await page.locator('#travel-route').click();
+  await travelRoute(page);
   await page.locator('#nav-replay-position').fill('300');
   await page
     .getByRole('dialog', { name: 'Navigation' })
@@ -2516,8 +2515,7 @@ test('a playing replay greys the road right behind the arrow', async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setup(page);
-  await page.locator('#travel-details > summary').click();
-  await page.locator('#travel-route').click();
+  await travelRoute(page);
   await page.locator('#nav-replay-position').fill('100');
   await page
     .getByRole('dialog', { name: 'Navigation' })
@@ -2566,8 +2564,7 @@ test.describe('replay going back', () => {
     page,
   }) => {
     await setup(page);
-    await page.locator('#travel-details > summary').click();
-    await page.locator('#travel-route').click();
+    await travelRoute(page);
     const road = page.locator('#nav-road'),
       position = page.locator('#nav-replay-position');
     await position.fill('600');
@@ -2648,8 +2645,7 @@ test.describe('replay going back', () => {
     await page.locator('#location-1').fill(`${lat}, ${lon(0) + 0.0001}`);
     await page.locator('#location-1').press('Tab');
     await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-    await page.locator('#travel-details > summary').click();
-    await page.locator('#travel-route').click();
+    await travelRoute(page);
     const road = page.locator('#nav-road'),
       position = page.locator('#nav-replay-position');
     const rest = page.locator('#nav-rest');
@@ -2763,8 +2759,7 @@ test.describe('speed while navigating', () => {
 
   test('a replay shows its own speed and the trip clock', async ({ page }) => {
     await setup(page);
-    await page.locator('#travel-details > summary').click();
-    await page.locator('#travel-route').click();
+    await travelRoute(page);
     // Paused: standing still.
     await expect(page.locator('#nav-speed-value')).toHaveText('0');
     await page

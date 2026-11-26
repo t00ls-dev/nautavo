@@ -307,7 +307,12 @@ export function setupRouteMarks(
       showWeather();
       draw();
     };
-    wrapper.append(input, text);
+    // Drawn as a switch beside the name (#308); the checkbox stays the
+    // control, hidden from sight.
+    const knob = document.createElement('span');
+    knob.className = 'switch';
+    knob.setAttribute('aria-hidden', 'true');
+    wrapper.append(input, text, knob);
     group.append(wrapper);
   }
   $('layers-menu').append(group);

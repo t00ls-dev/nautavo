@@ -8,6 +8,8 @@ import {
   mockRegion,
   overlapping,
   setLanguage,
+  openTripOptions,
+  openTab,
 } from './app-helpers';
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -21,7 +23,12 @@ const sheetHeight = async (page: Page) =>
 
 test('trip options are available before a route exists', async ({ page }) => {
   await page.goto(base);
+  // Not on the empty planner (#306): from the first point on, closed.
+  await expect(page.locator('#trip-options')).toBeHidden();
+  await page.locator('#location-0').fill('-22.97, -43.18');
+  await page.locator('#location-0').press('Tab');
   await expect(page.locator('#summary')).toBeHidden();
+  await openTripOptions(page);
   for (const id of ['departure', 'average-speed', 'prefer'])
     await expect(page.locator(`#trip-options #${id}`)).toBeVisible();
   // Units moved to Settings and apply at once.
@@ -78,18 +85,20 @@ for (const [width, language] of [
     await expect(dialog.locator('.settings-section h3')).toHaveText(
       language === 'pt'
         ? [
-            'Language / Idioma',
+            'Idioma',
             'Unidades',
             'Mapa e pontos',
             'Cópia de segurança',
             'Navegação',
+            'Tela inicial',
           ]
         : [
-            'Language / Idioma',
+            'Language',
             'Units',
             'Map and points',
             'Backup',
             'Navigation',
+            'Home screen',
           ],
     );
     // The language lives here, not in the header (#304), and the
@@ -143,7 +152,7 @@ test('wide screens collapse the side panel from its header', async ({
   await expect.poll(async () => (await map())!.width).toBe(1280);
   await expect(page.locator('#panel-toggle')).toBeVisible();
   await page.locator('#panel-toggle').click();
-  await expect(page.locator('#export')).toBeVisible();
+  await expect(page.locator('#location-0')).toBeVisible();
 });
 
 test.describe('bottom sheet', () => {
@@ -151,12 +160,23 @@ test.describe('bottom sheet', () => {
   test('closed sheet keeps status and export actions; More actions shows the rest', async ({
     page,
   }) => {
+    await mockRouting(page);
     await page.goto(base);
+    // The empty planner has no route actions yet (#306), and its closed
+    // sheet keeps the prompt.
+    await expect(page.locator('.action-bar')).toBeHidden();
     await page.locator('#panel-toggle').click();
-    await expect(page.locator('#route-panel')).toBeHidden();
     await expect(page.locator('#peek-status')).toHaveText(
       'Set your start and destination.',
     );
+    await page.locator('#panel-toggle').click();
+    await page.locator('#location-0').fill('-22.97, -43.18');
+    await page.locator('#location-0').press('Tab');
+    await page.locator('#location-1').fill('-23.02, -43.48');
+    await page.locator('#location-1').press('Tab');
+    await expect(page.locator('#summary')).toBeVisible();
+    await page.locator('#panel-toggle').click();
+    await expect(page.locator('#route-panel')).toBeHidden();
     // Save route and Export (#301); the name is asked when saving.
     await expect(page.locator('#save-route')).toBeVisible();
     await expect(page.locator('#export')).toBeVisible();
@@ -170,9 +190,9 @@ test.describe('bottom sheet', () => {
     // One menu at a time.
     await expect(page.locator('#export-menu')).toBeHidden();
     await expect(page.locator('.secondary-actions .file-button')).toBeVisible();
-    await expect(page.locator('#add-home')).toBeVisible();
+    await expect(page.locator('#travel-route')).toBeVisible();
     await more.click();
-    await expect(page.locator('#add-home')).toBeHidden();
+    await expect(page.locator('#travel-route')).toBeHidden();
   });
 
   test('the open sheet shows the status once, at the top, and Calculate route spans its row', async ({
@@ -184,6 +204,7 @@ test.describe('bottom sheet', () => {
     // Calculate route as after a failed calculation, when it shows (#296).
     await page.evaluate((text) => {
       document.getElementById('status')!.textContent = text;
+      document.getElementById('status')!.removeAttribute('data-empty-prompt');
       document.getElementById('calculate')!.hidden = false;
     }, message);
     const peek = page.locator('#peek-status');
@@ -454,6 +475,10 @@ test.describe('narrow phone', () => {
     const rowBox = (await row.boundingBox())!;
     expect(rowBox.height).toBe(48);
     expect(rowBox.x + rowBox.width).toBeLessThanOrEqual(320);
+    // Trip options show from the first point on (#306).
+    await page.locator('#location-0').fill('-22.97, -43.18');
+    await page.locator('#location-0').press('Tab');
+    await openTripOptions(page);
     const label = (await page.locator('label[for=departure]').boundingBox())!;
     const field = (await page.locator('#departure').boundingBox())!;
     expect(field.y).toBeGreaterThanOrEqual(label.y + label.height - 1);
@@ -588,12 +613,13 @@ test.describe('add to home screen', () => {
     [320, 'en'],
     [430, 'pt'],
   ] as const)
-    test(`More actions shows the steps for this phone at ${width} px in ${lang}`, async ({
+    test(`Settings shows the steps for this phone at ${width} px in ${lang}`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto(`${base}?lang=${lang}`);
-      await page.locator('#more-actions').click();
+      // In Settings, always at hand (#306).
+      await page.locator('#open-settings').click();
       const button = page.locator('#add-home');
       await expect(button).toBeVisible();
       // The label stays on one line inside the button.
@@ -766,7 +792,15 @@ for (const [width, language] of [
     page,
   }) => {
     await page.setViewportSize({ width, height: 800 });
+    await mockRouting(page);
     await page.goto(language === 'pt' ? `${base}?lang=pt` : base);
+    // The route's actions show once there is a route (#306).
+    await page.locator('#location-0').fill('-22.97, -43.18');
+    await page.locator('#location-0').press('Tab');
+    await page.locator('#location-1').fill('-23.02, -43.48');
+    await page.locator('#location-1').press('Tab');
+    await expect(page.locator('#summary')).toBeVisible();
+    await openTab(page, 'points');
     const layout = await page.evaluate(() => {
       const box = (e: Element) => e.getBoundingClientRect();
       const px = (value: number) => Math.round(value) || 0;
@@ -812,7 +846,10 @@ for (const [width, language] of [
 
 /** Whether the bottom of a locator's box is above the phone's action bar. */
 async function aboveActionBar(page: Page, selector: string) {
-  const bar = (await page.locator('#action-bar').boundingBox())!;
+  // The empty planner has no action bar (#306): the screen's bottom then.
+  const bar = (await page.locator('#action-bar').boundingBox()) ?? {
+    y: page.viewportSize()!.height,
+  };
   const box = (await page.locator(selector).boundingBox())!;
   return box.y + box.height <= bar.y;
 }
@@ -862,19 +899,28 @@ for (const width of [320, 390])
       expect(await aboveActionBar(page, '#summary .stats')).toBe(true);
     });
 
-test('on wide screens the summary stays below the points', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(base);
-  expect(
-    await page.evaluate(
-      () =>
-        document
-          .querySelector('.points-section')!
-          .compareDocumentPosition(document.getElementById('summary')!) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ),
-  ).toBeTruthy();
-});
+for (const width of [390, 1280])
+  test(`the summary, Trip options and the tabs come before the points at ${width}px (#305)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(base);
+    // In the page, so the focus order follows what is seen.
+    expect(
+      await page.evaluate(() =>
+        [...document.querySelectorAll('#route-panel > *')]
+          .map((e) => e.id)
+          .filter((id) =>
+            [
+              'summary',
+              'trip-options',
+              'route-tabs',
+              'points-section',
+            ].includes(id),
+          ),
+      ),
+    ).toEqual(['summary', 'trip-options', 'route-tabs', 'points-section']);
+  });
 
 test.describe('point fields on the sheet', () => {
   test.use({ hasTouch: true, isMobile: true });
@@ -899,7 +945,9 @@ test.describe('point fields on the sheet', () => {
         await expect(options.first()).toBeVisible();
         expect(await aboveActionBar(page, '#location-1')).toBe(true);
         for (const option of (await options.all()).slice(0, 4)) {
-          const bar = (await page.locator('#action-bar').boundingBox())!,
+          const bar = (await page.locator('#action-bar').boundingBox()) ?? {
+              y: page.viewportSize()!.height,
+            },
             box = (await option.boundingBox())!;
           expect(box.y + box.height).toBeLessThanOrEqual(bar.y);
         }
@@ -1033,11 +1081,12 @@ for (const language of ['en', 'pt'] as const)
           ),
         ].map((e) => e.id || e.className.split(' ')[0]),
       );
+    // Trip options and the tabs come before the points (#305).
     expect(await order()).toEqual([
+      'trip-options',
       'points-section',
       'saved-routes',
       'favorites',
-      'trip-options',
       'route-details',
     ]);
     // Once a point is set they return below the route details (#213).
@@ -1046,8 +1095,8 @@ for (const language of ['en', 'pt'] as const)
     await expect
       .poll(order)
       .toEqual([
-        'points-section',
         'trip-options',
+        'points-section',
         'route-details',
         'saved-routes',
         'favorites',
@@ -1058,7 +1107,14 @@ test('the Export menu stays on a phone held sideways, its choices whole (#301)',
   page,
 }) => {
   await page.setViewportSize({ width: 844, height: 390 });
+  await mockRouting(page);
   await page.goto(`${base}?lang=pt`);
+  // Export shows once there is a route (#306).
+  await page.locator('#location-0').fill('-22.97, -43.18');
+  await page.locator('#location-0').press('Tab');
+  await page.locator('#location-1').fill('-23.02, -43.48');
+  await page.locator('#location-1').press('Tab');
+  await expect(page.locator('#export')).toBeVisible();
   await page.locator('#export').click();
   const menu = (await page.locator('#export-menu').boundingBox())!;
   expect(menu.y).toBeGreaterThanOrEqual(0);
@@ -1074,3 +1130,68 @@ test('the Export menu stays on a phone held sideways, its choices whole (#301)',
   await expect(page.locator('#export-menu')).toBeHidden();
   await expect(page.locator('#export')).toBeFocused();
 });
+
+for (const width of [320, 390, 1280])
+  for (const language of ['en', 'pt'] as const)
+    test(`the empty planner's ways to start and the route's tabs fit at ${width}px in ${language} (#305, #306)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await mockRouting(page);
+      await page.goto(`${base}?lang=${language}`);
+      const start = page.locator('#start-options');
+      await expect(start).toBeVisible();
+      await expect(page.locator('#save-route')).toBeHidden();
+      await expect(page.locator('#trip-options')).toBeHidden();
+      // Each way to start keeps its name and note whole inside its button.
+      const whole = (selector: string) =>
+        page.locator(selector).evaluateAll((buttons) =>
+          buttons
+            .filter((b) => b.getClientRects().length)
+            .filter(
+              (b) =>
+                b.scrollWidth > b.clientWidth + 1 ||
+                [...b.children].some(
+                  (c) =>
+                    c.getBoundingClientRect().right >
+                    b.getBoundingClientRect().right + 0.5,
+                ),
+            )
+            .map((b) => b.id),
+        );
+      expect(await whole('.start-grid button')).toEqual([]);
+      await page.locator('#location-0').fill('-22.97, -43.18');
+      await page.locator('#location-0').press('Tab');
+      await page.locator('#location-1').fill('-23.02, -43.48');
+      await page.locator('#location-1').press('Tab');
+      await expect(page.locator('#route-tabs')).toBeVisible();
+      await expect(start).toBeHidden();
+      // The tabs keep one line each; the row scrolls sideways where it is
+      // wider than the panel.
+      const tabs = await page
+        .locator('#route-tabs button:visible')
+        .evaluateAll((buttons) =>
+          buttons.map((b) => Math.round(b.getBoundingClientRect().height)),
+        );
+      expect(new Set(tabs)).toEqual(new Set([44]));
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      // A tab opens its section and closes the others; Points come back.
+      await openTab(page, 'itinerary');
+      await expect(page.locator('#itinerary details')).toHaveAttribute(
+        'open',
+        '',
+      );
+      await expect(page.locator('#points')).toBeHidden();
+      await openTab(page, 'surface');
+      await expect(page.locator('#itinerary details')).not.toHaveAttribute(
+        'open',
+        '',
+      );
+      await openTab(page, 'points');
+      await expect(page.locator('#points')).toBeVisible();
+      await expect(page.locator('#surface')).not.toHaveAttribute('open', '');
+    });

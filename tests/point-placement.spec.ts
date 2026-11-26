@@ -1,7 +1,7 @@
 import { mockBasemap, mapCanvas } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockRouting, setLanguage } from './app-helpers';
+import { base, mockRouting, setLanguage, mapTool, undo } from './app-helpers';
 
 const destination = '-23.050160, -43.535240';
 
@@ -97,7 +97,7 @@ test.describe('phone', () => {
     await expect(markers).toHaveCount(2);
     await expect(page.locator('#location-1')).not.toHaveValue(destination);
     await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-    await page.locator('#undo').click();
+    await undo(page);
     await expect(page.locator('#location-1')).toHaveValue(destination);
   });
 
@@ -113,7 +113,7 @@ test.describe('phone', () => {
     await expect(page.locator('#location-1')).toHaveValue(destination);
     await markers.last().tap();
     await expect(bar).toBeVisible();
-    await page.locator('#lock').click();
+    await mapTool(page, 'lock');
     await expect(bar).toBeHidden();
     await expect(markers).toHaveCount(2);
     await markers.last().tap();

@@ -4,11 +4,19 @@
  * of the others. Visual only; samples, cards and links never change.
  */
 
-/** Marker icon size and anchors, in pixels (see the weather marker CSS). */
-export const MARKER_SIZE: [number, number] = [68, 52];
-export const OUTBOUND_ANCHOR: [number, number] = [2, 40];
+/**
+ * Marker icon size and anchors, in pixels (see the weather marker CSS): one
+ * badge, the symbol and the wind, held 18 px right of and 16 px above its
+ * route point by a short line, so the route's own markers stay clear (#309).
+ */
+export const MARKER_SIZE: [number, number] = [110, 46];
+/** The badge without the wind, when the map is zoomed out (`WIND_ZOOM`). */
+const COMPACT_WIDTH = 50;
+/** Below this zoom the badges leave out the wind and show the symbol only. */
+export const WIND_ZOOM = 8;
+export const OUTBOUND_ANCHOR: [number, number] = [0, 46];
 /** A return marker hangs to the left, beside the outbound one. */
-export const RETURN_ANCHOR: [number, number] = [66, 40];
+export const RETURN_ANCHOR: [number, number] = [110, 46];
 
 /** Weather icons from mildest to worst, for choosing a cluster's marker. */
 const CONDITION_ORDER = [
@@ -32,8 +40,8 @@ export interface Box {
   bottom: number;
 }
 
-/** How far the "+N" count rises above the marker (see its CSS). */
-const COUNT_RISE = 6;
+/** How far the count rises above the marker (see its CSS). */
+const COUNT_RISE = 12;
 /**
  * Pixels at the anchor side left out of the box: an outbound and a return
  * marker on the same point share them by design, side by side.
@@ -42,22 +50,41 @@ const SHARED_EDGE = 3;
 
 /**
  * The screen area a marker takes when its route point sits at `x`, `y`,
- * its count included.
+ * its count included; `compact` while the wind is left out.
  */
 export function markerBox(
   x: number,
   y: number,
   pass?: 'outbound' | 'return',
+  compact = false,
 ): Box {
-  const [ax, ay] = pass === 'return' ? RETURN_ANCHOR : OUTBOUND_ANCHOR;
-  const left = x - ax,
-    top = y - ay;
+  const width = compact ? COMPACT_WIDTH : MARKER_SIZE[0];
+  const left = pass === 'return' ? x - width : x;
   return {
     left,
-    top: top - COUNT_RISE,
-    right: left + MARKER_SIZE[0],
-    bottom: top + MARKER_SIZE[1],
+    top: y - MARKER_SIZE[1] - COUNT_RISE,
+    right: left + width,
+    bottom: y,
   };
+}
+
+/** The line from the route point to the badge, horizontally (see the CSS). */
+const LEADER = 18;
+
+/**
+ * The badge alone, without the line to its point: what must stay clear of
+ * the route's own pins, which sit on the point (#309).
+ */
+export function badgeBox(
+  x: number,
+  y: number,
+  pass?: 'outbound' | 'return',
+  compact = false,
+): Box {
+  const box = markerBox(x, y, pass, compact);
+  return pass === 'return'
+    ? { ...box, right: box.right - LEADER }
+    : { ...box, left: box.left + LEADER };
 }
 
 /** Whether two markers collide; an outbound and a return pass share the edge at their point. */

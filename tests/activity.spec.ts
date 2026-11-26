@@ -50,10 +50,9 @@ test('a recording opens as an activity, apart from the planned route (#156)', as
   await expect(page.locator('#points')).toBeHidden();
   await expect(page.locator('#download')).toBeHidden();
   await expect(page.locator('#activity-replay')).toBeVisible();
-  // Fit route, alone in its group once Lock and Undo step aside, keeps
-  // every corner rounded.
+  // Fit route frames the activity; Lock editing and Undo step aside.
   await expect(page.locator('#undo')).toBeHidden();
-  await expect(page.locator('#fit')).toHaveCSS('border-radius', '10px');
+  await expect(page.locator('#fit')).toBeVisible();
   expect(page.url()).toBe(before);
   await expect(page.locator('.activity-marker')).toHaveCount(2);
   // Nothing about the activity is sent anywhere.

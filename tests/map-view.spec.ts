@@ -10,6 +10,7 @@ import {
   regionRoute,
   saveRoute,
   setLanguage,
+  mapTool,
 } from './app-helpers';
 import { weatherResponse } from './weather-fixture';
 import { REGION_PATH } from '../src/region';
@@ -342,11 +343,11 @@ for (const mobile of [false, true]) {
         }),
       )
       .toBe(true);
-    await page.locator('#fullscreen').click();
+    await mapTool(page, 'fullscreen');
     await expect
       .poll(() => page.evaluate(() => !!document.fullscreenElement))
       .toBe(true);
-    await page.locator('#fullscreen').click();
+    await mapTool(page, 'fullscreen');
     await expect
       .poll(() => page.evaluate(() => !!document.fullscreenElement))
       .toBe(false);
@@ -355,12 +356,12 @@ for (const mobile of [false, true]) {
         value: undefined,
       });
     });
-    await page.locator('#fullscreen').click();
+    await mapTool(page, 'fullscreen');
     await expect(page.locator('body')).toHaveClass(/map-fullscreen/);
     expect((await page.locator('#map').boundingBox())!.width).toBe(
       page.viewportSize()!.width,
     );
-    await page.locator('#fullscreen').click();
+    await mapTool(page, 'fullscreen');
     await setLanguage(page, 'pt');
     await expect(page.locator('#locate')).toHaveAccessibleName(
       'Usar minha localização',
@@ -996,9 +997,11 @@ test('already allowed, a slow GPS still opens the map on the device at street zo
   expect(dot.y + dot.height / 2).toBeCloseTo(sheet.y / 2, -1);
   // Once the traveler moves the map, fixes no longer frame it.
   await mapIdle(page);
+  // Released on the map, clear of the credits: MapLibre ends a mouse drag
+  // released over a control only at the next move.
   await page.mouse.move(200, 300);
   await page.mouse.down();
-  await page.mouse.move(260, 360, { steps: 8 });
+  await page.mouse.move(260, 250, { steps: 8 });
   await page.mouse.up();
   await mapIdle(page);
   const moved = await mapView(page);

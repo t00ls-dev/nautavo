@@ -17,6 +17,9 @@ import {
   saveRoute,
   openTripOptions,
   setLanguage,
+  mapTool,
+  openTab,
+  openSavedRoutes,
 } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
@@ -81,7 +84,7 @@ async function setup(
       buffer: Buffer.from(gpx),
     });
   await expect(page.locator('#download')).toBeEnabled();
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
 }
 async function date(page: Page, value = '2026-11-08T10:00') {
   await openTripOptions(page);
@@ -145,7 +148,7 @@ for (const mobile of [false, true])
     const marker = page.locator('.weather-marker').first();
     await expect(marker).toHaveAttribute('aria-label', /View weather.*Nov.*km/);
     expect(await marker.getAttribute('aria-label')).not.toContain('Start');
-    await page.locator('#weather-section > summary').click();
+    await openTab(page, 'weather-section');
     await page.locator('#panel-toggle').click();
     await marker.focus();
     await page.keyboard.press('Enter');
@@ -165,13 +168,11 @@ for (const mobile of [false, true])
     await expect(page.locator('.weather-card-uv').first()).toHaveText(
       'UV 7 · alto',
     );
-    await expect(page.locator('#summary .stats-basis')).toHaveText(
-      'A 60 km/h · sem paradas',
+    await expect(page.locator('#trip-line')).toContainText(
+      '60 km/h, sem paradas',
     );
     await setLanguage(page, 'en');
-    await expect(page.locator('#summary .stats-basis')).toHaveText(
-      'At 60 km/h · no stops',
-    );
+    await expect(page.locator('#trip-line')).toContainText('60 km/h, no stops');
     expect(calls).toBe(1);
   });
 test('daylight shows today without a departure, dark sections for an evening departure and translates', async ({
@@ -196,6 +197,7 @@ test('daylight shows today without a departure, dark sections for an evening dep
     /Sunrise \d\d:\d\d [AP]M Sunset \d\d:\d\d [AP]M · [\d.]+\skm in the dark/,
   );
   const details = page.locator('#daylight-details');
+  await openTab(page, 'daylight-details');
   await expect(details).toBeVisible();
   await expect(details).toContainText(
     /Dark from [\d.]+\skm \(.+\) to 111\.2\skm/,
@@ -210,7 +212,7 @@ test('daylight shows today without a departure, dark sections for an evening dep
   await expect(page.locator('#summary dd').nth(2).locator('strong')).toHaveText(
     '06:21 PM',
   );
-  await expect(page.locator('#summary')).toContainText('At 60 km/h · no stops');
+  await expect(page.locator('#trip-line')).toContainText('60 km/h, no stops');
   await expect(details).toContainText(
     /Daylight at the start from \d\d:\d\d [AP]M\./,
   );
@@ -324,7 +326,7 @@ test('elevation is requested only when opened, shows stats and the map cursor, a
   });
   await page.waitForTimeout(300);
   expect(requests).toHaveLength(0);
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-status')).toHaveText(
     'Elevation unavailable. Try again.',
   );
@@ -414,7 +416,7 @@ test('the automatic departure follows the next half hour until the user chooses 
     'Ascent',
     'Arrival',
   ]);
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await expect(page.locator('#weather-result')).toBeVisible();
   expect(forecasts).toHaveLength(1);
   // Never written to the link.
@@ -587,7 +589,7 @@ test('weather and elevation that fail without a connection load once it returns'
     'No connection. The weather will load when the connection returns.',
     { timeout: 10000 },
   );
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-status')).toHaveText(
     'No connection. The elevation will load when the connection returns.',
   );
@@ -852,7 +854,7 @@ test('climbs are listed, shaded in the chart and shown on the map', async ({
     return r.fulfill({ json: { elevation: lons.map(ele) } });
   });
   await date(page);
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   const climbs = page.locator('.climbs .climb');
   await expect(page.locator('.climbs-heading')).toHaveText('Climbs (1)');
   await expect(climbs).toHaveCount(1);
@@ -912,7 +914,7 @@ test('a climb whose summit is not the highest point keeps its summit mark', asyn
       800 * ramp(lon, 0.6, 0.7);
     return r.fulfill({ json: { elevation: lons.map(ele) } });
   });
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('.climbs .climb')).toHaveCount(2);
   await page.locator('.climbs .climb').first().click();
   await expect(page.locator('.climb-summit svg')).toHaveCount(1);
@@ -938,7 +940,7 @@ test('the highest and lowest points are marked on the map while Elevation is ope
           : 900 - 2000 * (lon - 0.7);
     return r.fulfill({ json: { elevation: lons.map(ele) } });
   });
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-stats')).toContainText(
     /Min (4\d|5\d)\sm · Max (8[89]\d|900)\sm/,
   );
@@ -1081,12 +1083,13 @@ test('a recalculated route waits to settle and reuses cached elevation', async (
       .split(',').length;
     return r.fulfill({ json: { elevation: Array(count).fill(80) } });
   });
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-stats')).toContainText('Min 80 m');
   const first = requests.length;
   expect(first).toBeGreaterThan(0);
   // Editing a point recalculates the route (the mock returns the same road):
   // the row waits for the route to settle, then every sample is cached.
+  await openTab(page, 'points');
   await page.locator('#location-1').fill('0, 1.0000001');
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#elevation-status')).toHaveText(
@@ -1122,7 +1125,7 @@ test('a usage limit counts down, retries once by itself, then offers the button'
       .split(',').length;
     return r.fulfill({ json: { elevation: Array(count).fill(70) } });
   });
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   const status = page.locator('#elevation-status');
   // A live countdown and no button while waiting.
   await expect(status).toHaveText(
@@ -1158,7 +1161,7 @@ test('a flat route has no climbs', async ({ page }) => {
       .split(',').length;
     return r.fulfill({ json: { elevation: Array(count).fill(50) } });
   });
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('.climbs')).toHaveText(
     'No significant climbs on this route.',
   );
@@ -1180,7 +1183,7 @@ test('recorded GPX elevations need no request', async ({ page }) => {
     buffer: Buffer.from(`<gpx><trk><trkseg>${track}</trkseg></trk></gpx>`),
   });
   await expect(page.locator('#download')).toBeEnabled();
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-stats')).toContainText(
     'Min 100 m · Max 200 m',
   );
@@ -1231,12 +1234,12 @@ test('Trip options folds into one line once the route shows (#303)', async ({
   await setup(page, true);
   const options = page.locator('#trip-options');
   await expect(options).not.toHaveAttribute('open', '');
-  await expect(page.locator('#trip-line')).toHaveText(
-    'No departure · 60 km/h · Main roads',
+  await expect(page.locator('#trip-line')).toContainText(
+    'No departure · 60 km/h, no stops · Main roads',
   );
   await setLanguage(page, 'pt');
-  await expect(page.locator('#trip-line')).toHaveText(
-    'Sem partida · 60 km/h · Vias principais',
+  await expect(page.locator('#trip-line')).toContainText(
+    'Sem partida · 60 km/h, sem paradas · Vias principais',
   );
   // Opened by the user, it stays open.
   await options.locator('summary').click();
@@ -1322,9 +1325,7 @@ test('selected speeds recalculate weather locally and support slow/fast travel a
 }) => {
   await setup(page, false, null);
   // Nothing stored yet: the 20 km/h default, also for an imported GPX.
-  await expect(page.locator('#summary .stats-basis')).toHaveText(
-    'At 20 km/h · no stops',
-  );
+  await expect(page.locator('#trip-line')).toContainText('20 km/h, no stops');
   await date(page);
   await fetchWeather(page);
   let calls = 0;
@@ -1336,9 +1337,7 @@ test('selected speeds recalculate weather locally and support slow/fast travel a
     .last()
     .getAttribute('aria-label');
   await setSpeed(page, 30);
-  await expect(page.locator('#summary .stats-basis')).toHaveText(
-    'At 30 km/h · no stops',
-  );
+  await expect(page.locator('#trip-line')).toContainText('30 km/h, no stops');
   await expect(page.locator('.weather-marker').last()).not.toHaveAttribute(
     'aria-label',
     before!,
@@ -1347,10 +1346,10 @@ test('selected speeds recalculate weather locally and support slow/fast travel a
   await expect(page.locator('#weather-status')).toContainText('exceed');
   await expect(page.locator('#weather-retry')).toBeVisible();
   await setSpeed(page, 120);
-  await expect(page.locator('#summary .stats-basis')).toContainText('120 km/h');
+  await expect(page.locator('#trip-line')).toContainText('120 km/h');
   await expect(page.locator('#weather-result')).toBeVisible();
   await chooseUnits(page, { distance: 'imperial' });
-  await expect(page.locator('#summary .stats-basis')).toContainText('75 mph');
+  await expect(page.locator('#trip-line')).toContainText('75 mph');
   expect(calls).toBe(0);
 });
 test('changing only the weather server refreshes weather without rerouting', async ({
@@ -1442,17 +1441,17 @@ test('departure persists but forecasts and samples do not; reload refreshes; GPX
   });
   await page.reload();
   await expect(page.locator('#departure')).toHaveValue('2026-11-08T10:00');
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await fetchWeather(page);
   await page.goto(base);
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await page
     .getByRole('button', {
       name: 'Open saved route: Weather saved',
       exact: true,
     })
     .click();
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await fetchWeather(page);
 });
 test.describe('device timezone', () => {
@@ -1603,7 +1602,7 @@ test.describe('phone page height', () => {
       .locator('.weather-marker:not(.weather-marker-clustered)')
       .last();
     const card = await marker.getAttribute('aria-controls');
-    await marker.click();
+    await marker.locator('.weather-marker-badge').click();
     await expect(page.locator(`#${card}`)).toHaveAttribute(
       'aria-current',
       'true',
@@ -1641,7 +1640,7 @@ test('weather icons can be hidden from the map, keeping the cards and the foreca
   expect(new URL(page.url()).hash).not.toMatch(/weather/);
   await page.reload();
   await expect(page.locator('#download')).toBeEnabled();
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await fetchWeather(page);
   await expect(page.locator('.weather-card')).toHaveCount(cards);
   await expect(page.locator('.weather-marker').first()).toBeHidden();
@@ -1701,7 +1700,7 @@ test('a sharp bend gets its own weather sample with the wind relation of the new
   ];
   await page.goto(base + encodeState(state));
   await expect(page.locator('#download')).toBeEnabled();
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await date(page);
   await fetchWeather(page);
   const wind = page.locator('.weather-card-wind');
@@ -1765,7 +1764,11 @@ test('consecutive samples with equivalent weather share one card and one marker'
     '22–23 °C',
   );
   await expect(merged).toHaveAttribute('aria-label', /9\.3–101\.9\skm/);
-  await page.locator('.weather-marker').nth(1).click();
+  await page
+    .locator('.weather-marker')
+    .nth(1)
+    .locator('.weather-marker-badge')
+    .click();
   await expect(merged).toHaveAttribute('aria-current', 'true');
   await setLanguage(page, 'pt');
   await expect(merged.locator('.weather-card-place')).toContainText(
@@ -1835,7 +1838,7 @@ for (const width of [320, 360, 390, 430])
       ];
       await page.goto(base + encodeState(state));
       await expect(page.locator('#download')).toBeEnabled();
-      await page.locator('#weather-section > summary').click();
+      await openTab(page, 'weather-section');
       await date(page, '2026-11-18T22:00');
       await fetchWeather(page);
       await expect(
@@ -1920,7 +1923,7 @@ test('a road used both ways labels outbound and return, with both markers visibl
   ];
   await page.goto(base + encodeState(state));
   await expect(page.locator('#download')).toBeEnabled();
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await date(page);
   await fetchWeather(page);
   const cards = page.locator('.weather-card');
@@ -2084,11 +2087,15 @@ for (const native of [false, true]) {
           value: undefined,
         }),
       );
-    await page.locator('#weather-section > summary').click();
+    await openTab(page, 'weather-section');
     await page.locator('#panel-toggle').click();
-    await page.locator('#fullscreen').click();
+    await mapTool(page, 'fullscreen');
     await expect(page.locator('body')).toHaveClass(/map-fullscreen/);
-    await page.locator('.weather-marker').nth(3).click();
+    await page
+      .locator('.weather-marker')
+      .nth(3)
+      .locator('.weather-marker-badge')
+      .click();
     const target = page.locator('#weather-point-3');
     await expect(target).toBeFocused();
     await expect(target).toHaveAttribute('aria-current', 'true');
@@ -2143,7 +2150,7 @@ test('slower travel adds hourly samples automatically and faster travel reuses t
   await expect(page.locator('#weather-result')).toBeVisible();
   await setSpeed(page, 15);
   await page.clock.fastForward(6500);
-  await expect(page.locator('#summary .stats-basis')).toContainText('15 km/h');
+  await expect(page.locator('#trip-line')).toContainText('15 km/h');
   await expect(page.locator('.weather-card')).toHaveCount(9, {
     timeout: 15000,
   });
@@ -2153,7 +2160,7 @@ test('slower travel adds hourly samples automatically and faster travel reuses t
   await expect(page.locator('.weather-card').nth(1)).toContainText('13.9 km');
   await setSpeed(page, 60);
   await expect(page.locator('#weather-result')).toBeVisible();
-  await expect(page.locator('#summary .stats-basis')).toContainText('60 km/h');
+  await expect(page.locator('#trip-line')).toContainText('60 km/h');
   expect(requests).toHaveLength(2);
 });
 
@@ -2513,7 +2520,11 @@ for (const [speed, direction, strength, angle] of [
     await expect(page.locator('.weather-card').first()).toContainText(
       expectedRelation,
     );
-    await expect(badge.locator('.weather-marker-wind-unit')).toHaveText('km/h');
+    // The badge keeps the number; the unit is in the marker's name (#309).
+    await expect(marker).toHaveAttribute(
+      'aria-label',
+      /km\/h|Wind unavailable/,
+    );
     await expect(badge.locator('.weather-marker-wind-value')).toHaveText(
       speed === null ? '-' : String(speed),
     );
@@ -2529,19 +2540,21 @@ for (const [speed, direction, strength, angle] of [
       'data-strength',
       strength,
     );
-    await expect(page.locator('.weather-marker-wind-unit').first()).toHaveText(
-      'mph',
-    );
-    await page.locator('#weather-section > summary').click();
+    if (speed !== null)
+      await expect(page.locator('.weather-marker').first()).toHaveAttribute(
+        'aria-label',
+        /mph/,
+      );
+    await openTab(page, 'weather-section');
     await page.locator('#panel-toggle').click();
     await page.locator('.weather-marker-wind').first().click();
     await expect(page.locator('.weather-card').first()).toBeFocused();
   });
 
 // The longest badge texts: 99.9 km/h (62.1 mph) and, without decimals from
-// 100 km/h, 161 km/h (100 mph).
+// 100 km/h, 161 km/h (100 mph), on one line inside the marker's area (#309).
 for (const speed of [99.9, 160.7])
-  test(`the map wind badge keeps a long speed beside its unit: ${speed} km/h`, async ({
+  test(`the map wind badge keeps a long speed on one line: ${speed} km/h`, async ({
     page,
   }) => {
     await setup(page);
@@ -2559,37 +2572,34 @@ for (const speed of [99.9, 160.7])
     );
     await date(page);
     await fetchWeather(page);
-    const badge = page.locator('.weather-marker-wind').first();
+    const marker = page.locator('.weather-marker').first();
+    const badge = marker.locator('.weather-marker-wind');
     const check = async (value: string, unit: string) => {
       await expect(badge.locator('.weather-marker-wind-value')).toHaveText(
         value,
       );
-      await expect(badge.locator('.weather-marker-wind-unit')).toHaveText(unit);
-      const box = await badge.evaluate((el) => {
-        const outer = el.getBoundingClientRect();
-        const [arrow, text, label] = [...el.children].map((child) =>
-          child.getBoundingClientRect(),
-        );
-        const value = el.children[1] as HTMLElement;
+      await expect(marker).toHaveAttribute('aria-label', new RegExp(unit));
+      const box = await marker.evaluate((el) => {
+        const area = el
+          .querySelector('.weather-marker-content')!
+          .getBoundingClientRect();
+        const pill = el
+          .querySelector('.weather-marker-badge')!
+          .getBoundingClientRect();
+        const wind = el.querySelector<HTMLElement>('.weather-marker-wind')!;
+        const value = wind.querySelector<HTMLElement>(
+          '.weather-marker-wind-value',
+        )!;
         return {
-          left: outer.left + 4,
-          right: outer.right - 4,
-          arrow: arrow.right,
-          textLeft: text.left,
-          textRight: text.right,
+          right: area.right,
+          pill: pill.right,
           overflow: value.scrollWidth - value.clientWidth,
-          unitLeft: label.left,
-          unitRight: label.right,
-          lines: Math.round(outer.height),
+          height: Math.round(wind.getBoundingClientRect().height),
         };
       });
       expect(box.overflow, `${value} ${unit}`).toBeLessThanOrEqual(0);
-      expect(box.arrow).toBeLessThanOrEqual(box.textLeft);
-      expect(box.textRight, `${value} ${unit}`).toBeLessThanOrEqual(
-        box.unitLeft,
-      );
-      expect(box.unitRight, `${value} ${unit}`).toBeLessThanOrEqual(box.right);
-      expect(box.lines).toBe(18);
+      expect(box.pill, `${value} ${unit}`).toBeLessThanOrEqual(box.right);
+      expect(box.height).toBe(22);
     };
     const [kmh, mph] = speed < 100 ? ['99.9', '62.1'] : ['161', '100'];
     await check(kmh, 'km/h');
@@ -2610,6 +2620,7 @@ test('automatic routing reuses recent geometry, and Calculate route shows only w
   });
   await setup(page, true);
   expect(calls).toBe(1);
+  await openTab(page, 'points');
   await page.locator('#location-1').fill('0, 0.5');
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled();

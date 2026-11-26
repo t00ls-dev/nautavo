@@ -1,3 +1,4 @@
+import { popupMenu } from './popup-menu';
 import type { PlannerMap } from './planner-map';
 import { type IconName, icon, iconControl } from './icons';
 import { byId as $, text } from './dom';
@@ -32,7 +33,7 @@ export function visibleMapHeight(container: HTMLElement): number {
  */
 export function placeLibrary(first: boolean): void {
   const lists = document.querySelectorAll('.saved-routes, .favorites');
-  if (first) $('trip-options').before(...lists);
+  if (first) $('start-options').after(...lists);
   else $('route-details').after(...lists);
 }
 
@@ -61,6 +62,7 @@ export function setupPanel(map: PlannerMap): void {
   iconControl($('reverse'), 'swap', 'Reverse');
   iconControl($('roundtrip'), 'roundtrip', 'Round trip');
   iconControl($('calculate'), 'refresh', 'Calculate route');
+  iconControl($('undo'), 'undo', 'Undo');
   // The Export menu (#301): touch devices that can share files share them
   // instead (main.ts); each choice says what it is for.
   const shares = sharesFirst();
@@ -240,16 +242,19 @@ export function setupPanel(map: PlannerMap): void {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', layout);
 
-  // On the sheet the route's numbers come first, above the points (#206).
-  // The element moves rather than being reordered by CSS, so the focus order
-  // follows what is seen.
-  const summary = $('summary'),
-    points = panel.querySelector('.points-section')!,
-    afterSummary = $('trip-options');
-  const placeSummary = () =>
-    compactLayout() ? points.before(summary) : afterSummary.before(summary);
-  placeSummary();
-  matchMedia(COMPACT).addEventListener('change', placeSummary);
+  // The route's numbers, its trip options and its tabs come first, above the
+  // points, which are the first tab (#206, #305). The elements move rather
+  // than being reordered by CSS, so the focus order follows what is seen.
+  const points = panel.querySelector('.points-section')!;
+  points.before($('summary'), $('trip-options'), $('route-tabs'));
+  // On wide screens Elevation opens in a strip under the map (#305), where
+  // its profile has the map's width; on the sheet it is one of the tabs.
+  const placeElevation = () => {
+    if (compactLayout()) $('surface').before($('elevation'));
+    else $('elevation-strip').append($('elevation'));
+  };
+  placeElevation();
+  matchMedia(COMPACT).addEventListener('change', placeElevation);
 
   // A point field brings its menu into view (#204): on the sheet, focusing
   // it raises the sheet to full height and scrolls the field to the top of
@@ -299,41 +304,19 @@ export function setupPanel(map: PlannerMap): void {
     document.body.classList.toggle('more-open', expanded);
     if (expanded) showExports(false);
   };
-  // Export opens its menu above the action bar; a choice, a click elsewhere
-  // or Escape closes it.
-  const exports = $('export'),
-    exportMenu = $('export-menu');
-  const showExports = (open: boolean) => {
-    exports.setAttribute('aria-expanded', String(open));
-    exportMenu.hidden = !open;
-  };
-  exports.onclick = () => {
-    const open = exportMenu.hasAttribute('hidden');
-    showExports(open);
-    if (!open) return;
+  // Export opens its menu above the action bar (#301).
+  const showExports = popupMenu($('export'), $('export-menu'), () => {
     more.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('more-open');
-    exportMenu
-      .querySelector<HTMLButtonElement>('button:not(:disabled)')
-      ?.focus();
-  };
-  exportMenu.addEventListener('click', (event) => {
-    if ((event.target as Element).closest('button')) showExports(false);
-  });
-  document.addEventListener('click', (event) => {
-    const target = event.target as Element;
-    if (!exportMenu.hidden && !target.closest('#export, #export-menu'))
-      showExports(false);
-  });
-  exportMenu.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    showExports(false);
-    exports.focus();
   });
 
   // The closed sheet still shows the latest status message.
   const mirror = () => {
     $('peek-status').textContent = $('status').textContent;
+    $('peek-status').toggleAttribute(
+      'data-empty-prompt',
+      $('status').hasAttribute('data-empty-prompt'),
+    );
     $('panel-toggle').classList.toggle(
       'error',
       $('status').classList.contains('error'),
@@ -344,7 +327,7 @@ export function setupPanel(map: PlannerMap): void {
     characterData: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['class'],
+    attributeFilter: ['class', 'data-empty-prompt'],
   });
   mirror();
 

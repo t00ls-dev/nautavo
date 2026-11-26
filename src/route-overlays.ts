@@ -190,6 +190,9 @@ export function setupRouteOverlays(
   heading.textContent = 'Route coloring';
   group.append(heading);
   menu.append(group);
+  const notes = document.createElement('p');
+  notes.className = 'coloring-notes';
+  notes.setAttribute('aria-hidden', 'true');
 
   const legendBox = document.createElement('div');
   legendBox.className = 'route-legend map-control';
@@ -333,6 +336,24 @@ export function setupRouteOverlays(
         button.setAttribute('aria-disabled', String(!!why));
         button.querySelector('.coloring-reason')!.textContent = why ?? '';
       });
+    // One row of choices (#308): why one is unavailable shows below them,
+    // named, in English source text for the DOM translator.
+    notes.replaceChildren(
+      ...[...group.querySelectorAll<HTMLButtonElement>('[data-coloring]')]
+        .filter((button) => !button.hidden)
+        .flatMap((button) => {
+          const why = button.querySelector('.coloring-reason')!.textContent;
+          if (!why) return [];
+          const line = document.createElement('span');
+          const name = document.createElement('span');
+          name.textContent = button.querySelector('span')!.textContent;
+          const text = document.createElement('span');
+          text.textContent = why;
+          line.append(name, ': ', text);
+          return [line];
+        }),
+    );
+    group.append(notes);
     draw();
   }
 

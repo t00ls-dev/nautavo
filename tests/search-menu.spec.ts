@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, boxSettled, setLanguage } from './app-helpers';
+import { base, boxSettled, setLanguage, mapTool } from './app-helpers';
 
 const start = '-22.900000, -43.100000';
 
@@ -131,7 +131,7 @@ test('My location sets the point to the exact position', async ({
 
 test('a locked route offers no menu in its fields', async ({ page }) => {
   await setup(page);
-  await page.locator('#lock').click();
+  await mapTool(page, 'lock');
   await page.locator('#location-1').focus();
   await expect(page.locator('#suggestions-1').getByRole('option')).toHaveCount(
     0,
@@ -201,7 +201,9 @@ test.describe('phone', () => {
     // The case only means something while a control sits under the finger.
     expect(
       await page.evaluate(
-        ({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.id,
+        ({ x, y }) =>
+          document.elementFromPoint(x, y)?.closest('button, summary, input')
+            ?.tagName,
         point,
       ),
     ).toBeTruthy();
@@ -209,5 +211,7 @@ test.describe('phone', () => {
     await page.waitForTimeout(300);
     await expect(field).toHaveValue(/^Posto Shell/);
     await expect(page.locator('#location-1')).toHaveValue('');
+    // Trip options, which show from the first point on (#306), stay closed.
+    await expect(page.locator('#trip-options')).not.toHaveAttribute('open', '');
   });
 });

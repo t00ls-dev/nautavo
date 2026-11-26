@@ -18,6 +18,11 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- The empty planner shows the ways to start a plan: choose the start on the map with the crosshair, import a GPX, FIT or TCX file, open a saved route or use or add a favorite place. Save route, Export and the other route actions appear once there is a route, and Add to home screen moves to Settings.
+- Below the route summary, tabs show Points, Itinerary, Weather, Elevation, Surface and Daylight one at a time, instead of a list of folded sections; each still loads its data only when you open it. On a computer, Elevation opens in a strip under the map, as wide as the map, from its button or from Show in Ascent. Travel the route is in More actions on a phone, and below the route's actions on a computer.
+- The map keeps Use my location, Map layers and Fit route at hand; Full screen and Lock editing are in More map tools, Undo is beside the points it undoes, and the map credits button is smaller.
+- Map layers shows the base maps side by side with a small preview, then the route coloring and the route marks as switches. On a phone held upright it opens from the bottom of the screen and fits without scrolling.
+- Weather on the map is one badge per place, with the symbol, the wind and how many samples it stands for, set beside its route point so the numbered markers stay clear. Zoomed out, the badges show the symbol only.
 - The route's actions put planning first: Save route and Export are the main buttons, on phones and computers. Save route asks for the route's name in its own sheet, and Export opens a menu with Download GPX, the TCX and FIT courses with turns and Copy link, each saying what it is for. On a phone, Navigate moves to the route summary, beside the route's start and end; on a computer, Import is below Saved routes.
 - The route summary is headed by the route's name, or its start and end, and shows Distance, Ascent and Arrival, with the time of the trip below the arrival. Ascent appears when you tap Show, which loads the elevation as opening Elevation does, and stays on for the next routes; a file with recorded elevation shows it at once.
 - Once the route shows, Trip options folds into one line with the departure, the speed and Main roads; tap it to change them.

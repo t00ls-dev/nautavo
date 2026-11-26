@@ -6,6 +6,7 @@ import {
   exportAs,
   saveRoute,
   setLanguage,
+  openSavedRoutes,
 } from './app-helpers';
 // The app-shell service worker only runs in production builds: these tests
 // use the preview server started by playwright.config.ts.
@@ -151,7 +152,7 @@ test('a saved route opens offline, without routing requests, and downloads', asy
   context.on('request', (r) => {
     if (r.url().includes('/route/v1/')) routing++;
   });
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await page
     .getByRole('button', {
       name: 'Open saved route: Offline route',

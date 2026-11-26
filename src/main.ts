@@ -139,6 +139,7 @@ import {
 } from './point-placement';
 import { setupMapControls } from './map-controls';
 import { compactLayout, placeLibrary, setupPanel } from './panel';
+import { setupRouteTabs } from './route-tabs';
 import { stopTapHoldLoupe } from './tap-hold';
 import { setupRouteDrag } from './route-drag';
 import { createPointPopup, createTrash, pointRole } from './point-removal';
@@ -176,10 +177,18 @@ let state: State = defaults(),
   timer: ReturnType<typeof setTimeout>;
 /** Counts status messages, so background work can tell it was superseded. */
 let statusCount = 0;
+/**
+ * The empty planner's prompt: the sheet's header shows it, and the panel's
+ * status row leaves it out while the start options show (#306).
+ */
+const EMPTY_PROMPT = 'Set your start and destination.';
 function status(message: string, error = false) {
   statusCount++;
   $('status').textContent = message;
   $('status').classList.toggle('error', error);
+  $('status').toggleAttribute('data-empty-prompt', message === EMPTY_PROMPT);
+  // Route ready is said to screen readers; the route on screen shows it.
+  $('status').toggleAttribute('data-quiet', message === 'Route ready.');
 }
 /**
  * Edit lock, kept in page memory only. Every route edit entry point checks
@@ -505,6 +514,9 @@ function refreshAscent() {
     state.language === 'pt' ? 'pt-BR' : 'en',
     () => {
       ascentShown = true;
+      // On wide screens the profile opens with it, in the strip under the
+      // map (#305); opening it is the same explicit choice.
+      if (!compactLayout()) $<HTMLDetailsElement>('elevation').open = true;
       elevation.want();
       refreshAscent();
     },
@@ -764,7 +776,15 @@ function pointValue(point: Point, route = current): string {
   );
 }
 /** Saved routes and favorites come first while no point is set (#213). */
-const placeLists = () => placeLibrary(state.points.every((p) => !p.coord));
+/**
+ * With no point set, the library comes right below the points and the ways
+ * to start a plan show instead of the route's actions (#213, #306).
+ */
+function placeLists() {
+  const empty = state.points.every((p) => !p.coord);
+  placeLibrary(empty);
+  document.body.classList.toggle('plan-empty', empty);
+}
 function renderPoints() {
   const list = $('points');
   const scroll = list.scrollTop;
@@ -1168,6 +1188,7 @@ function clearSummary() {
   showCalculate(null);
   $('summary').hidden = true;
   $('route-details').hidden = true;
+  document.body.classList.remove('route-shown');
   $('peek-main').textContent = '';
   for (const id of ['summary-content', 'summary-notes', 'itinerary'])
     $(id).replaceChildren();
@@ -1326,24 +1347,25 @@ function renderSummary(route: Route) {
     itinerary = $('itinerary');
   $('summary').hidden = false;
   $('route-details').hidden = false;
+  // The route's tabs and trip options show with a route (#305).
+  document.body.classList.add('route-shown');
   summary.replaceChildren();
   notes.replaceChildren();
   itinerary.replaceChildren();
   const leaving = departureOf(state);
   const departure = leaving ? Date.parse(leaving) : NaN;
-  const { stats, basis, peek } = summaryStats(
-    route,
-    speedKmh,
-    departure,
-    locale,
-  );
+  const { stats, peek } = summaryStats(route, speedKmh, departure, locale);
   // Shown on the handle of the closed bottom sheet.
   $('peek-main').textContent = peek;
   $('summary-title').replaceChildren(...routeTitle());
   showTripLine(departure, locale);
+  // The sun's line heads the Daylight tab, and the local roads to review are
+  // in the Itinerary (#305).
+  optionalById('daylight-summary')?.remove();
   const daylight = document.createElement('div');
   daylight.id = 'daylight-summary';
-  summary.append(stats, basis, daylight);
+  $('daylight-details').querySelector('summary')!.after(daylight);
+  summary.append(stats);
   renderDaylight(state, route, speedKmh);
   elevation.setRoute(route);
   refreshAscent();
@@ -1403,7 +1425,7 @@ function renderSummary(route: Route) {
       first.scrollIntoView({ block: 'nearest' });
       (first.querySelector('button') ?? first).focus({ preventScroll: true });
     };
-    notes.append(review);
+    roads.append(review);
   }
   maneuverLayer.clearLayers();
   const ul = itineraryList(route, local, locale, showManeuver);
@@ -1665,9 +1687,7 @@ function missingPoint(): string | null {
   const i = state.points.findIndex((p) => !p.coord || dirty.has(p));
   if (i < 0) return null;
   if (i === 0)
-    return state.points.at(-1)!.coord
-      ? 'Set your start.'
-      : 'Set your start and destination.';
+    return state.points.at(-1)!.coord ? 'Set your start.' : EMPTY_PROMPT;
   if (i === state.points.length - 1) return 'Set your destination.';
   return `Set point ${i + 1}.`;
 }
@@ -2339,6 +2359,7 @@ function openSavedRoute(record: SavedRoute) {
 }
 
 setupPanel(map);
+setupRouteTabs({ elevationInStrip: () => !compactLayout() });
 stopTapHoldLoupe();
 setupHomeScreen();
 const navigation = setupNavigation({
@@ -2408,7 +2429,10 @@ function setLocked(value: boolean) {
   );
 }
 $('lock').onclick = () => setLocked(!locked);
+// The empty planner's ways to start (#306).
+$('start-map').onclick = () => adjustPoint(state.points[0], true);
+$('start-import').onclick = () => $('import').click();
 $('unlock').onclick = () => {
   setLocked(false);
-  $('lock').focus();
+  $('map-more').focus();
 };

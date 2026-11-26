@@ -1,7 +1,14 @@
 import { closePanel, mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, type Coord } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockRouting, routedPoints, setLanguage } from './app-helpers';
+import {
+  base,
+  mockRouting,
+  routedPoints,
+  setLanguage,
+  mapTool,
+  undo,
+} from './app-helpers';
 
 const start: Coord = [-22.930929, -43.238286];
 const destination: Coord = [-23.05016, -43.53524];
@@ -120,7 +127,7 @@ test.describe('desktop', () => {
     // One route request, through the new stop.
     expect(requests).toEqual([3]);
     // Undo returns to the route without the stop, without a request.
-    await page.locator('#undo').click();
+    await undo(page);
     await expect(pointFields(page)).toHaveCount(2);
     expect(requests).toEqual([3]);
   });
@@ -142,7 +149,7 @@ test.describe('desktop', () => {
 
   test('no handle while the route is locked', async ({ page }) => {
     await setup(page);
-    await page.locator('#lock').click();
+    await mapTool(page, 'lock');
     await expect(page.locator('#lock')).toHaveAttribute('aria-pressed', 'true');
     const middle = await onPage(page, along(0.5));
     await page.mouse.move(middle.x, middle.y);
@@ -170,7 +177,7 @@ test.describe('desktop', () => {
     await expect(page.locator('#download')).toBeEnabled();
     expect(requests).toEqual([2]);
     // Undo brings it back with its route, without a request.
-    await page.locator('#undo').click();
+    await undo(page);
     await expect(pointFields(page)).toHaveCount(3);
     expect(requests).toEqual([2]);
   });
@@ -209,8 +216,10 @@ test.describe('desktop', () => {
     // Its number, as on the marker, and its place on the route.
     await expect(popup(page).locator('.point-popup-number')).toHaveText('2');
     await expect(popup(page).locator('strong')).toHaveText(/^(km|mi)\s\d/);
-    // A click elsewhere on the map closes it.
-    await page.mouse.click(700, 300);
+    // A click elsewhere on the map closes it: its left edge, clear of the
+    // route and the popup.
+    const map = (await page.locator('#map').boundingBox())!;
+    await page.mouse.click(map.x + 30, map.y + map.height / 2);
     await expect(popup(page)).toHaveCount(0);
     await markers(page).nth(1).click({ button: 'right' });
     // Not the map point menu: the stop's own popup.

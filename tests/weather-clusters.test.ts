@@ -23,26 +23,31 @@ function item(x: number, extra: Partial<ClusterItem> = {}): ClusterItem {
 
 describe('markerBox', () => {
   it('hangs outbound markers right of the point and return markers left, count included', () => {
-    // The 68 × 52 icon and 6 px more above for the count.
+    // The 110 × 46 badge with its line to the point, and 12 px more above
+    // for the count (#309).
     expect(markerBox(100, 100)).toEqual({
-      left: 98,
-      top: 54,
-      right: 166,
-      bottom: 112,
+      left: 100,
+      top: 42,
+      right: 210,
+      bottom: 100,
     });
     expect(markerBox(100, 100, 'return')).toEqual({
-      left: 34,
-      top: 54,
-      right: 102,
-      bottom: 112,
+      left: -10,
+      top: 42,
+      right: 100,
+      bottom: 100,
     });
+  });
+  it('is narrower zoomed out, where the badge leaves out the wind', () => {
+    expect(markerBox(100, 100, 'outbound', true).right).toBe(150);
+    expect(markerBox(100, 100, 'return', true).left).toBe(50);
   });
 });
 
 describe('overlaps', () => {
   it('needs a 2 px gap between markers', () => {
-    expect(overlaps(markerBox(0, 0), markerBox(69, 0))).toBe(true);
-    expect(overlaps(markerBox(0, 0), markerBox(71, 0))).toBe(false);
+    expect(overlaps(markerBox(0, 0), markerBox(111, 0))).toBe(true);
+    expect(overlaps(markerBox(0, 0), markerBox(113, 0))).toBe(false);
     expect(overlaps(markerBox(0, 0), markerBox(0, 61))).toBe(false);
     expect(overlaps(markerBox(0, 0), markerBox(0, 59))).toBe(true);
   });
@@ -80,7 +85,7 @@ describe('shownMember', () => {
 
 describe('clusterWeather', () => {
   it('leaves markers alone when they fit', () => {
-    const clusters = clusterWeather([item(0), item(100), item(200)]);
+    const clusters = clusterWeather([item(0), item(120), item(240)]);
     expect(clusters.map((c) => c.members)).toEqual([[0], [1], [2]]);
     expect(clusters.every((c) => c.noneWorse && c.alerts === 0)).toBe(true);
   });

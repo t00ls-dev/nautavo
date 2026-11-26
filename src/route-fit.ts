@@ -32,6 +32,8 @@ export function createRouteFit(map: PlannerMap, coords: () => Coord[]) {
       $('sheet'),
       $('sheet').querySelector('header'),
       $('map-note'),
+      // The elevation strip under the map on wide screens (#305).
+      document.querySelector('.elevation-strip #elevation[open]'),
       ...element.querySelectorAll(
         ':scope > .map-corner, :scope > .map-credits',
       ),

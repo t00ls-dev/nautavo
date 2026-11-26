@@ -177,8 +177,13 @@ export function setupMapLayers(map: PlannerMap) {
     button.setAttribute('aria-expanded', 'false');
     if (focus) button.focus();
   };
+  // On a phone held upright Map layers is a sheet over the route panel
+  // (#308), so it leaves the map's stacking context while it shows.
+  const asSheet = matchMedia('(max-width: 759px) and (min-height: 501px)');
+  const home = menu.parentElement!;
   button.onclick = () => {
     const opening = menu.hidden;
+    if (opening) (asSheet.matches ? document.body : home).append(menu);
     menu.hidden = !opening;
     button.setAttribute('aria-expanded', String(opening));
     if (opening) {

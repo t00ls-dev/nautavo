@@ -3,7 +3,7 @@ import { defaults, encodeState, meters } from '../src/core';
 import { decodePolyline } from '../src/routing';
 import { chooseUnits } from './unit-settings';
 import { coloringKinds, overlayCount } from './map-helpers';
-import { base, setLanguage } from './app-helpers';
+import { base, setLanguage, openTab } from './app-helpers';
 
 /**
  * A mocked Valhalla `/trace_attributes`: one edge between each pair of sent
@@ -92,7 +92,7 @@ test('surface is asked only when opened, totals and stretches translate and conv
   const requests = await mockTrace(page);
   await page.waitForTimeout(300);
   expect(requests).toHaveLength(0);
-  await page.locator('#surface > summary').click();
+  await openTab(page, 'surface');
   const totals = page.locator('.surface-totals li');
   await expect(totals).toHaveCount(2);
   // About 89 km paved and 22 km gravel on a 111 km route.
@@ -124,10 +124,11 @@ test('surface is asked only when opened, totals and stretches translate and conv
   await expect(totals.nth(1)).toContainText('Sem asfalto');
   await expect(sections.first()).toContainText('Sem asfalto');
   await expect(page.locator('#surface > summary')).toHaveText('Pavimento');
-  // Closing hides the stretch on the map; reopening uses the answer kept.
-  await page.locator('#surface > summary').click();
+  // Closing (another tab) hides the stretch on the map; reopening uses the
+  // answer kept.
+  await openTab(page, 'points');
   await expect.poll(() => overlayCount(page, 'rg-surface')).toBe(0);
-  await page.locator('#surface > summary').click();
+  await openTab(page, 'surface');
   await expect(totals).toHaveCount(2);
   expect(requests).toHaveLength(1);
 });
@@ -144,7 +145,7 @@ test('surface that fails without a connection loads once it returns', async ({
       : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
   );
   await context.setOffline(true);
-  await page.locator('#surface > summary').click();
+  await openTab(page, 'surface');
   await expect(page.locator('#surface-status')).toHaveText(
     'No connection. The surface will load when the connection returns.',
   );
@@ -184,7 +185,7 @@ test('a long route is asked in spaced pieces and a failed piece shows as unknown
       ? r.fulfill({ status: 503 })
       : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
   );
-  await page.locator('#surface > summary').click();
+  await openTab(page, 'surface');
   await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 15000 });
   expect(requests).toHaveLength(3);
   // Serialized on the routing queue, at least 1.5 s apart.
@@ -201,13 +202,14 @@ test('editing a point asks again only for the pieces that changed', async ({
 }) => {
   await setup(page, 4);
   const requests = await mockTrace(page);
-  await page.locator('#surface > summary').click();
+  await openTab(page, 'surface');
   await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 15000 });
   expect(requests).toHaveLength(3);
   // The same road comes back: every piece is in the page-memory cache.
+  await openTab(page, 'points');
   await page.locator('#location-1').fill('0, 4.0000001');
   await page.locator('#location-1').press('Tab');
-  await expect(page.locator('#surface-status')).toHaveText('Loading surface…');
+  await openTab(page, 'surface');
   await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 10000 });
   expect(requests).toHaveLength(3);
 });
@@ -220,12 +222,15 @@ test('an answer for an older route is discarded', async ({ page }) => {
     if (i === 0) await held;
     return r.fulfill({ json: traceAnswer(r.request().postData()!) });
   });
-  await page.locator('#surface > summary').click();
+  await openTab(page, 'surface');
   await expect.poll(() => requests.length).toBe(1);
   // A new route while the first answer is pending.
+  await openTab(page, 'points');
   await page.locator('#location-1').fill('0, 0.5');
   await page.locator('#location-1').press('Tab');
+  // The new route waits on the routing queue behind the held answer.
   release();
+  await openTab(page, 'surface');
   await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 10000 });
   // Only the new route's surface: about 55 km, gravel from 33 to 55 km.
   await expect(page.locator('.surface-totals li').nth(1)).toHaveText(
@@ -246,7 +251,7 @@ for (const width of [320, 360, 390, 430, 1280])
       await setLanguage(page, language);
       if (width < 760 && !(await page.locator('#route-panel').isVisible()))
         await page.locator('#panel-toggle').click();
-      await page.locator('#surface > summary').click();
+      await openTab(page, 'surface');
       await expect(page.locator('.surface-totals li')).toHaveCount(2);
       const lines = await page.evaluate(() =>
         [

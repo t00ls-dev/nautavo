@@ -76,9 +76,6 @@ const pt: Record<string, string> = {
   'Recalculate off route': 'Recalcular fora da rota',
   'Automatic recalculation on': 'Recálculo automático ativo',
   'Turn off': 'Desativar',
-  'See the route on the navigation screen before you leave: each turn, the distances and the arrival.':
-    'Veja a rota na tela de navegação antes de sair: cada conversão, as distâncias e a chegada.',
-  'Simulate navigation': 'Simular navegação',
   Then: 'Depois',
   'You have arrived': 'Você chegou',
   'Weak GPS signal': 'Sinal de GPS fraco',
@@ -263,6 +260,18 @@ const pt: Record<string, string> = {
   'Weather unavailable': 'Clima indisponível',
 
   'Map layers': 'Camadas do mapa',
+  'More map tools': 'Mais ferramentas do mapa',
+  'Base map': 'Mapa base',
+  Itinerary: 'Itinerário',
+  Language: 'Idioma',
+  Route: 'Rota',
+  'Or start from': 'Ou comece por',
+  'Place the start with the crosshair': 'Marque o início com a mira',
+  'Save route and Export appear once the route is ready.':
+    'Salvar rota e Exportar aparecem quando a rota estiver pronta.',
+  'Plan a route': 'Planeje uma rota',
+  'GPX, FIT or TCX': 'GPX, FIT ou TCX',
+  'Home screen': 'Tela inicial',
   Standard: 'Padrão',
   Topographic: 'Topográfico',
   Satellite: 'Satélite',
@@ -730,8 +739,8 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
 
   [
     // Numbers and units are joined by a no-break space (`withUnit`): \s.
-    /^At (.*?)\s(km\/h|mph) · no stops$/,
-    (n, u) => `A ${n}\u00a0${u} · sem paradas`,
+    /^(.*?)\s(km\/h|mph), no stops$/,
+    (n, u) => `${n}\u00a0${u}, sem paradas`,
   ],
   [/^Location of point (\d+)$/, (n) => `Local do ponto ${n}`],
   [/^Results for point (\d+)$/, (n) => `Resultados do ponto ${n}`],

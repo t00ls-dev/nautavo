@@ -78,15 +78,9 @@ export function summaryStats(
       `${time}${day}`,
     );
   } else stat('Time', time);
-  // The basis of the time estimate, next to the numbers it explains.
-  const speed = speedFromKmh(speedKmh, distanceUnits()).toLocaleString(locale, {
-    maximumFractionDigits: 1,
-  });
-  const basis = `At ${withUnit(speed, distanceUnits() === 'imperial' ? 'mph' : 'km/h')} · no stops`;
   return {
     stats,
     ascent,
-    basis: text('p', basis, 'hint stats-basis'),
     peek: `${distance} · ${time}`,
   };
 }
@@ -133,15 +127,20 @@ export function tripLine(
   const speed = speedFromKmh(speedKmh, distanceUnits()).toLocaleString(locale, {
     maximumFractionDigits: 1,
   });
+  // The weekday only when it is not today, so the line stays short.
+  const today =
+    Number.isFinite(departure) &&
+    new Date(departure).toDateString() === new Date().toDateString();
   return [
     Number.isFinite(departure)
       ? new Date(departure).toLocaleString(locale, {
-          weekday: 'short',
+          ...(today ? {} : { weekday: 'short' as const }),
           hour: '2-digit',
           minute: '2-digit',
         })
       : 'No departure',
-    withUnit(speed, distanceUnits() === 'imperial' ? 'mph' : 'km/h'),
+    // The basis of the time estimate (#305): the speed, without stops.
+    `${withUnit(speed, distanceUnits() === 'imperial' ? 'mph' : 'km/h')}, no stops`,
     ...(prefer ? ['Main roads'] : []),
   ];
 }

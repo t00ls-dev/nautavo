@@ -43,27 +43,12 @@ for (const width of [320, 360, 390, 430]) {
           ? [
               'Usar minha localização',
               'Camadas do mapa',
-              'Tela cheia',
-              'Ver rota',
-              'Bloquear edição',
-              'Desfazer',
+              'Mais ferramentas do mapa',
             ]
-          : [
-              'Use my location',
-              'Map layers',
-              'Full screen',
-              'Fit route',
-              'Lock editing',
-              'Undo',
-            ];
-      const ids = [
-        'locate',
-        'layers-toggle',
-        'fullscreen',
-        'fit',
-        'lock',
-        'undo',
-      ];
+          : ['Use my location', 'Map layers', 'More map tools'];
+      // The empty planner's tools (#307): Fit route waits for a route.
+      const ids = ['locate', 'layers-toggle', 'map-more'];
+      await expect(page.locator('#fit')).toBeHidden();
       let lastBottom = 0;
       for (let i = 0; i < ids.length; i++) {
         const locator = page.locator(`#${ids[i]}`);
@@ -77,7 +62,7 @@ for (const width of [320, 360, 390, 430]) {
         lastBottom = box.y + box.height;
         expect(await locator.locator('.button-label').isVisible()).toBe(false);
       }
-      await expect(page.locator('.map-action-control #undo')).toHaveCount(1);
+      await expect(page.locator('#points-section #undo')).toHaveCount(1);
       await expect(page.locator('#example')).toHaveCount(0);
       // Average speed belongs to the route summary card, with the departure.
       await expect(page.locator('#trip-options .speed-options')).toHaveCount(1);
@@ -97,10 +82,17 @@ for (const width of [320, 360, 390, 430]) {
         'aria-expanded',
         'true',
       );
+      // Map layers is a sheet from the bottom of the screen (#308), whole
+      // without scrolling.
       const menu = (await page.locator('#layers-menu').boundingBox())!,
         column = (await page.locator('#layers-toggle').boundingBox())!;
-      expect(menu.x).toBeGreaterThanOrEqual(0);
-      expect(menu.x + menu.width).toBeLessThan(column.x);
+      expect(menu.x).toBe(0);
+      expect(Math.round(menu.y + menu.height)).toBe(width === 320 ? 568 : 844);
+      expect(
+        await page
+          .locator('#layers-menu')
+          .evaluate((e) => e.scrollHeight <= e.clientHeight),
+      ).toBe(true);
       await page.keyboard.press('Escape');
       // With the sheet open, the credits stay on the map above it, beside the
       // tool column that reaches the sheet on short screens.

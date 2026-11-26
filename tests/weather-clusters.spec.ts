@@ -2,7 +2,7 @@ import { mapCanvas, mapIdle } from './map-helpers';
 import { expect, test, type Page } from '@playwright/test';
 import { defaults, encodeState } from '../src/core';
 import { chooseUnits } from './unit-settings';
-import { base, openTripOptions } from './app-helpers';
+import { base, openTripOptions, openTab } from './app-helpers';
 
 // A winding road of about 390 km, so the whole-route view clusters markers.
 const road: [number, number][] = [];
@@ -78,7 +78,7 @@ async function open(page: Page, language: 'en' | 'pt') {
   ];
   await page.goto(base + encodeState(state));
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await openTripOptions(page);
   await page.locator('#departure').fill('2026-11-08T10:00');
   await page.locator('#departure').press('Tab');
@@ -114,7 +114,8 @@ function layout(page: Page) {
           if (!c) return null;
           const r = c.getBoundingClientRect();
           return {
-            n: Number(c.textContent.slice(1)),
+            // The badge counts itself too (#309).
+            n: Number(c.textContent) - 1,
             alerts: c.classList.contains('has-alerts'),
             box: [r.left, r.top, r.right, r.bottom],
           };
@@ -150,9 +151,11 @@ for (const [width, language] of [
     await page.setViewportSize({ width, height: 800 });
     await open(page, language);
     if (width === 430) await chooseUnits(page, { distance: 'imperial' });
+    // Zoomed out, the badges leave out the wind (#309): on a wide map they
+    // may all fit.
     await expect
       .poll(async () => (await layout(page)).visible.length)
-      .toBeLessThan(11);
+      .toBeLessThanOrEqual(width >= 1280 ? 11 : 10);
     const map = await layout(page);
     // No two visible markers touch, and no count covers a pin or a marker.
     for (const [i, a] of map.visible.entries()) {
@@ -219,9 +222,9 @@ test('a count rings hidden alerts, zooms in when tapped, and markers then show o
 test('a hidden sample is not focusable, and its card shows it on the map', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize({ width: 800, height: 800 });
   await open(page, 'pt');
-  // The whole route on a desktop already clusters some samples.
+  // The whole route on a narrow desktop already clusters some samples.
   await expect
     .poll(async () => (await layout(page)).visible.length)
     .toBeLessThan(11);
@@ -293,7 +296,7 @@ test('a loop with stops that comes back near itself shows no overlapping markers
   state.points = stops.map((coord, i) => ({ name: `Point ${i}`, coord }));
   await page.goto(base + encodeState(state));
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await page.locator('#weather-section > summary').click();
+  await openTab(page, 'weather-section');
   await openTripOptions(page);
   await page.locator('#departure').fill('2026-11-08T10:00');
   await page.locator('#departure').press('Tab');
