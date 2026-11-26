@@ -1,6 +1,11 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 import { BASEMAP_STYLE } from './map-helpers';
-import { previewBase as base, osrmAnswer } from './app-helpers';
+import {
+  previewBase as base,
+  osrmAnswer,
+  exportAs,
+  saveRoute,
+} from './app-helpers';
 // The app-shell service worker only runs in production builds: these tests
 // use the preview server started by playwright.config.ts.
 const start = '-22.930929, -43.238286',
@@ -136,7 +141,7 @@ test('a saved route opens offline, without routing requests, and downloads', asy
   await controlled(page);
   await routedPair(page);
   await page.locator('#route-name').fill('Offline route');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
 
   await goOffline(context, true);
@@ -156,7 +161,7 @@ test('a saved route opens offline, without routing requests, and downloads', asy
   await expect(page.locator('#summary')).toContainText('42 km');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   expect(download.suggestedFilename()).toBe('offline-route.gpx');
   expect(routing).toBe(0);
@@ -361,7 +366,7 @@ test('Calculate route without a connection keeps the route on screen and its dow
   expect(network.routing).toBe(before);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   expect(download.suggestedFilename()).toMatch(/\.gpx$/);
 });

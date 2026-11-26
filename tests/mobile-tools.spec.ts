@@ -7,7 +7,13 @@ import {
   mapCanvas,
   scriptedTouches,
 } from './map-helpers';
-import { base, gpxPoints, mockRegion } from './app-helpers';
+import {
+  base,
+  gpxPoints,
+  mockRegion,
+  exportAs,
+  saveRoute,
+} from './app-helpers';
 const features = {
   features: [
     {
@@ -173,7 +179,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
   });
   await expect(page.locator('#download')).toBeEnabled();
   await page.locator('#route-name').fill('Custom file');
-  await page.locator('#share-gpx').click();
+  await exportAs(page, 'share-gpx');
   await expect
     .poll(() =>
       page.evaluate(
@@ -191,7 +197,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
   expect(shared.type).toBe('application/xml');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   const xml = await readFile(await download.path(), 'utf8');
   expect(gpxPoints(xml)).toEqual(coords);
@@ -199,7 +205,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
   await page.locator('.map-zoom-in').click();
   const [after] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   expect(gpxPoints(await readFile(await after.path(), 'utf8'))).toEqual(coords);
   await page.evaluate(() =>
@@ -209,7 +215,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
     }),
   );
   const status = await page.locator('#status').textContent();
-  await page.locator('#share-gpx').click();
+  await exportAs(page, 'share-gpx');
   await expect(page.locator('#status')).toHaveText(status!);
   await page.evaluate(() =>
     Object.defineProperty(navigator, 'share', {
@@ -220,7 +226,7 @@ test('full geometry survives drawing and share uses the same GPX and custom file
   // Any other failure downloads the same file instead.
   const [fallback] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#share-gpx').click(),
+    exportAs(page, 'share-gpx'),
   ]);
   expect(fallback.suggestedFilename()).toBe('custom-file.gpx');
   // No elevation loaded: the status says how to include it (#290).
@@ -549,25 +555,26 @@ for (const language of ['en', 'pt'] as const)
     await page.goto(base);
     if (language === 'pt') await page.locator('#language').selectOption('pt');
     const label = language === 'pt' ? 'Compartilhar GPX' : 'Share GPX';
+    // The Export menu's first choice (#301).
+    await page.locator('#export').click();
     await expect(page.locator('#download')).toHaveAccessibleName(label);
+    await page.locator('#export').click();
     await page.locator('#import').setInputFiles({
       name: 'dense.gpx',
       mimeType: 'application/gpx+xml',
       buffer: Buffer.from(gpx),
     });
     await expect(page.locator('#download')).toBeEnabled();
-    // The name is in More actions, where Share GPX merged into the main action.
-    await page.locator('#more-actions').click();
+    // Saving names the route (#301); the shared file takes that name, and
+    // Share GPX merged into the menu's first choice.
+    await saveRoute(page, 'Shared ride');
+    await expect(page.locator('#saved-count')).toHaveText('(1)');
+    await exportAs(page, 'download');
     await expect(page.locator('#share-gpx')).toBeHidden();
-    await page.locator('#route-name').fill('Shared ride');
-    await page.locator('#route-name').press('Tab');
-    await page.locator('#download').click();
     await expect
       .poll(() => sharedFiles(page))
       .toEqual(['shared-ride.gpx application/gpx+xml']);
     // Saved routes and the backup share too.
-    await page.locator('#save-route').click();
-    await expect(page.locator('#saved-count')).toHaveText('(1)');
     await page.locator('.saved-routes > summary').click();
     await page
       .getByRole('button', {
@@ -607,7 +614,9 @@ test('a touch device without file sharing keeps Download GPX', async ({
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await mockBasemap(page);
   await page.goto(base);
+  await page.locator('#export').click();
   await expect(page.locator('#download')).toHaveAccessibleName('Download GPX');
+  await page.locator('#export').click();
   await expect(page.locator('#backup-routes')).toHaveText('Export backup');
   await page.locator('#import').setInputFiles({
     name: 'dense.gpx',
@@ -616,7 +625,7 @@ test('a touch device without file sharing keeps Download GPX', async ({
   });
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   expect(download.suggestedFilename()).toMatch(/\.gpx$/);
   await context.close();
@@ -639,21 +648,25 @@ for (const width of [320, 360, 390, 430, 760])
       await page.goto(base);
       if (language === 'pt') await page.locator('#language').selectOption('pt');
       const button = page.locator('#download');
+      await page.locator('#export').click();
       await expect(button).toHaveAccessibleName(
         language === 'pt' ? 'Compartilhar GPX' : 'Share GPX',
       );
-      // The GPX button on the bar, and the backup button in Settings.
+      // The GPX choice in the Export menu (its name, not the note below
+      // it), the bar's own buttons, and the backup button in Settings.
       const fits = (target: Locator) =>
         target.evaluate((e) => {
           const label = e.querySelector('.button-label') ?? e;
           const range = document.createRange();
-          range.selectNodeContents(label);
+          range.selectNode(label.firstChild ?? label);
           const lines = new Set(
             [...range.getClientRects()].map((r) => Math.round(r.top)),
           );
           return lines.size <= 1 && e.scrollWidth <= e.clientWidth + 1;
         });
       expect(await fits(button)).toBe(true);
+      for (const id of ['#save-route', '#export'])
+        expect(await fits(page.locator(id)), id).toBe(true);
       await page.locator('#open-settings').click();
       await expect(page.locator('#backup-routes')).toBeVisible();
       expect(await fits(page.locator('#backup-routes'))).toBe(true);

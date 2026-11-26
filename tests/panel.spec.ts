@@ -114,7 +114,7 @@ test('wide screens collapse the side panel from its header', async ({
   await expect.poll(async () => (await map())!.width).toBe(1280);
   await expect(page.locator('#panel-toggle')).toBeVisible();
   await page.locator('#panel-toggle').click();
-  await expect(page.locator('#download')).toBeVisible();
+  await expect(page.locator('#export')).toBeVisible();
 });
 
 test.describe('bottom sheet', () => {
@@ -128,18 +128,22 @@ test.describe('bottom sheet', () => {
     await expect(page.locator('#peek-status')).toHaveText(
       'Set your start and destination.',
     );
-    await expect(page.locator('#download')).toBeVisible();
-    await expect(page.locator('#share')).toBeVisible();
+    // Save route and Export (#301); the name is asked when saving.
+    await expect(page.locator('#save-route')).toBeVisible();
+    await expect(page.locator('#export')).toBeVisible();
     await expect(page.locator('#route-name')).toBeHidden();
+    await page.locator('#export').click();
+    await expect(page.locator('#share')).toBeVisible();
     const more = page.locator('#more-actions');
     await expect(more).toHaveAccessibleName('More actions');
     await more.click();
     await expect(more).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('#route-name')).toBeVisible();
-    await expect(page.locator('#save-route')).toBeVisible();
+    // One menu at a time.
+    await expect(page.locator('#export-menu')).toBeHidden();
     await expect(page.locator('.secondary-actions .file-button')).toBeVisible();
+    await expect(page.locator('#add-home')).toBeVisible();
     await more.click();
-    await expect(page.locator('#route-name')).toBeHidden();
+    await expect(page.locator('#add-home')).toBeHidden();
   });
 
   test('the open sheet shows the status once, at the top, and Calculate route spans its row', async ({
@@ -381,7 +385,10 @@ test.describe('phone summary', () => {
     await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
     const arrival = page.locator('#summary .stats > div').nth(2);
     await expect(arrival.locator('strong')).toHaveText('00:44');
-    await expect(arrival.locator('dd span')).toHaveText('11 de nov.');
+    // The time of the trip, then the date (#302).
+    await expect(arrival.locator('dd span')).toHaveText(
+      '1h 14 min · 11 de nov.',
+    );
     // Each value stays on one line, and the three point actions share a row.
     for (const value of await page.locator('#summary .stats strong').all())
       expect(
@@ -738,12 +745,14 @@ for (const [width, language] of [
       const tiles = [
         ...document.querySelectorAll('.inline-actions > button'),
       ].map(box);
-      const download = document.querySelector('#download')!;
-      const footer = [
-        '#download',
-        '#share',
-        '.secondary-actions .file-button',
-      ].map((selector) => box(document.querySelector(selector)!));
+      // Save route and Export (#301), on one row.
+      const footer = ['#save-route', '#export'].map((selector) =>
+        box(document.querySelector(selector)!),
+      );
+      const oneLine = ['#save-route', '#export'].every((selector) => {
+        const button = document.querySelector(selector)!;
+        return button.scrollWidth <= button.clientWidth;
+      });
       return {
         tileRows: new Set(tiles.map((b) => px(b.top))).size,
         tileHeights: new Set(tiles.map((b) => px(b.height))).size,
@@ -751,8 +760,8 @@ for (const [width, language] of [
           px(tiles[0].left - list.left),
           px(tiles[2].right - list.right),
         ],
-        downloadOneLine: download.scrollWidth <= download.clientWidth,
-        downloadHeight: px(box(download).height),
+        oneLine,
+        height: px(footer[0].height),
         footerRows: new Set(footer.map((b) => px(b.top))).size,
         footerInside: footer.every((b) => b.right <= list.right + 1),
       };
@@ -761,11 +770,12 @@ for (const [width, language] of [
       tileRows: 1,
       tileHeights: 1,
       tileEdges: [0, 0],
-      downloadOneLine: true,
-      downloadHeight: 44,
+      oneLine: true,
+      height: 44,
       footerRows: 1,
       footerInside: true,
     });
+    await page.locator('#export').click();
     await expect(page.locator('#share')).toHaveAccessibleName(
       language === 'pt' ? 'Copiar link' : 'Copy link',
     );
@@ -815,8 +825,8 @@ for (const width of [320, 390])
         expect(
           await card.evaluate(
             (c) =>
-              c.querySelector('strong')!.getBoundingClientRect().right <=
-              c.getBoundingClientRect().right,
+              c.querySelector('strong, button')!.getBoundingClientRect()
+                .right <= c.getBoundingClientRect().right,
           ),
         ).toBe(true);
       // Visible at half height without scrolling.
@@ -965,7 +975,12 @@ test.describe('touch accessibility at 320 px', () => {
     }
   });
   test('Navigate is named by what it shows', async ({ page }) => {
+    // In the summary of a route (#301).
+    await mockRouting(page);
     await page.goto(base);
+    await page.locator('#location-0').fill('-22.97, -43.18');
+    await page.locator('#location-1').fill('-23.02, -43.48');
+    await page.locator('#location-1').press('Tab');
     const navigate = page.getByRole('button', {
       name: 'Navigate',
       exact: true,
@@ -1009,3 +1024,24 @@ for (const language of ['en', 'pt'] as const)
         'favorites',
       ]);
   });
+
+test('the Export menu stays on a phone held sideways, its choices whole (#301)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto(`${base}?lang=pt`);
+  await page.locator('#export').click();
+  const menu = (await page.locator('#export-menu').boundingBox())!;
+  expect(menu.y).toBeGreaterThanOrEqual(0);
+  // Choices keep their size and the menu scrolls instead.
+  expect(
+    await page
+      .locator('#export-menu > button:not([hidden])')
+      .evaluateAll((all) =>
+        all.every((b) => b.scrollHeight <= b.clientHeight + 1),
+      ),
+  ).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#export-menu')).toBeHidden();
+  await expect(page.locator('#export')).toBeFocused();
+});

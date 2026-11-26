@@ -22,7 +22,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 1. Open [nautavo.com](https://nautavo.com/).
 2. Enter addresses or `latitude, longitude` in **Start** and **Destination**, or pick points on the map.
 3. Add stops, adjust the points and review the calculated route.
-4. Optionally enter a **route name**, then press **Download GPX** (**Share GPX** on a phone or tablet that can share files, which keeps the file name in browsers such as Firefox on iPhone).
+4. Press **Export**, then **Download GPX** (**Share GPX** on a phone or tablet that can share files, which keeps the file name in browsers such as Firefox on iPhone); TCX and FIT courses with the turns and the route link are in the same menu. **Save route** asks for the route's name and keeps it in this browser.
 
 Gestures, shortcuts and every control are explained on the [Help page](https://nautavo.com/help). Recent changes are listed on [What's new](https://nautavo.com/changelog) and in the [changelog](CHANGELOG.md).
 

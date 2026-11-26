@@ -26,6 +26,8 @@ import {
   routedPoints,
   openAdvancedSettings,
   mockRegion,
+  exportAs,
+  saveRoute,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
@@ -78,9 +80,10 @@ for (const mobile of [false, true]) {
       await expect(page.locator('.route-marker')).toHaveCount(2);
       await expect(page.locator('#summary')).toContainText('42 km');
       // The automatic departure (next half hour) also gives an arrival.
+      // Distance, ascent (asked on a tap) and the arrival with the time (#302).
       await expect(page.locator('#summary dt')).toHaveText([
         'Distance',
-        'Time',
+        'Ascent',
         'Arrival',
       ]);
       // Our own estimate from the default 20 km/h, never the router's 49 min.
@@ -198,7 +201,7 @@ for (const mobile of [false, true]) {
       else await page.locator('.map-zoom-in').click();
       await page.locator('#fit').click();
       const download = page.waitForEvent('download');
-      await page.locator('#download').click();
+      await exportAs(page, 'download');
       await download;
       expect(routeRequests).toBe(requestsBefore);
 
@@ -714,7 +717,7 @@ test('editing an imported track reroutes only the track around the edit', async 
   expect(routes).toEqual([3]);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   const gpx = await readFile(await download.path(), 'utf8');
   const exported = gpx.match(/<trkpt[^>]*\/>/g)!;
@@ -767,7 +770,7 @@ test('distance units change without rerouting, changing GPX geometry or the link
   });
   const [before] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   const originalGeometry = (await readFile(await before.path(), 'utf8')).match(
     /<trkpt[^>]*\/>/g,
@@ -779,7 +782,7 @@ test('distance units change without rerouting, changing GPX geometry or the link
   expect(page.url()).toBe(hashBefore);
   const [after] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   const newGeometry = (await readFile(await after.path(), 'utf8')).match(
     /<trkpt[^>]*\/>/g,
@@ -818,7 +821,9 @@ test('average speed: keyboard steps, units, kept on the device and never taken f
   await expect(page.locator('#average-speed')).toBeEnabled();
   await expect(page.locator('#use-average-speed, #reset-speed')).toHaveCount(0);
   await expect(page.locator('#average-speed-value')).toHaveText('20');
-  // Fine steps at low speeds, coarser above, up to 120 km/h.
+  // Fine steps at low speeds, coarser above, up to 120 km/h. Trip options
+  // folds into one line once the route shows (#303).
+  await page.locator('#trip-options > summary').click();
   await page.locator('#average-speed').focus();
   await expect(page.locator('#average-speed')).toBeFocused();
   await page.locator('#average-speed').press('Home');
@@ -1119,11 +1124,11 @@ test('the route name is visible and names the downloaded file, metadata and trac
   await setup(page);
   await fillPair(page);
   const name = 'Passeio <Alto> & Grumari';
-  await expect(page.getByLabel('Route name')).toBeVisible();
+  await expect(page.locator('#route-name')).toBeVisible();
   await page.locator('#route-name').fill(name);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   expect(download.suggestedFilename()).toBe('passeio-alto-grumari.gpx');
   const xml = await readFile(await download.path(), 'utf8');
@@ -1141,7 +1146,7 @@ test('the route name is visible and names the downloaded file, metadata and trac
   await page.locator('#route-name').fill('');
   const [fallback] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   expect(fallback.suggestedFilename()).toBe('start-to-destination.gpx');
 });
@@ -1152,7 +1157,7 @@ test('the edit lock disables and enables opening saved routes, however the list 
   await setup(page);
   await fillPair(page);
   await page.locator('#route-name').fill('Locked route');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   await page.locator('.saved-routes > summary').click();
   const open = page.locator('#saved-list .library-open');
@@ -1194,9 +1199,7 @@ for (const language of ['en', 'pt'] as const)
     await setup(page);
     await page.locator('#language').selectOption(language);
     await fillPair(page);
-    await page.locator('#more-actions').click();
-    await page.locator('#route-name').fill('Weekend route');
-    await page.locator('#save-route').click();
+    await saveRoute(page, 'Weekend route');
     await expect(page.locator('#status')).toHaveText(say.saved);
     const saved = await libraryEntry(page, 'routes', 'weekend route');
     expect(saved).not.toBeNull();
@@ -1229,16 +1232,14 @@ test('Undo never overwrites a route saved again under the same name', async ({
   await page.setViewportSize({ width: 320, height: 640 });
   await setup(page);
   await fillPair(page);
-  await page.locator('#more-actions').click();
-  await page.locator('#route-name').fill('Weekend route');
-  await page.locator('#save-route').click();
+  await saveRoute(page, 'Weekend route');
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   await page.locator('.saved-routes > summary').click();
   await page
     .getByRole('button', { name: 'Delete saved route: Weekend route' })
     .click();
   await expect(page.locator('#saved-count')).toHaveText('(0)');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   const again = await libraryEntry(page, 'routes', 'weekend route');
   await page
@@ -1257,13 +1258,22 @@ test('only explicitly saved named routes persist, and reopening does not reroute
   await setup(page);
   await fillPair(page);
   await expect(page.locator('#saved-count')).toHaveText('(0)');
-  await expect(page.locator('#save-route')).toBeDisabled();
+  // The save sheet asks for a name (#301): none, and nothing is saved.
+  await page.locator('#save-route').click();
+  await page.locator('#save-confirm').click();
+  await expect(page.locator('#save-error')).toHaveText(
+    'Name the route to save it.',
+  );
+  await page.locator('#save-cancel').click();
   await page.locator('#route-name').fill('Weekend route');
   await expect(page.locator('#saved-count')).toHaveText('(0)');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
-  await expect(page.locator('#save-route')).toHaveText('Update saved route');
+  // The same name again replaces it, and the sheet says so.
   await page.locator('#save-route').click();
+  await expect(page.locator('#save-name')).toHaveValue('Weekend route');
+  await expect(page.locator('#save-confirm')).toHaveText('Update saved route');
+  await page.locator('#save-confirm').click();
   await expect(page.locator('#status')).toHaveText(
     'Route saved on this device.',
   );
@@ -1304,7 +1314,7 @@ test('route backups restore deleted routes and skip existing names', async ({
   await setup(page);
   await fillPair(page);
   await page.locator('#route-name').fill('Backup test');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   // The backup lives in Settings.
   await page.locator('#open-settings').click();
@@ -1464,7 +1474,7 @@ test('a route saved before turn directions gets them once, keeping its geometry'
   // The saved geometry is kept: three points, not the router's two.
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   const xml = await readFile(await download.path(), 'utf8');
   expect((xml.match(/<trkpt /g) || []).length).toBe(3);
@@ -1700,7 +1710,7 @@ test('an imported track gets directions by map matching when the itinerary opens
   // The exact imported track is kept.
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download').click(),
+    exportAs(page, 'download'),
   ]);
   const xml = await readFile(await download.path(), 'utf8');
   expect((xml.match(/<trkpt /g) || []).length).toBe(60);
@@ -1716,14 +1726,15 @@ test('a TCX course carries the turns, asking an imported track for them once (#2
   const matches = await mockMatch(page);
   await page.goto(base);
   await importRide(page);
-  // On a computer it takes its own row, named, below Download GPX.
-  await expect(page.locator('#download-tcx')).toHaveText(
+  // A choice of the Export menu (#301), named.
+  await expect(page.locator('#download-tcx')).toHaveAttribute(
+    'aria-label',
     'Download TCX with turns',
   );
   const course = async () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('#download-tcx').click(),
+      exportAs(page, 'download-tcx'),
     ]);
     expect(download.suggestedFilename()).toMatch(/\.tcx$/);
     return readFile(await download.path(), 'utf8');
@@ -1749,12 +1760,13 @@ test('a FIT course carries the same turns, as course points', async ({
   const matches = await mockMatch(page);
   await page.goto(base);
   await importRide(page);
-  await expect(page.locator('#download-fit')).toHaveText(
+  await expect(page.locator('#download-fit')).toHaveAttribute(
+    'aria-label',
     'Download FIT with turns',
   );
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.locator('#download-fit').click(),
+    exportAs(page, 'download-fit'),
   ]);
   expect(download.suggestedFilename()).toMatch(/\.fit$/);
   const fit = readTrackFile(
@@ -1785,47 +1797,54 @@ test('downloads carry the elevation the page already has, never asking for it (#
   });
   await page.goto(base);
   await importRide(page);
-  const file = async (id: string) => {
+  const file = async (id: 'download' | 'download-tcx') => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator(id).click(),
+      exportAs(page, id),
     ]);
     return readFile(await download.path(), 'utf8');
   };
   // Elevation not opened: no request, no elevation in the files.
-  expect(await file('#download')).not.toContain('<ele>');
-  expect(await file('#download-tcx')).not.toContain('<AltitudeMeters>');
+  expect(await file('download')).not.toContain('<ele>');
+  expect(await file('download-tcx')).not.toContain('<AltitudeMeters>');
   expect(asked).toEqual([]);
   // Opened by the user: every track point takes the loaded profile.
   await page.locator('#elevation > summary').click();
   await expect(page.locator('#elevation-chart svg')).toBeVisible();
   const requests = asked.length;
-  const gpx = await file('#download');
+  const gpx = await file('download');
   expect((gpx.match(/<ele>/g) || []).length).toBe(60);
   await expect(page.locator('#status')).toHaveText('GPX downloaded.');
-  const tcx = await file('#download-tcx');
+  const tcx = await file('download-tcx');
   expect((tcx.match(/<AltitudeMeters>/g) || []).length).toBe(60);
   // The downloads asked nothing more.
   expect(asked).toHaveLength(requests);
 });
-test('the course actions fit More actions on a 320 px phone (pt)', async ({
-  page,
-}) => {
+test('the Export choices fit a 320 px phone (pt)', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await setup(page);
   await page.goto(`${base}?lang=pt`);
   await importRide(page);
-  await page.locator('#more-actions').click();
+  await page.locator('#export').click();
   for (const [id, label] of [
+    ['#download', 'Baixar GPX'],
     ['#download-tcx', 'Baixar TCX com curvas'],
     ['#download-fit', 'Baixar FIT com curvas'],
+    ['#share', 'Copiar link'],
   ]) {
     const action = page.locator(id);
     await expect(action).toBeVisible();
     await expect(action).toContainText(label);
-    // One line, inside the screen.
+    // The name on one line, the choice inside the screen (#301).
+    const name = await action.evaluate((e) => {
+      const range = document.createRange();
+      range.selectNode(e.querySelector('.button-label')!.firstChild!);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top)))
+        .size;
+    });
+    expect(name).toBe(1);
     const box = (await action.boundingBox())!;
-    expect(box.height).toBeLessThan(52);
+    expect(box.y).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(320);
   }
 });
@@ -1865,7 +1884,7 @@ test('download still works if persistent browser storage is unavailable', async 
   await setup(page);
   await fillPair(page);
   await page.locator('#route-name').fill('Temporary');
-  await page.locator('#save-route').click();
+  await saveRoute(page);
   await expect(page.locator('#status')).toContainText('Could not save locally');
   await expect(page.locator('#download')).toBeEnabled();
 });

@@ -98,7 +98,7 @@ import { setupHomeScreen } from './home-screen';
 import { setupElevation } from './elevation-ui';
 import { setupSurface } from './surface-ui';
 import { SURFACE_KINDS } from './surface';
-import { gradeRanges, trackElevations } from './elevation';
+import { elevationStats, gradeRanges, trackElevations } from './elevation';
 import { setupRouteOverlays } from './route-overlays';
 import {
   repeatsFor,
@@ -115,7 +115,12 @@ import {
 } from './planner-map';
 import { createRouteFit } from './route-fit';
 import { setupLibrary } from './library-ui';
-import { itineraryList, summaryStats } from './summary-ui';
+import {
+  itineraryList,
+  showAscent,
+  summaryStats,
+  tripLine,
+} from './summary-ui';
 import { checkTrack, type TrackCheck } from './track-check';
 import { PASS_OFFSET } from './route-overlays';
 import { routeDaylight } from './daylight';
@@ -284,6 +289,10 @@ const library = setupLibrary({
   pointNamed: () => {
     syncUrl();
     renderPoints();
+  },
+  rename: (name) => {
+    $<HTMLInputElement>('route-name').value = name;
+    renameRoute();
   },
   map,
   photonUrl: () => photonUrl,
@@ -468,10 +477,39 @@ const elevation = setupElevation(map, {
   endpoint: () => weather.endpoint(),
   recorded: (route) => recordedElevation.get(route),
   speed: () => speedKmh,
-  // The Grade coloring is an explicit choice that needs the profile too.
-  wanted: () => overlays.active() === 'grade',
-  onProfile: () => overlays.refresh(),
+  // The Grade coloring and Show ascent are explicit choices that need the
+  // profile too; a recorded profile asks for nothing.
+  wanted: () =>
+    overlays.active() === 'grade' ||
+    ascentShown ||
+    (!!current && recordedElevation.has(current)),
+  onProfile: () => {
+    overlays.refresh();
+    refreshAscent();
+  },
+  onStatus: () => refreshAscent(),
 });
+/** Show ascent was chosen in the summary: later routes show it too (#302). */
+let ascentShown = false;
+/** The summary's Ascent, from the profile when it is known. */
+function refreshAscent() {
+  const cell = optionalById('summary-ascent');
+  if (!cell) return;
+  const loaded = elevation.profile();
+  showAscent(
+    cell,
+    loaded
+      ? (elevationStats(loaded.profile, loaded.source)?.ascent ?? null)
+      : null,
+    elevation.loading(),
+    state.language === 'pt' ? 'pt-BR' : 'en',
+    () => {
+      ascentShown = true;
+      elevation.want();
+      refreshAscent();
+    },
+  );
+}
 const surface = setupSurface(map, {
   state: () => state,
   // The Surface coloring is an explicit choice that needs it too.
@@ -1247,6 +1285,39 @@ async function addDirections(route: Route) {
 
 /** Meters from a route point to the road the route uses, above which it warns. */
 const FAR_FROM_ROAD = 500;
+/**
+ * The summary's heading (#302): the route's name, else its first and last
+ * points by the first part of their names.
+ */
+function routeTitle(): Node[] {
+  if (state.name) return [document.createTextNode(state.name)];
+  const short = (point: Point) => point.name.split(',')[0].trim();
+  // The arrow is drawn; screen readers hear "to".
+  return [
+    text('span', short(state.points[0])),
+    icon('right'),
+    text('span', 'to', 'sr-only'),
+    document.createTextNode(' '),
+    text('span', short(state.points.at(-1)!)),
+  ];
+}
+/** Trip options closes to one line once a route is shown, until opened (#303). */
+let tripOptionsTouched = false;
+$('trip-options')
+  .querySelector('summary')!
+  .addEventListener('click', () => {
+    tripOptionsTouched = true;
+  });
+function showTripLine(departure: number, locale: string) {
+  const parts = tripLine(departure, speedKmh, state.prefer, locale);
+  $('trip-line').replaceChildren(
+    ...parts.flatMap((part, i) => [
+      ...(i ? [document.createTextNode(' · ')] : []),
+      text('span', part),
+    ]),
+  );
+  if (!tripOptionsTouched) $<HTMLDetailsElement>('trip-options').open = false;
+}
 /** Route summary card; departure, units, speed and language changes only re-render this. */
 function renderSummary(route: Route) {
   const locale = state.language === 'pt' ? 'pt-BR' : 'en';
@@ -1268,11 +1339,14 @@ function renderSummary(route: Route) {
   );
   // Shown on the handle of the closed bottom sheet.
   $('peek-main').textContent = peek;
+  $('summary-title').replaceChildren(...routeTitle());
+  showTripLine(departure, locale);
   const daylight = document.createElement('div');
   daylight.id = 'daylight-summary';
   summary.append(stats, basis, daylight);
   renderDaylight(state, route, speedKmh);
   elevation.setRoute(route);
+  refreshAscent();
   surface.setRoute(route);
   overlays.refresh();
   marks.refresh();
@@ -1940,11 +2014,13 @@ $<HTMLInputElement>('route-name').oninput = () => {
   state.name = $<HTMLInputElement>('route-name').value.trim();
   library.updateSaveButton();
 };
-$<HTMLInputElement>('route-name').onchange = () => {
+/** The route takes the Route name field's name, in the link and undo. */
+function renameRoute() {
   state.name = $<HTMLInputElement>('route-name').value.trim();
   syncUrl();
   if (current) undoHistory.attach(current);
-};
+}
+$<HTMLInputElement>('route-name').onchange = renameRoute;
 /** The route's exports (GPX and the courses) follow the route shown. */
 function exportable(ready: boolean) {
   for (const id of ['download', 'download-tcx', 'download-fit'])

@@ -232,11 +232,18 @@
             </div>
           </div>
           <section id="summary" aria-label="Route summary" hidden>
+            <div class="summary-head">
+              <h2 id="summary-title"></h2>
+              <button id="navigate" type="button" disabled>Navigate</button>
+            </div>
             <div id="summary-content"></div>
             <div id="summary-notes"></div>
           </section>
           <details id="trip-options" class="trip-options" open>
-            <summary>Trip options</summary>
+            <summary>
+              <span>Trip options</span>
+              <span id="trip-line" class="trip-line"></span>
+            </summary>
             <div class="departure-field">
               <label for="departure">Departure</label>
               <input
@@ -330,6 +337,9 @@
             <summary>Saved routes <span id="saved-count">(0)</span></summary>
             <p id="library-status" class="hint" role="status"></p>
             <div id="saved-list"></div>
+            <button id="library-import" class="ghost" type="button">
+              Import GPX, FIT or TCX
+            </button>
           </details>
           <details class="favorites">
             <summary>
@@ -361,37 +371,15 @@
         </aside>
         <div id="action-bar" class="action-bar">
           <div id="more-panel" class="more-panel">
-            <div class="gpx-name">
-              <label for="route-name">Route name</label>
-              <div class="save-name">
-                <input
-                  id="route-name"
-                  maxlength="160"
-                  placeholder="My road trip"
-                /><button id="save-route" type="button" disabled>
-                  Save route
-                </button>
-              </div>
-            </div>
             <div class="secondary-actions">
               <label class="file-button"
-                ><span class="label-short">Import</span
-                ><span class="label-long">Import GPX, FIT or TCX</span
+                ><span>Import GPX, FIT or TCX</span
                 ><input
                   id="import"
                   type="file"
                   aria-label="Import GPX, FIT or TCX"
                   title="Import GPX, FIT or TCX"
               /></label>
-              <button id="share-gpx" type="button" hidden disabled>
-                Share GPX
-              </button>
-              <button id="download-tcx" type="button" disabled>
-                Download TCX with turns
-              </button>
-              <button id="download-fit" type="button" disabled>
-                Download FIT with turns
-              </button>
               <button
                 id="add-home"
                 type="button"
@@ -402,15 +390,42 @@
               </button>
             </div>
           </div>
+          <div class="gpx-name">
+            <label for="route-name">Route name</label>
+            <input id="route-name" maxlength="160" placeholder="My road trip" />
+          </div>
+          <div id="export-menu" class="export-menu" hidden>
+            <button id="download" type="button" disabled>Download GPX</button>
+            <button id="download-tcx" type="button" disabled>
+              Download TCX with turns
+            </button>
+            <button id="download-fit" type="button" disabled>
+              Download FIT with turns
+            </button>
+            <button id="share-gpx" type="button" hidden disabled>
+              Share GPX
+            </button>
+            <button id="share" type="button">Copy link</button>
+          </div>
           <div class="export-actions">
             <button id="activity-replay" class="primary" type="button" hidden>
               Play activity</button
-            ><button id="navigate" class="primary" disabled type="button">
-              Navigate</button
-            ><button id="download" class="primary" disabled type="button">
-              Download GPX</button
-            ><button id="share" type="button" title="Copy route link">
-              Copy link</button
+            ><button
+              id="save-route"
+              class="primary"
+              type="button"
+              aria-haspopup="dialog"
+              aria-controls="save-dialog"
+              disabled
+            >
+              Save route</button
+            ><button
+              id="export"
+              type="button"
+              aria-expanded="false"
+              aria-controls="export-menu"
+            >
+              Export</button
             ><button
               id="more-actions"
               type="button"
@@ -657,6 +672,27 @@
       </button>
     </dialog>
     <dialog
+      id="save-dialog"
+      class="nav-notice save-dialog"
+      aria-labelledby="save-title"
+    >
+      <form id="save-form" method="dialog" novalidate>
+        <h2 id="save-title">Save route</h2>
+        <label for="save-name">Route name</label>
+        <input
+          id="save-name"
+          type="text"
+          maxlength="160"
+          autocomplete="off"
+          enterkeyhint="done"
+          placeholder="My road trip"
+        />
+        <p id="save-error" class="dialog-error" role="alert" hidden></p>
+        <button id="save-confirm" class="primary" type="submit">Save</button>
+        <button id="save-cancel" type="button">Cancel</button>
+      </form>
+    </dialog>
+    <dialog
       id="favorite-dialog"
       class="nav-notice favorite-dialog"
       aria-labelledby="favorite-title"
@@ -710,7 +746,7 @@
           enterkeyhint="done"
           placeholder="E.g. Corner bakery"
         />
-        <p id="favorite-error" class="favorite-error" role="alert" hidden></p>
+        <p id="favorite-error" class="dialog-error" role="alert" hidden></p>
         <button id="favorite-save" class="primary" type="submit">Save</button>
         <button id="favorite-cancel" type="button">Cancel</button>
       </form>

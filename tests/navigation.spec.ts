@@ -2134,12 +2134,14 @@ test('a denied location permission ends navigation with a message', async ({
   );
 });
 
-test('wide screens keep Download GPX as the main action', async ({ page }) => {
+test('wide screens offer no Navigate: Save route and Export lead (#301)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await setup(page);
   await expect(page.locator('#navigate')).toBeHidden();
-  await expect(page.locator('#download')).toHaveClass(/primary/);
-  await expect(page.locator('#download')).toContainText('Download GPX');
+  await expect(page.locator('#save-route')).toHaveClass(/primary/);
+  await expect(page.locator('#export')).toBeVisible();
 });
 
 test.describe('replay on the navigation screen', () => {

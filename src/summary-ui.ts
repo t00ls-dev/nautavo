@@ -2,6 +2,7 @@ import type { Coord, Route, Step } from './core';
 import {
   distanceLabel,
   durationLabel,
+  elevationLabel,
   milepostLabel,
   stepDistanceLabel,
   withUnit,
@@ -27,9 +28,11 @@ import { text } from './dom';
  */
 
 /**
- * The summary's numbers: distance, time from the traveler's speed (never the
- * router's duration) and the arrival when there is a departure, with the
- * line that says what the time assumes and the closed sheet's peek text.
+ * The summary's numbers (#302): distance, ascent and the arrival when there
+ * is a departure, with the time from the traveler's speed (never the
+ * router's duration) below it, else the time alone; the line that says what
+ * the time assumes and the closed sheet's peek text. The ascent's value is
+ * filled by `showAscent`.
  */
 export function summaryStats(
   route: Route,
@@ -52,25 +55,29 @@ export function summaryStats(
   };
   const distance = distanceLabel(route.distance, distanceUnits(), locale);
   stat('Distance', distance);
+  stat('Ascent', '');
+  const ascent = stats.lastElementChild!.querySelector('dd')!;
+  ascent.id = 'summary-ascent';
   const time = durationLabel(duration);
-  stat('Time', time);
   if (Number.isFinite(departure)) {
     const arrival = new Date(departure + duration * 1000);
     // The date is added only when the arrival is on another day.
+    const day =
+      arrival.toDateString() === new Date(departure).toDateString()
+        ? ''
+        : ` · ${arrival.toLocaleDateString(locale, {
+            month: 'short',
+            day: 'numeric',
+          })}`;
     stat(
       'Arrival',
       arrival.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      arrival.toDateString() === new Date(departure).toDateString()
-        ? undefined
-        : arrival.toLocaleDateString(locale, {
-            month: 'short',
-            day: 'numeric',
-          }),
+      `${time}${day}`,
     );
-  }
+  } else stat('Time', time);
   // The basis of the time estimate, next to the numbers it explains.
   const speed = speedFromKmh(speedKmh, distanceUnits()).toLocaleString(locale, {
     maximumFractionDigits: 1,
@@ -78,9 +85,65 @@ export function summaryStats(
   const basis = `At ${withUnit(speed, distanceUnits() === 'imperial' ? 'mph' : 'km/h')} · no stops`;
   return {
     stats,
+    ascent,
     basis: text('p', basis, 'hint stats-basis'),
     peek: `${distance} · ${time}`,
   };
+}
+
+/**
+ * The summary's Ascent (#302): the value once the route's profile is known,
+ * "…" while it loads, else a Show button whose tap asks for it: elevation is
+ * never requested without that choice.
+ */
+export function showAscent(
+  cell: HTMLElement,
+  ascent: number | null,
+  loading: boolean,
+  locale: string,
+  onShow: () => void,
+) {
+  if (ascent !== null)
+    cell.replaceChildren(
+      text('strong', elevationLabel(ascent, distanceUnits(), locale)),
+    );
+  else if (loading) {
+    const busy = text('strong', '…');
+    busy.setAttribute('aria-label', 'Loading elevation…');
+    cell.replaceChildren(busy);
+  } else {
+    const show = text('button', 'Show', 'ascent-show') as HTMLButtonElement;
+    show.type = 'button';
+    show.setAttribute('aria-label', 'Show ascent');
+    show.onclick = onShow;
+    cell.replaceChildren(show);
+  }
+}
+
+/**
+ * The closed Trip options' line (#303): departure, speed and, when on,
+ * Prefer main roads, each part its own text so the interface translates it.
+ */
+export function tripLine(
+  departure: number,
+  speedKmh: number,
+  prefer: boolean,
+  locale: string,
+): string[] {
+  const speed = speedFromKmh(speedKmh, distanceUnits()).toLocaleString(locale, {
+    maximumFractionDigits: 1,
+  });
+  return [
+    Number.isFinite(departure)
+      ? new Date(departure).toLocaleString(locale, {
+          weekday: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'No departure',
+    withUnit(speed, distanceUnits() === 'imperial' ? 'mph' : 'km/h'),
+    ...(prefer ? ['Main roads'] : []),
+  ];
 }
 
 /**

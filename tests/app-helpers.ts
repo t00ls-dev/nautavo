@@ -249,3 +249,33 @@ export function coveredControls(page: Page, scope: string) {
     return covered;
   }, scope);
 }
+
+/** An action of the Export menu (#301): opens the menu, then chooses it. */
+export async function exportAs(
+  page: Page,
+  id: 'download' | 'download-tcx' | 'download-fit' | 'share-gpx' | 'share',
+) {
+  if (await page.locator('#export-menu').isHidden())
+    await page.locator('#export').click();
+  await page.locator(`#${id}`).click();
+}
+
+/**
+ * Save route (#301): opens the save sheet, types `name` when given (it is
+ * filled with the route's name) and confirms.
+ */
+export async function saveRoute(page: Page, name?: string) {
+  await page.locator('#save-route').click();
+  if (name !== undefined) await page.locator('#save-name').fill(name);
+  await page.locator('#save-confirm').click();
+}
+
+/**
+ * Opens Trip options, which folds into one line once a route shows (#303),
+ * so its departure, speed and road choice can be changed.
+ */
+export async function openTripOptions(page: Page) {
+  const options = page.locator('#trip-options');
+  if ((await options.getAttribute('open')) === null)
+    await options.locator('> summary').click();
+}

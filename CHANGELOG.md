@@ -18,6 +18,9 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
+- The route's actions put planning first: Save route and Export are the main buttons, on phones and computers. Save route asks for the route's name in its own sheet, and Export opens a menu with Download GPX, the TCX and FIT courses with turns and Copy link, each saying what it is for. On a phone, Navigate moves to the route summary, beside the route's start and end; on a computer, Import is below Saved routes.
+- The route summary is headed by the route's name, or its start and end, and shows Distance, Ascent and Arrival, with the time of the trip below the arrival. Ascent appears when you tap Show, which loads the elevation as opening Elevation does, and stays on for the next routes; a file with recorded elevation shows it at once.
+- Once the route shows, Trip options folds into one line with the departure, the speed and Main roads; tap it to change them.
 - Calculate route shows only where it does something: as Try again after a calculation fails, and on an imported track, which it matches to the roads again. The route is still calculated on its own after every change.
 - With Prefer main roads, the summary counts the local roads left on the route with their length (15 local road sections · 6.2 km) in a neutral line instead of a warning, and a route point placed away from a road says how far it is and that the route uses the nearest road; it is a warning only beyond 500 m.
 - Weather cards no longer raise a rain alert for light rain that is only likely: below 1 mm an hour, a high chance of rain is named Light rain likely, in the card's neutral color.
