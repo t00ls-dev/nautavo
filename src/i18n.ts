@@ -70,13 +70,10 @@ const pt: Record<string, string> = {
   'Keep this tab open and the screen on, or the browser stops following you.':
     'Deixe esta aba aberta e a tela acesa, ou o navegador para de acompanhar você.',
   "Don't show this notice again": 'Não exibir mais este aviso',
-  'Show the notice when navigation starts':
-    'Mostrar o aviso ao iniciar a navegação',
+  'Show the start notice': 'Mostrar o aviso inicial',
   'Off the route, a way back is recalculated when online; turn it off to follow the planned track exactly.':
     'Fora da rota, um caminho de volta é recalculado com conexão; desative para seguir exatamente o trajeto planejado.',
-  'Recalculate the route automatically': 'Recalcular a rota automaticamente',
-  'Recalculate the route automatically while navigating':
-    'Recalcular a rota automaticamente ao navegar',
+  'Recalculate off route': 'Recalcular fora da rota',
   'Automatic recalculation on': 'Recálculo automático ativo',
   'Turn off': 'Desativar',
   'See the route on the navigation screen before you leave: each turn, the distances and the arrival.':
@@ -114,8 +111,6 @@ const pt: Record<string, string> = {
   'Route recalculated.': 'Rota recalculada.',
   'Navigation started.': 'Navegação iniciada.',
   'Speak the directions': 'Falar as instruções',
-  'Speak the directions while navigating':
-    'Falar as instruções durante a navegação',
   'Voice on': 'Voz ligada',
   'Voice off': 'Voz desligada',
   'Upcoming turns': 'Próximas curvas',
@@ -424,7 +419,7 @@ const pt: Record<string, string> = {
     'Rota importada. Sem conexão: a trilha será conferida com as ruas quando a conexão voltar.',
   'Route imported. The track could not be checked against the roads now.':
     'Rota importada. Não foi possível conferir a trilha com as ruas agora.',
-  'Track aligned to the roads.': 'Trajeto alinhado às ruas.',
+  'Track aligned to the roads.': 'Trilha alinhada às ruas.',
   'Keep the recorded track': 'Manter a trilha gravada',
   'Recorded track restored.': 'Trilha gravada restaurada.',
   'This route cannot be followed exactly in 1 place:':

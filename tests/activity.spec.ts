@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { base, coveredControls, overlapping } from './app-helpers';
+import { base, coveredControls, overlapping, setLanguage } from './app-helpers';
 import { mapReady, mockBasemap } from './map-helpers';
 import {
   activityGpx,
@@ -22,7 +22,7 @@ async function setup(page: Page, lang: 'en' | 'pt' = 'en') {
     localStorage.setItem('temperature-units', 'celsius');
   });
   await page.goto(`${base}${lang === 'pt' ? '?lang=pt' : ''}`);
-  if (lang === 'en') await page.locator('#language').selectOption('en');
+  if (lang === 'en') await setLanguage(page, 'en');
   await mapReady(page);
   return services;
 }

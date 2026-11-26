@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
-import { base, previewBase, mockRegion } from './app-helpers';
+import { base, previewBase, mockRegion, setLanguage } from './app-helpers';
 test('SEO metadata stays localized and excludes private route state', async ({
   page,
 }) => {
@@ -12,7 +12,7 @@ test('SEO metadata stays localized and excludes private route state', async ({
     'href',
     canonical,
   );
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page).toHaveTitle(/Planejador de rotas/);
   await expect(page.locator('meta[name=description]')).toHaveAttribute(
     'content',
@@ -34,7 +34,7 @@ test('SEO metadata stays localized and excludes private route state', async ({
     'content',
     canonical + '?lang=pt',
   );
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(page).toHaveTitle(/Route Planner/);
   expect(new URL(page.url()).search).toBe('');
   expect(new URL(page.url()).hash).toMatch(/^#v2=/);
@@ -165,7 +165,7 @@ test('help switches language and metadata while preserving the route in its retu
   await expect(page.locator('#help-en')).toBeHidden();
   await expect(page).toHaveTitle(/Ajuda/);
   await expect(page.locator('#back')).toHaveAttribute('href', './' + hash);
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#help-en')).toBeVisible();
   await expect(page.locator('#help-pt')).toBeHidden();
@@ -173,7 +173,7 @@ test('help switches language and metadata while preserving the route in its retu
   await expect(page.locator('#back')).toHaveAttribute('href', './' + hash);
   expect(new URL(page.url()).hash).toBe(hash);
   expect(new URL(page.url()).searchParams.get('lang')).toBe('en');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#help-pt')).toBeVisible();
   await expect(page.locator('#back')).toHaveText('Voltar ao mapa');
 });
@@ -201,7 +201,7 @@ test("What's new switches language and metadata and keeps the route for Back to 
     'https://nautavo.com/changelog?lang=pt',
   );
   await expect(page.locator('#back')).toHaveAttribute('href', './#v2=abc');
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(page.locator('#changelog-en')).toBeVisible();
   await expect(page).toHaveTitle("Nautavo: What's New");
   await expect(page.locator('meta[name=description]')).toHaveAttribute(
@@ -229,7 +229,7 @@ test("the panel footer and the help page link to What's new in the chosen langua
 }) => {
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await page.goto(base);
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   const link = page.locator('#changelog');
   await expect(link).toHaveText('Novidades');
   await expect(link).toHaveAttribute('href', /^\.\/changelog\?lang=pt#/);

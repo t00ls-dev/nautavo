@@ -13,6 +13,7 @@ import {
   mockRegion,
   exportAs,
   saveRoute,
+  setLanguage,
 } from './app-helpers';
 const features = {
   features: [
@@ -294,11 +295,11 @@ test('empty suggestions offer an explicit Enter search and translate both ways',
   await expect(page.locator('#status')).toHaveText(
     'No suggestions found. Press Enter to search addresses.',
   );
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(page.locator('#status')).toHaveText(
     'Nenhuma sugestão encontrada. Pressione Enter para buscar endereços.',
   );
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(page.locator('#status')).toHaveText(
     'No suggestions found. Press Enter to search addresses.',
   );
@@ -553,7 +554,7 @@ for (const language of ['en', 'pt'] as const)
     let downloads = 0;
     page.on('download', () => downloads++);
     await page.goto(base);
-    if (language === 'pt') await page.locator('#language').selectOption('pt');
+    if (language === 'pt') await setLanguage(page, 'pt');
     const label = language === 'pt' ? 'Compartilhar GPX' : 'Share GPX';
     // The Export menu's first choice (#301).
     await page.locator('#export').click();
@@ -646,7 +647,7 @@ for (const width of [320, 360, 390, 430, 760])
       await mockBasemap(page);
       await page.addInitScript(shareMock);
       await page.goto(base);
-      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      if (language === 'pt') await setLanguage(page, 'pt');
       const button = page.locator('#download');
       await page.locator('#export').click();
       await expect(button).toHaveAccessibleName(

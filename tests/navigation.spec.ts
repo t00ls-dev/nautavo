@@ -8,6 +8,7 @@ import {
   coveredControls,
   osrmFirst,
   overlapping,
+  setLanguage,
 } from './app-helpers';
 import { BASEMAP_STYLE, scriptedTouches } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
@@ -87,7 +88,7 @@ async function setup(
   );
   // The maneuvers come from the OSRM mock, so OSRM routes first.
   await page.goto(osrmFirst());
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await page.locator('#location-0').fill(start);
   await page.locator('#location-0').press('Tab');
   await page.locator('#location-1').fill(end);
@@ -361,7 +362,9 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-notice')).toBeHidden();
     await page.locator('#nav-stop').click();
     await page.locator('#open-settings').click();
-    const setting = page.getByLabel('Show the notice when navigation starts');
+    const setting = page
+      .locator('#settings-dialog')
+      .getByLabel('Show the start notice');
     await expect(setting).not.toBeChecked();
     await setting.check();
     await page.keyboard.press('Escape');
@@ -803,7 +806,7 @@ test.describe('phone navigation', () => {
     }) => {
       await page.setViewportSize({ width, height: 700 });
       await setup(page);
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await page.locator('#navigate').click();
       await page.locator('#nav-notice-start').click();
       const road = page.locator('#nav-road'),
@@ -1039,9 +1042,9 @@ test.describe('phone navigation', () => {
   }) => {
     const asked = await rerouting(page, {
       start: async () => {
-        const auto = page.getByLabel('Recalculate the route automatically', {
-          exact: true,
-        });
+        const auto = page
+          .locator('#nav-notice')
+          .getByLabel('Recalculate off route', { exact: true });
         await expect(auto).toBeChecked();
         await auto.uncheck();
         await page.locator('#nav-notice-start').click();
@@ -1060,9 +1063,9 @@ test.describe('phone navigation', () => {
       await page.evaluate(() => localStorage.getItem('auto-reroute')),
     ).toBe('off');
     await page.locator('#open-settings').click();
-    const setting = page.getByLabel(
-      'Recalculate the route automatically while navigating',
-    );
+    const setting = page
+      .locator('#settings-dialog')
+      .getByLabel('Recalculate off route');
     await expect(setting).not.toBeChecked();
     await setting.check();
     expect(
@@ -1086,7 +1089,7 @@ test.describe('phone navigation', () => {
     expect(await fits(page)).toEqual([]);
     // Each start says it again while it stays on.
     await page.locator('#nav-stop').click();
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#navigate').click();
     await expect(chip.locator('span')).toHaveText('Recálculo automático ativo');
     expect(await fits(page)).toEqual([]);
@@ -1112,7 +1115,7 @@ test.describe('phone navigation', () => {
     await page.setViewportSize({ width: 320, height: 640 });
     await rerouting(page, {
       ok: false,
-      before: () => page.locator('#language').selectOption('pt').then(),
+      before: () => setLanguage(page, 'pt'),
     });
     // Off the route for 5.5 s.
     await sendFix(page, offRoute(), t0 + 2000, null, 8);
@@ -1142,7 +1145,7 @@ test.describe('phone navigation', () => {
         });
         await rerouting(page, {
           ok: false,
-          before: () => page.locator('#language').selectOption(language).then(),
+          before: () => setLanguage(page, language),
         });
         // Moving off the route for 5.5 s: the badge and Recalculate show.
         await sendFix(page, offRoute(), t0 + 2000, 5, 8);
@@ -1206,7 +1209,7 @@ test.describe('phone navigation', () => {
         await ownFixes(page);
         await setup(page, longName);
         await chooseUnits(page, { distance: 'imperial' });
-        await page.locator('#language').selectOption(language);
+        await setLanguage(page, language);
         await mockReroute(page, false);
         await page.locator('#navigate').click();
         await page.locator('#nav-notice-start').click();
@@ -1271,7 +1274,7 @@ test.describe('phone navigation', () => {
       }) => {
         await page.setViewportSize({ width, height });
         await setup(page);
-        await page.locator('#language').selectOption(language);
+        await setLanguage(page, language);
         await page.locator('#navigate').click();
         const start = page.locator('#nav-notice-start');
         await expect(start).toBeVisible();
@@ -1288,7 +1291,7 @@ test.describe('phone navigation', () => {
     await page.addInitScript(() => localStorage.setItem('average-speed', '1'));
     await ownFixes(page);
     await setup(page);
-    await page.locator('#language').selectOption(language);
+    await setLanguage(page, language);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
   }
@@ -1309,7 +1312,7 @@ test.describe('phone navigation', () => {
     await expect(chip).toHaveText(/^Sunset in \d+ min$/);
     expect(Math.abs((await chipMinutes(page)) - 40)).toBeLessThanOrEqual(2);
     await page.keyboard.press('Escape');
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
     await sendFix(page, [lat, lon(0)], sun.sunset! - 39 * 60_000);
@@ -1460,7 +1463,7 @@ test.describe('phone navigation', () => {
       );
       await setup(page, longName);
       await chooseUnits(page, { distance: 'imperial' });
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       expect(await fits(page)).toEqual([]);
       await page.locator('#navigate').click();
       expect(await fits(page)).toEqual([]);
@@ -1540,7 +1543,7 @@ test.describe('phone navigation', () => {
       coord: [lat, lon(i === 1 ? 20 : 0)],
     }));
     await page.goto(base + encodeState(state));
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     await expect(page.locator('#navigate')).toBeEnabled({ timeout: 15000 });
   }
 
@@ -1619,7 +1622,7 @@ test.describe('phone navigation', () => {
         longName,
       ]);
       await chooseUnits(page, { distance: 'imperial' });
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await page.locator('#navigate').click();
       await page.locator('#nav-notice-start').click();
       const options = page.locator('#nav-pass-options button');
@@ -1709,7 +1712,7 @@ test.describe('phone navigation', () => {
           maneuver: { type: 'arrive', location: coords[20] },
         },
       ]);
-      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      if (language === 'pt') await setLanguage(page, 'pt');
       const toward = language === 'pt' ? 'em direção a' : 'toward';
       // The itinerary: the route number and first destination stand in for
       // the nameless road, and go on a third line under a named one.
@@ -1891,7 +1894,7 @@ test.describe('phone navigation', () => {
     }) => {
       await page.setViewportSize({ width, height: 700 });
       await setup(page, longName);
-      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      if (language === 'pt') await setLanguage(page, 'pt');
       await page.locator('#navigate').click();
       await page.locator('#nav-notice-start').click();
       await page.locator('#nav-list-toggle').click();
@@ -1996,7 +1999,7 @@ test.describe('phone navigation', () => {
   test('voice speaks Portuguese in Portuguese', async ({ page, context }) => {
     const said = await recordSpeech(page);
     await setup(page);
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-voice').check();
     await page.locator('#nav-notice-start').click();
@@ -2016,7 +2019,7 @@ test.describe('phone navigation', () => {
   }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await setup(page);
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#navigate').click();
     const box = page.locator('#nav-notice-voice').locator('..');
     await expect(box).toContainText('Falar as instruções');
@@ -2034,8 +2037,11 @@ test.describe('phone navigation', () => {
   });
 
   /** Starts navigation, then counts the routing requests after a reload. */
-  async function navigateAndReload(page: Page) {
+  async function navigateAndReload(page: Page, language?: 'pt') {
     await setup(page);
+    // Settings, where the language is chosen, is out of reach under the
+    // continue prompt, so the language is chosen before navigating.
+    if (language) await setLanguage(page, language);
     await page.locator('#navigate').click();
     await page.locator('#nav-notice-start').click();
     await expect(page.locator('#nav-road')).toHaveText('Estrada das Furnas');
@@ -2089,8 +2095,7 @@ test.describe('phone navigation', () => {
       page,
     }) => {
       await page.setViewportSize({ width, height: 700 });
-      await navigateAndReload(page);
-      if (language === 'pt') await page.locator('#language').selectOption('pt');
+      await navigateAndReload(page, language === 'pt' ? 'pt' : undefined);
       const prompt = page.locator('#nav-resume-notice');
       await expect(prompt).toBeVisible();
       await expect(prompt.locator('h2')).toHaveText(
@@ -2239,7 +2244,7 @@ test.describe('replay on the navigation screen', () => {
     }) => {
       await page.setViewportSize({ width, height: width > 1000 ? 800 : 640 });
       await setup(page);
-      await page.locator('#language').selectOption(language);
+      await setLanguage(page, language);
       await page.locator('#travel-details > summary').click();
       // The button's label stays on one line inside it.
       const label = page.locator('#travel-route');
@@ -2268,7 +2273,7 @@ for (const [width, height] of LANDSCAPE)
     await setup(page, longName);
     // A drawn map, to see it follow the screen as it turns.
     await page.route('**/styles/**', (r) => r.fulfill({ json: BASEMAP_STYLE }));
-    await page.locator('#language').selectOption('pt');
+    await setLanguage(page, 'pt');
     await page.locator('#travel-details > summary').click();
     await page.locator('#travel-route').click();
     await expect(page.locator('#nav-map canvas')).toBeVisible();
@@ -2336,7 +2341,7 @@ test('a playing replay turns the map smoothly on a road with small bends', async
     }),
   );
   await page.goto(base);
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await page.locator('#location-0').fill(`${bends[0][1]}, ${bends[0][0]}`);
   await page.locator('#location-0').press('Tab');
   await page.locator('#location-1').fill(`${bends[299][1]}, ${bends[299][0]}`);
@@ -2415,7 +2420,7 @@ async function replayTurns(page: Page, path: number[][]) {
     }),
   );
   await page.goto(base);
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await page.locator('#location-0').fill(`${path[0][1]}, ${path[0][0]}`);
   await page.locator('#location-0').press('Tab');
   await page.locator('#location-1').fill(`${path[last][1]}, ${path[last][0]}`);
@@ -2637,7 +2642,7 @@ test.describe('replay going back', () => {
       }),
     );
     await page.goto(base);
-    await page.locator('#language').selectOption('en');
+    await setLanguage(page, 'en');
     await page.locator('#location-0').fill(`${lat}, ${lon(0)}`);
     await page.locator('#location-0').press('Tab');
     await page.locator('#location-1').fill(`${lat}, ${lon(0) + 0.0001}`);
@@ -2732,7 +2737,7 @@ test.describe('speed while navigating', () => {
         await page.setViewportSize({ width, height: 640 });
         await navigateWithFixes(page, async () => {
           await chooseUnits(page, { distance: units });
-          await page.locator('#language').selectOption(language);
+          await setLanguage(page, language);
         });
         await fix(page, 100, 50, t0 + 1000);
         // 50 m/s is 180 km/h or 112 mph.

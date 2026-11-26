@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockBasemap } from './map-helpers';
-import { base } from './app-helpers';
+import { base, setLanguage } from './app-helpers';
 test.use({ isMobile: true, hasTouch: true });
 test.beforeEach(async ({ page }) => {
   await page.route('https://**/*', (route) => route.fulfill({ status: 204 }));
@@ -184,7 +184,7 @@ test('credit and help links preserve a route in the app; modal translates and fo
   await toggle.click();
   await expect(dialog).not.toContainText('EOX');
   await page.keyboard.press('Escape');
-  await page.locator('#language').selectOption('pt');
+  await setLanguage(page, 'pt');
   await expect(toggle).toHaveAccessibleName('Créditos do mapa');
   await page.locator('#layers-toggle').click();
   await page.locator('[data-layer=satellite]').click();
@@ -196,7 +196,7 @@ test('credit and help links preserve a route in the app; modal translates and fo
   await expect(dialog).toContainText('© colaboradores do OpenStreetMap');
   await dialog.getByRole('button', { name: 'Fechar', exact: true }).click();
   await expect(toggle).toBeFocused();
-  await page.locator('#language').selectOption('en');
+  await setLanguage(page, 'en');
   await expect(toggle).toHaveAccessibleName('Map credits');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await toggle.click();

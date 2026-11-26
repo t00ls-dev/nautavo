@@ -1,7 +1,7 @@
 import { closePanel, mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, type Coord } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, mockRouting, routedPoints } from './app-helpers';
+import { base, mockRouting, routedPoints, setLanguage } from './app-helpers';
 
 const start: Coord = [-22.930929, -43.238286];
 const destination: Coord = [-23.05016, -43.53524];
@@ -39,7 +39,7 @@ async function setup(
   await page.goto(
     `${base}${lang === 'pt' ? '?lang=pt' : ''}${encodeState(state)}`,
   );
-  if (lang === 'en') await page.locator('#language').selectOption('en');
+  if (lang === 'en') await setLanguage(page, 'en');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   await mapReady(page);
   await mapIdle(page);

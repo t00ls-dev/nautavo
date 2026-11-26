@@ -279,3 +279,18 @@ export async function openTripOptions(page: Page) {
   if ((await options.getAttribute('open')) === null)
     await options.locator('> summary').click();
 }
+
+/**
+ * Chooses the interface language: in Settings on the planner page (#304),
+ * opened and closed around the choice unless it is already open, and in the
+ * header of the help and What's new pages.
+ */
+export async function setLanguage(page: Page, language: string) {
+  const dialog = page.locator('#settings-dialog');
+  const opens =
+    (await dialog.count()) > 0 &&
+    !(await dialog.evaluate((d) => (d as HTMLDialogElement).open));
+  if (opens) await page.locator('#open-settings').click();
+  await page.locator('#language').selectOption(language);
+  if (opens) await page.locator('#close-settings').click();
+}
