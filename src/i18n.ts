@@ -260,7 +260,6 @@ const pt: Record<string, string> = {
   'Weather unavailable': 'Clima indisponível',
 
   'Map layers': 'Camadas do mapa',
-  'More map tools': 'Mais ferramentas do mapa',
   'Base map': 'Mapa base',
   Itinerary: 'Itinerário',
   Language: 'Idioma',
@@ -595,12 +594,7 @@ const pt: Record<string, string> = {
   'Valhalla returned an invalid response.':
     'O Valhalla retornou uma resposta inválida.',
   'Loading surface…': 'Buscando pavimento…',
-  'Surface unavailable. Try again.': 'Pavimento indisponível. Tente novamente.',
-  'Surface unavailable for part of the route.':
-    'Pavimento indisponível em parte da rota.',
-  'No unpaved stretches.': 'Nenhum trecho sem asfalto.',
-  'From OpenStreetMap. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.':
-    'Do OpenStreetMap. Vias sem pavimento mapeado contam como pavimentadas; os trechos sem asfalto são os mapeados. Confira antes de sair.',
+  'Surface unavailable.': 'Pavimento indisponível.',
   'Road data usage limit reached. Try again later.':
     'Limite de uso dos dados das vias atingido. Tente mais tarde.',
   Paved: 'Asfalto',
@@ -636,12 +630,6 @@ const pt: Record<string, string> = {
   Distance: 'Distância',
   Time: 'Tempo',
   Arrival: 'Chegada',
-  'Sun up all day': 'Sol o dia todo',
-  'Sun down all day': 'Sem sol o dia todo',
-  'None in the dark': 'Nada no escuro',
-  'Today at the start:': 'Hoje no início:',
-  'Choose a departure date to see dark sections.':
-    'Escolha a data de partida para ver os trechos no escuro.',
   Start: 'Início',
   Destination: 'Destino',
   Via: 'Passagem',
@@ -751,12 +739,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   ],
 
   [/^(.+) in the dark$/, (distance) => `${distance} no escuro`],
-  [/^(.+) in civil twilight$/, (distance) => `${distance} no crepúsculo civil`],
-  [
-    /^Dark from (.+) \((.+)\) to (.+) \((.+)\)$/,
-    (from, start, to, end) =>
-      `No escuro de ${from} (${start}) a ${to} (${end})`,
-  ],
   [
     /^Leave by (.+) to arrive before sunset\.$/,
     (time) => `Saia até ${time} para chegar antes do pôr do sol.`,
@@ -821,7 +803,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Recalculate in (\d+) s$/, (n) => `Recalcular em ${n} s`],
   [/^Step (\d+) of (\d+)$/, (a, b) => `Etapa ${a} de ${b}`],
   [/^Climbs \((\d+)\)$/, (n) => `Subidas (${n})`],
-  [/^Unpaved stretches \((\d+)\)$/, (n) => `Trechos sem asfalto (${n})`],
   [
     /^Surface is not available for this route: it would need more than (\d+) requests\.$/,
     (n) =>

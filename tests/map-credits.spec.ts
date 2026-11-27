@@ -42,7 +42,7 @@ for (const [width, height] of [
           // beside the tool column.
           expect(open.y + open.height).toBeLessThanOrEqual(sheet.y);
           expect(open.x + open.width).toBeLessThan(
-            (await page.locator('#map-more').boundingBox())!.x,
+            (await page.locator('#undo').boundingBox())!.x,
           );
         }
         await page.locator('#panel-toggle').tap();
@@ -53,10 +53,9 @@ for (const [width, height] of [
       await expect(toggle).toHaveAttribute('aria-haspopup', 'dialog');
       const button = (await toggle.boundingBox())!;
       const map = (await page.locator('#map').boundingBox())!;
-      // Phones hide the zoom buttons; the credits sit below the map tools
-      // instead, whose last button is More map tools (#307).
+      // Phones hide the zoom buttons; the credits sit below the map tools instead.
       const zoom = (await page
-        .locator(phone ? '#map-more' : '.map-zoom-out')
+        .locator(phone ? '#undo' : '.map-zoom-out')
         .boundingBox())!;
       expect(button.width).toBeGreaterThanOrEqual(44);
       expect(button.height).toBeGreaterThanOrEqual(44);

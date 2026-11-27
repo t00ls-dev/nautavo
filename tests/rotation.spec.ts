@@ -235,8 +235,7 @@ test.describe('phone', () => {
       const compass = page.locator('#compass');
       await expect(compass).toBeVisible();
       const box = (await compass.boundingBox())!;
-      // Below the tool column, whose last button is More map tools (#307).
-      const undo = (await page.locator('#map-more').boundingBox())!;
+      const undo = (await page.locator('#undo').boundingBox())!;
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(Math.abs(box.x - undo.x)).toBeLessThan(1);

@@ -197,9 +197,6 @@
             <div class="section-line">
               <h2>Points</h2>
               <span id="point-count"></span>
-              <button id="undo" class="ghost" type="button" disabled>
-                Undo
-              </button>
             </div>
             <ol id="points"></ol>
             <div class="inline-actions">
@@ -261,6 +258,12 @@
             <div id="summary-content"></div>
             <div id="summary-notes"></div>
           </section>
+          <button
+            id="daylight-alert"
+            class="daylight-alert"
+            type="button"
+            hidden
+          ></button>
           <details id="trip-options" class="trip-options">
             <summary>
               <span>Trip options</span>
@@ -344,24 +347,7 @@
               aria-selected="false"
               aria-controls="elevation"
             >
-              Elevation</button
-            ><button
-              id="tab-surface"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="surface"
-            >
-              Surface</button
-            ><button
-              id="tab-daylight-details"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="daylight-details"
-              hidden
-            >
-              Daylight
+              Elevation
             </button>
           </div>
           <section id="route-details" aria-label="Route details" hidden>
@@ -390,16 +376,6 @@
               </button>
               <div id="elevation-chart"></div>
               <div id="elevation-stats" class="elevation-stats"></div>
-            </details>
-            <details id="surface" class="surface">
-              <summary>Surface</summary>
-              <p id="surface-status" class="hint" role="status"></p>
-              <button id="surface-retry" type="button" hidden>Try again</button>
-              <div id="surface-result"></div>
-            </details>
-            <details id="daylight-details" class="daylight-details" hidden>
-              <summary>Daylight</summary>
-              <ul id="daylight-list"></ul>
             </details>
           </section>
           <details class="saved-routes">
@@ -582,22 +558,11 @@
         </div>
         <div class="map-tools">
           <button id="locate" type="button">Use my location</button>
-          <div class="map-more-control">
-            <button
-              id="map-more"
-              type="button"
-              aria-expanded="false"
-              aria-controls="map-menu"
-            >
-              More map tools
-            </button>
-            <div id="map-menu" class="map-menu" hidden>
-              <button id="fullscreen" type="button">Full screen</button>
-              <button id="lock" type="button" aria-pressed="false">
-                Lock editing
-              </button>
-            </div>
-          </div>
+          <button id="fullscreen" type="button">Full screen</button>
+          <button id="undo" type="button" disabled>Undo</button>
+          <button id="lock" type="button" aria-pressed="false">
+            Lock editing
+          </button>
         </div>
         <button id="fit" class="fit-button" type="button">Fit route</button>
       </section>

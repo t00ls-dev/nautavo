@@ -1186,12 +1186,15 @@ for (const width of [320, 390, 1280])
         '',
       );
       await expect(page.locator('#points')).toBeHidden();
-      await openTab(page, 'surface');
+      await openTab(page, 'weather-section');
       await expect(page.locator('#itinerary details')).not.toHaveAttribute(
         'open',
         '',
       );
       await openTab(page, 'points');
       await expect(page.locator('#points')).toBeVisible();
-      await expect(page.locator('#surface')).not.toHaveAttribute('open', '');
+      await expect(page.locator('#weather-section')).not.toHaveAttribute(
+        'open',
+        '',
+      );
     });

@@ -2,7 +2,7 @@ import { byId as $ } from './dom';
 
 /**
  * The route's tabs (#305): Points, then the analyses (Itinerary, Weather,
- * Elevation, Surface, Daylight), one shown at a time below the summary. Each
+ * Elevation), one shown at a time below the summary. Each
  * analysis stays the `<details>` it was: choosing its tab opens it, which is
  * still the explicit choice that loads its data, and closes the others; on
  * wide screens Elevation opens in the strip under the map instead and is no
@@ -14,8 +14,6 @@ const PANELS = [
   'itinerary',
   'weather-section',
   'elevation',
-  'surface',
-  'daylight-details',
 ] as const;
 type Panel = (typeof PANELS)[number];
 
@@ -86,18 +84,6 @@ export function setupRouteTabs(options: {
     },
     true,
   );
-  // Daylight is a tab only while it has a departure to work from.
-  const daylight = $('daylight-details');
-  const syncDaylight = () => {
-    tabOf('daylight-details').hidden = daylight.hidden;
-    if (daylight.hidden && selected === 'daylight-details')
-      select('points-section');
-  };
-  new MutationObserver(syncDaylight).observe(daylight, {
-    attributes: true,
-    attributeFilter: ['hidden'],
-  });
-  syncDaylight();
   select('points-section');
   return { select };
 }

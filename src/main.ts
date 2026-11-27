@@ -1,7 +1,7 @@
 import { departureOf } from './departure';
 import { RoutingCache } from './routing-cache';
 import { setupWeather } from './weather-ui';
-import { renderDaylight } from './daylight-ui';
+import { renderDaylight, setupDaylightAlert } from './daylight-ui';
 import {
   markDirectionsChecked,
   updateSavedSteps,
@@ -138,7 +138,12 @@ import {
   type PlacementMode,
 } from './point-placement';
 import { setupMapControls } from './map-controls';
-import { compactLayout, placeLibrary, setupPanel } from './panel';
+import {
+  compactLayout,
+  placeLibrary,
+  setupPanel,
+  sheetCoversMap,
+} from './panel';
 import { setupRouteTabs } from './route-tabs';
 import { stopTapHoldLoupe } from './tap-hold';
 import { setupRouteDrag } from './route-drag';
@@ -522,9 +527,9 @@ function refreshAscent() {
     },
   );
 }
-const surface = setupSurface(map, {
+const surface = setupSurface({
   state: () => state,
-  // The Surface coloring is an explicit choice that needs it too.
+  // The Surface coloring is the explicit choice that needs it.
   wanted: () => overlays.active() === 'surface',
   onSurface: () => overlays.refresh(),
 });
@@ -582,6 +587,8 @@ overlays.register({
   // Drawn once the road attributes arrive (requested on this choice).
   ranges: () => surface.ranges() ?? [],
   activate: () => surface.want(),
+  legendValue: (kind) => surface.share(kind),
+  legendStatus: () => surface.status(),
 });
 overlays.register({
   id: 'daylight',
@@ -594,6 +601,12 @@ overlays.register({
   unavailable: () =>
     Number.isFinite(departureTime()) ? null : 'Choose a departure date',
   ranges: (route) => routeDaylight(route, departureTime(), speedKmh).ranges,
+});
+// The dark notice shows where: the Daylight coloring, with the map in view.
+setupDaylightAlert(() => {
+  overlays.choose('daylight');
+  if (!$('route-panel').hidden && sheetCoversMap()) $('panel-toggle').click();
+  if (current) routeFit.fit();
 });
 for (const coloring of activityColorings({
   activity: () => openActivity(),
@@ -1359,12 +1372,7 @@ function renderSummary(route: Route) {
   $('peek-main').textContent = peek;
   $('summary-title').replaceChildren(...routeTitle());
   showTripLine(departure, locale);
-  // The sun's line heads the Daylight tab, and the local roads to review are
-  // in the Itinerary (#305).
-  optionalById('daylight-summary')?.remove();
-  const daylight = document.createElement('div');
-  daylight.id = 'daylight-summary';
-  $('daylight-details').querySelector('summary')!.after(daylight);
+  // The local roads to review are in the Itinerary (#305).
   summary.append(stats);
   renderDaylight(state, route, speedKmh);
   elevation.setRoute(route);
@@ -2434,5 +2442,5 @@ $('start-map').onclick = () => adjustPoint(state.points[0], true);
 $('start-import').onclick = () => $('import').click();
 $('unlock').onclick = () => {
   setLocked(false);
-  $('map-more').focus();
+  $('lock').focus();
 };

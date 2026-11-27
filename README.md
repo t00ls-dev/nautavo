@@ -21,7 +21,7 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 
 1. Open [nautavo.com](https://nautavo.com/).
 2. Enter addresses or `latitude, longitude` in **Start** and **Destination**, or pick points on the map; an empty planner also starts from a file, a saved route or a favorite place.
-3. Add stops, adjust the points and review the calculated route in its tabs: **Itinerary**, **Weather**, **Elevation** (under the map on a computer), **Surface** and **Daylight**.
+3. Add stops, adjust the points and review the calculated route in its tabs: **Itinerary**, **Weather** and **Elevation** (under the map on a computer); Map layers colors it by surface, grade or daylight.
 4. Press **Export**, then **Download GPX** (**Share GPX** on a phone or tablet that can share files, which keeps the file name in browsers such as Firefox on iPhone); TCX and FIT courses with the turns and the route link are in the same menu. **Save route** asks for the route's name and keeps it in this browser.
 
 Gestures, shortcuts and every control are explained on the [Help page](https://nautavo.com/help). Recent changes are listed on [What's new](https://nautavo.com/changelog) and in the [changelog](CHANGELOG.md).
@@ -39,7 +39,7 @@ Every control, gesture and limit is explained on the [Help page](https://nautavo
 ## Privacy
 
 - No cookies, analytics or account. The site's own server stores nothing; besides the files, it only answers the approximate region by IP, which can be turned off.
-- Routing, search, map, weather, elevation and surface providers receive the locations each request needs and your IP address. Weather is asked for the route's departure (by default the next half hour, which can be turned off); elevation and surface only when you open them or choose their route coloring. A track imported as a route goes to the Valhalla server once, to align it to the roads; a recorded activity is opened on the device only.
+- Routing, search, map, weather, elevation and surface providers receive the locations each request needs and your IP address. Weather is asked for the route's departure (by default the next half hour, which can be turned off); elevation only when you open it or choose its route coloring, and surface only when you choose its route coloring. A track imported as a route goes to the Valhalla server once, to align it to the roads; a recorded activity is opened on the device only.
 - Your location is used only after the browser allows it and stays on the device, except when you add it as a route point or a navigation recalculation sends the current position.
 - Saved routes, favorite places and preferences stay in this browser; every service URL is configurable in **Settings**.
 - A recorded activity's times, heart rate and other sensor values are read on the device, kept only while the page is open and never saved or sent.

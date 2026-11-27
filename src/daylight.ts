@@ -100,6 +100,14 @@ export function sunTimes(time: number, [lat, lon]: Coord): SunTimes {
         }),
   };
 }
+/** The first sunrise after `time` at a place, or null where none comes. */
+export function nextSunrise(time: number, place: Coord): number | null {
+  for (const day of [0, 1]) {
+    const { sunrise } = sunTimes(time + day * DAY, place);
+    if (sunrise !== null && sunrise > time) return sunrise;
+  }
+  return null;
+}
 
 interface DarkSection {
   /** Cumulative route distances in meters. */

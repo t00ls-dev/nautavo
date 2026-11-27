@@ -43,12 +43,27 @@ for (const width of [320, 360, 390, 430]) {
           ? [
               'Usar minha localização',
               'Camadas do mapa',
-              'Mais ferramentas do mapa',
+              'Tela cheia',
+              'Ver rota',
+              'Bloquear edição',
+              'Desfazer',
             ]
-          : ['Use my location', 'Map layers', 'More map tools'];
-      // The empty planner's tools (#307): Fit route waits for a route.
-      const ids = ['locate', 'layers-toggle', 'map-more'];
-      await expect(page.locator('#fit')).toBeHidden();
+          : [
+              'Use my location',
+              'Map layers',
+              'Full screen',
+              'Fit route',
+              'Lock editing',
+              'Undo',
+            ];
+      const ids = [
+        'locate',
+        'layers-toggle',
+        'fullscreen',
+        'fit',
+        'lock',
+        'undo',
+      ];
       let lastBottom = 0;
       for (let i = 0; i < ids.length; i++) {
         const locator = page.locator(`#${ids[i]}`);
@@ -62,7 +77,7 @@ for (const width of [320, 360, 390, 430]) {
         lastBottom = box.y + box.height;
         expect(await locator.locator('.button-label').isVisible()).toBe(false);
       }
-      await expect(page.locator('#points-section #undo')).toHaveCount(1);
+      await expect(page.locator('.map-action-control #undo')).toHaveCount(1);
       await expect(page.locator('#example')).toHaveCount(0);
       // Average speed belongs to the route summary card, with the departure.
       await expect(page.locator('#trip-options .speed-options')).toHaveCount(1);

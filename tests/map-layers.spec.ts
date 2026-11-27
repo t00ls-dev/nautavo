@@ -324,7 +324,7 @@ test('mobile layers stay accessible without overlapping other map controls or th
   const box = (await page.locator('#layers-toggle').boundingBox())!;
   expect(box.width).toBeGreaterThanOrEqual(44);
   expect(box.height).toBeGreaterThanOrEqual(44);
-  for (const selector of ['#locate', '#map-more', '#panel-toggle']) {
+  for (const selector of ['#locate', '#fullscreen', '#panel-toggle', '#lock']) {
     const other = (await page.locator(selector).boundingBox())!;
     expect(
       box.x + box.width <= other.x ||

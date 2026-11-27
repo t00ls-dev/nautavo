@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, boxSettled, setLanguage, mapTool } from './app-helpers';
+import { base, boxSettled, setLanguage } from './app-helpers';
 
 const start = '-22.900000, -43.100000';
 
@@ -131,7 +131,7 @@ test('My location sets the point to the exact position', async ({
 
 test('a locked route offers no menu in its fields', async ({ page }) => {
   await setup(page);
-  await mapTool(page, 'lock');
+  await page.locator('#lock').click();
   await page.locator('#location-1').focus();
   await expect(page.locator('#suggestions-1').getByRole('option')).toHaveCount(
     0,

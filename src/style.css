@@ -517,15 +517,6 @@ header button.icon-control {
   font-size: 13px;
   color: var(--color-text-muted);
 }
-/* Undo sits with the points it undoes (#307). */
-.points-section .section-line {
-  align-items: center;
-  justify-content: flex-start;
-}
-#undo {
-  min-height: 36px;
-  margin-left: auto;
-}
 #points {
   display: flex;
   flex-direction: column;
@@ -872,6 +863,33 @@ header button.icon-control {
   color: var(--color-text);
   font-size: 15px;
 }
+/* Part of the trip in the dark (#305): a notice under the trip line, shown
+   only then; a tap shows the Daylight coloring. */
+.daylight-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--control);
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-subtle);
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+  white-space: normal;
+}
+.daylight-alert[hidden] {
+  display: none;
+}
+.daylight-alert > .button-icon:last-child {
+  transform: rotate(90deg);
+  color: var(--color-text-muted);
+}
 /* The label sits above the field, which takes the full width. */
 .departure-field {
   display: flex;
@@ -1213,11 +1231,6 @@ div.step-item {
 .local-road {
   color: var(--color-warning);
 }
-.sun-time {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
 
 /* Saved routes. */
 .saved-routes #saved-count {
@@ -1449,6 +1462,12 @@ button:disabled .export-note {
 #library-import {
   margin: 0 0 8px;
 }
+/* On phones Import is in More actions (#305); Saved routes keeps its list. */
+@media (max-width: 759px), (max-height: 500px) {
+  #library-import {
+    display: none;
+  }
+}
 /* Guided navigation is offered in the phone layout only, in the summary
    (#301): planning comes first. */
 #navigate {
@@ -1676,43 +1695,6 @@ dialog.settings::backdrop {
   border-radius: 50%;
   background: rgb(23 101 165 / 12%);
   transform: translate(-50%, -50%);
-}
-/* More map tools (#307): Full screen and Lock editing, named, in a menu
-   beside the column, as Map layers opens. */
-.map-more-control {
-  position: relative;
-}
-.map-menu {
-  position: absolute;
-  top: 0;
-  right: calc(100% + 10px);
-  display: grid;
-  gap: 2px;
-  width: max-content;
-  padding: 6px;
-  border-radius: var(--radius-large);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-raised);
-}
-.map-tool-group .map-menu button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: var(--control);
-  height: auto;
-  padding: 0 12px;
-  border-radius: var(--radius);
-  justify-content: flex-start;
-}
-.map-action-control .map-menu .button-label {
-  display: inline;
-}
-.map-tool-group .map-menu button[aria-pressed='true'] {
-  box-shadow: none;
-}
-.map-tool-group .map-menu button:focus-visible::after {
-  content: none;
 }
 #fullscreen[aria-pressed='false'] .icon-minimize,
 #fullscreen[aria-pressed='true'] .icon-maximize,
@@ -2184,10 +2166,6 @@ dialog.settings::backdrop {
   .map-tool-group > :last-child > button {
     border-radius: 0 10px 10px 0;
   }
-  .map-menu {
-    top: calc(100% + 8px);
-    right: 0;
-  }
   /* Too short for a sheet: Map layers drops below the tools instead. */
   #layers-menu {
     position: absolute;
@@ -2618,81 +2596,26 @@ input[type='range'].range-input:disabled {
 .weather-marker-content {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  width: 110px;
-  height: 46px;
-  line-height: 1;
-}
-/* One badge (#309): the symbol and the wind together, 18 px right of and
-   16 px above the route point, clear of the route's pins (30 px wide), joined to it by a short line, so the route's
-   numbered markers stay clear. A return marker mirrors it to the left. */
-.weather-marker-content::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 24px;
-  height: 2px;
-  background: #536170;
-  transform: rotate(-42deg);
-  transform-origin: left center;
-}
-/* Flipped: the badge would cover a route pin, so it hangs on the other
-   side of its point, the content moving by its own width. */
-.weather-marker-flip:not(.weather-marker-return) .weather-marker-content {
-  transform: translateX(-100%);
-}
-.weather-marker-return.weather-marker-flip .weather-marker-content {
-  transform: translateX(100%);
-}
-.weather-marker-return:not(.weather-marker-flip) .weather-marker-content,
-.weather-marker-flip:not(.weather-marker-return) .weather-marker-content {
-  justify-content: flex-end;
-}
-.weather-marker-return:not(.weather-marker-flip)
-  .weather-marker-content::before,
-.weather-marker-flip:not(.weather-marker-return)
-  .weather-marker-content::before {
-  left: auto;
-  right: 0;
-  transform: rotate(42deg);
-  transform-origin: right center;
-}
-.weather-marker-badge {
-  position: relative;
-  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  height: 30px;
-  margin-left: 18px;
-  padding: 0 6px 0 2px;
-  border: 2px solid #64748b;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 1px 4px #0005;
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-.weather-marker-return:not(.weather-marker-flip) .weather-marker-badge,
-.weather-marker-flip:not(.weather-marker-return) .weather-marker-badge {
-  margin: 0 18px 0 0;
-}
-.weather-compact .weather-marker-badge {
-  padding-right: 2px;
-}
-.weather-compact .weather-marker-wind {
-  display: none;
+  width: 68px;
+  height: 52px;
+  line-height: 1;
 }
 .weather-marker-symbol {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: 2px solid #64748b;
   border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px #0005;
+  pointer-events: auto;
 }
-.weather-marker:focus-visible .weather-marker-badge {
+.weather-marker:focus-visible .weather-marker-symbol {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -2722,36 +2645,47 @@ input[type='range'].range-input:disabled {
 .weather-marker-wind {
   display: inline-flex;
   align-items: center;
-  gap: 1px;
-  height: 22px;
-  padding: 0 4px 0 2px;
-  border-radius: 11px;
+  justify-content: center;
+  gap: 2px;
+  /* Fits the longest speed, 99,9 km/h, in DejaVu Sans. */
+  width: 68px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin-top: -2px;
+  padding: 1px 3px;
+  border: 1px solid #95a4b2;
+  border-radius: 9px;
   background: #f3f5f7;
   color: #536170;
+  box-shadow: 0 1px 3px #0004;
+  pointer-events: auto;
 }
 /* Color describes wind relative to this route, not whether its speed is safe. */
 .weather-marker-wind[data-relation='Tailwind'] {
   background: #eaf6f1;
   color: #206f55;
+  border-color: #8bb6a5;
 }
 .weather-marker-wind[data-relation='Crosswind'] {
   background: #fff5d9;
   color: #856013;
+  border-color: #d0b46b;
 }
 .weather-marker-wind[data-relation='Headwind'] {
   background: #fff0f0;
   color: #9a2227;
+  border-color: #d49a9d;
 }
 /* Clustered: another marker stands for this stretch at the current zoom (#119). */
 .maplibregl-marker.weather-marker-clustered {
   display: none;
 }
-/* The count on the badge's top corner away from the route point, inside the
+/* "+N" on the symbol's top corner away from the route point, inside the
    marker's area (COUNT_RISE in src/weather-clusters.ts); tapping it zooms in. */
 .weather-marker-count {
   position: absolute;
-  top: -12px;
-  right: -14px;
+  top: -6px;
+  right: 0;
   min-width: 24px;
   height: 22px;
   padding: 0 5px;
@@ -2774,10 +2708,10 @@ input[type='range'].range-input:disabled {
 .weather-marker-return .weather-marker-count,
 .weather-marker-count.flipped {
   right: auto;
-  left: -14px;
+  left: 0;
 }
 .weather-marker-return .weather-marker-count.flipped {
-  right: -14px;
+  right: 0;
   left: auto;
 }
 /* Hidden samples include alerts: an alert-colored border. */
@@ -2787,8 +2721,12 @@ input[type='range'].range-input:disabled {
 }
 .weather-marker-wind-value {
   flex: none;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
+}
+.weather-marker-wind-unit {
+  flex: none;
+  font-size: 7px;
 }
 
 /* Weather content stays inside the panel, including long place names and native date inputs. */
@@ -2806,24 +2744,6 @@ input[type='range'].range-input:disabled {
   font-size: 16px;
 }
 
-.daylight-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 6px 0;
-  font-size: 13px;
-}
-.daylight-line .button-icon {
-  flex: 0 0 auto;
-}
-.daylight-details {
-  margin: 8px 0;
-  font-size: 13px;
-}
-.daylight-details ul {
-  margin: 0;
-  padding-left: 18px;
-}
 #weather-status:empty {
   display: none;
 }
@@ -3161,6 +3081,8 @@ input[type='range'].range-input:disabled {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  /* An item (swatch, name and share) never splits across lines. */
+  white-space: nowrap;
 }
 .route-legend-swatch {
   display: inline-block;
@@ -3168,6 +3090,19 @@ input[type='range'].range-input:disabled {
   height: 5px;
   border-radius: 3px;
   background: var(--route-coloring);
+}
+/* A kind's share of the route, after its label (surface). */
+.route-legend-value {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.route-legend-status {
+  align-self: center;
+}
+.route-legend .route-legend-retry {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 /* Compact color scale (grade): a slope icon at each end, one continuous bar
    and the limits under ticks on the boundaries, placed by percentage and
@@ -3574,16 +3509,6 @@ input[type='range'].range-input:disabled {
 .weather-card-severity {
   font-size: 13px;
 }
-.daylight-line {
-  flex-wrap: wrap;
-  margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 20px;
-}
-.daylight-details {
-  margin: 0;
-  font-size: 14px;
-}
 .climbs ol {
   font-size: 14px;
 }
@@ -3603,38 +3528,20 @@ input[type='range'].range-input:disabled {
   box-shadow: var(--shadow-control);
   font-size: 13px;
 }
+/* Under 360 px the two usual kinds and their shares stay on one line
+   (Asfalto 92% Sem asfalto 8%, in the widest fonts too). */
+@media (max-width: 359px) {
+  .route-legend {
+    font-size: 12px;
+  }
+  .route-legend:not(.route-legend-scale) .route-legend-swatch {
+    width: 14px;
+  }
+}
 .credits-dialog {
   border: 0;
   border-radius: 16px;
   box-shadow: var(--shadow-raised);
-}
-
-/* Surface row: totals with a swatch, the stretches to check (climb rows). */
-.surface-totals {
-  margin: 4px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-}
-.surface-totals li {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
-  column-gap: 6px;
-  align-items: center;
-  min-height: 22px;
-}
-.surface-value {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.surface-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: var(--route-coloring);
-}
-.surface-section .climb-grid {
-  grid-template-columns: 12px minmax(0, 1fr);
 }
 
 /* Guided navigation (#31): start notice and the full-screen navigation view. */
@@ -4829,11 +4736,12 @@ dialog:modal:not(.nav-screen) {
 .placement-bar[hidden] {
   display: none;
 }
-/* Without WebGL there is no map (#216): only the notice remains. */
+/* Without WebGL there is no map (#216): only the notice and Undo remain. */
 .no-map .layer-control,
 .no-map #map-note,
 .no-map #locate,
-.no-map .map-more-control,
+.no-map #fullscreen,
+.no-map #lock,
 .no-map #fit {
   display: none;
 }
@@ -4855,8 +4763,14 @@ body.activity-open #save-route,
 body.activity-open #export,
 body.activity-open #more-actions,
 body.activity-open #map-note,
+body.activity-open #undo,
 body.activity-open #lock {
   display: none;
+}
+/* Fit route is then alone in its group: rounded all round, since the hidden
+   tools after it still take the group's last corners. */
+body.activity-open #fit {
+  border-radius: 10px;
 }
 .activity h2 {
   margin: 0;
@@ -5243,15 +5157,13 @@ body.plan-empty:not(.activity-open) .start-options {
   overflow-wrap: anywhere;
 }
 body.plan-empty .points-section .inline-actions,
-body.plan-empty .points-section .section-line > :not(#undo),
-body.plan-empty #undo:disabled,
+body.plan-empty .points-section .section-line,
 body.plan-empty:not(.panel-closed) #peek-status[data-empty-prompt],
 body.plan-empty #status[data-empty-prompt],
 body.plan-empty .gpx-name,
 body.plan-empty #save-route,
 body.plan-empty #export,
-body.plan-empty #export-menu,
-body.plan-empty:not(.activity-open) #fit {
+body.plan-empty #export-menu {
   display: none;
 }
 /* As the mockup: a title, the points, the ways to start and a note; the

@@ -1,6 +1,6 @@
 /**
- * A button that opens a small menu of buttons beside it (the Export menu,
- * More map tools): a choice, a click elsewhere or Escape closes it, and
+ * A button that opens a small menu of buttons beside it (the Export menu):
+ * a choice, a click elsewhere or Escape closes it, and
  * Escape returns focus to the button. Returns the function that shows or
  * hides the menu, for callers that close it from elsewhere.
  */

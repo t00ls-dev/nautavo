@@ -1,14 +1,7 @@
 import { closePanel, mapIdle, mapReady, mockBasemap } from './map-helpers';
 import { defaults, encodeState, type Coord } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import {
-  base,
-  mockRouting,
-  routedPoints,
-  setLanguage,
-  mapTool,
-  undo,
-} from './app-helpers';
+import { base, mockRouting, routedPoints, setLanguage } from './app-helpers';
 
 const start: Coord = [-22.930929, -43.238286];
 const destination: Coord = [-23.05016, -43.53524];
@@ -127,7 +120,7 @@ test.describe('desktop', () => {
     // One route request, through the new stop.
     expect(requests).toEqual([3]);
     // Undo returns to the route without the stop, without a request.
-    await undo(page);
+    await page.locator('#undo').click();
     await expect(pointFields(page)).toHaveCount(2);
     expect(requests).toEqual([3]);
   });
@@ -149,7 +142,7 @@ test.describe('desktop', () => {
 
   test('no handle while the route is locked', async ({ page }) => {
     await setup(page);
-    await mapTool(page, 'lock');
+    await page.locator('#lock').click();
     await expect(page.locator('#lock')).toHaveAttribute('aria-pressed', 'true');
     const middle = await onPage(page, along(0.5));
     await page.mouse.move(middle.x, middle.y);
@@ -177,7 +170,7 @@ test.describe('desktop', () => {
     await expect(page.locator('#download')).toBeEnabled();
     expect(requests).toEqual([2]);
     // Undo brings it back with its route, without a request.
-    await undo(page);
+    await page.locator('#undo').click();
     await expect(pointFields(page)).toHaveCount(3);
     expect(requests).toEqual([2]);
   });

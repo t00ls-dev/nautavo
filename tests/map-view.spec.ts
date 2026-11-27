@@ -10,7 +10,6 @@ import {
   regionRoute,
   saveRoute,
   setLanguage,
-  mapTool,
 } from './app-helpers';
 import { weatherResponse } from './weather-fixture';
 import { REGION_PATH } from '../src/region';
@@ -343,11 +342,11 @@ for (const mobile of [false, true]) {
         }),
       )
       .toBe(true);
-    await mapTool(page, 'fullscreen');
+    await page.locator('#fullscreen').click();
     await expect
       .poll(() => page.evaluate(() => !!document.fullscreenElement))
       .toBe(true);
-    await mapTool(page, 'fullscreen');
+    await page.locator('#fullscreen').click();
     await expect
       .poll(() => page.evaluate(() => !!document.fullscreenElement))
       .toBe(false);
@@ -356,12 +355,12 @@ for (const mobile of [false, true]) {
         value: undefined,
       });
     });
-    await mapTool(page, 'fullscreen');
+    await page.locator('#fullscreen').click();
     await expect(page.locator('body')).toHaveClass(/map-fullscreen/);
     expect((await page.locator('#map').boundingBox())!.width).toBe(
       page.viewportSize()!.width,
     );
-    await mapTool(page, 'fullscreen');
+    await page.locator('#fullscreen').click();
     await setLanguage(page, 'pt');
     await expect(page.locator('#locate')).toHaveAccessibleName(
       'Usar minha localização',

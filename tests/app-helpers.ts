@@ -295,13 +295,7 @@ export async function setLanguage(page: Page, language: string) {
   if (opens) await page.locator('#close-settings').click();
 }
 
-type RouteTab =
-  | 'points'
-  | 'itinerary'
-  | 'weather-section'
-  | 'elevation'
-  | 'surface'
-  | 'daylight-details';
+type RouteTab = 'points' | 'itinerary' | 'weather-section' | 'elevation';
 /**
  * Opens one of the route's tabs (#305); on wide screens Elevation is no tab
  * but the strip under the map, opened by its button.
@@ -318,25 +312,6 @@ export async function openTab(page: Page, id: RouteTab) {
   await page.locator(`#tab-${id}`).click();
 }
 
-/** Chooses Full screen or Lock editing in More map tools (#307). */
-export async function mapTool(page: Page, id: 'fullscreen' | 'lock') {
-  if (await page.locator('#map-menu').isHidden())
-    await page.locator('#map-more').click();
-  await page.locator(`#${id}`).click();
-}
-
-/**
- * Undo, beside the points, in the Points tab once there is a route (#307);
- * on a phone with the sheet closed, the sheet opens first.
- */
-export async function undo(page: Page) {
-  if (await page.locator('body.panel-closed #panel-toggle').isVisible())
-    await page.locator('#panel-toggle').click();
-  const points = page.locator('#tab-points');
-  if (await points.isVisible()) await points.click();
-  await page.locator('#undo').click();
-}
-
 /** Travel the route: in More actions on phones, below the actions on wide screens (#305). */
 export async function travelRoute(page: Page) {
   if (await page.locator('#travel-route').isHidden())
@@ -344,13 +319,8 @@ export async function travelRoute(page: Page) {
   await page.locator('#travel-route').click();
 }
 
-/** Opens Saved routes: on the empty planner through its tile (#306). */
+/** Opens Saved routes, listed below the points on the empty planner too (#306). */
 export async function openSavedRoutes(page: Page) {
-  // The tile shows once the library has been read.
-  if (await page.locator('body.plan-empty').count()) {
-    await page.locator('#start-saved').click();
-    return;
-  }
   const list = page.locator('.saved-routes');
   if ((await list.getAttribute('open')) === null)
     await list.locator('> summary').click();

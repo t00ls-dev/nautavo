@@ -8,7 +8,7 @@ import {
   parseTraceAttributes,
 } from '../src/road-attributes';
 import { decodePolyline } from '../src/routing';
-import { sectionsToCheck, surfaceRanges, surfaceTotals } from '../src/surface';
+import { surfaceRanges, surfaceTotals } from '../src/surface';
 
 /** Points every 0.01° of longitude on the equator (about 1.1 km apart). */
 const east = (n: number, offset = 0): Coord[] =>
@@ -219,11 +219,8 @@ describe('surface along the route', () => {
       { kind: 'unpaved', label: 'Unpaved', length: 500 },
       { kind: 'unknown', label: 'Unknown', length: 1100 },
     ]);
-    expect(sectionsToCheck(ranges)).toEqual([
-      { from: 1500, to: 2000, kind: 'unpaved' },
-    ]);
   });
-  it('keeps the first edge where pieces overlap and skips short stretches', () => {
+  it('keeps the first edge where pieces overlap', () => {
     const ranges = surfaceRanges(
       [
         edge(0, 1000, 'paved'),
@@ -234,6 +231,5 @@ describe('surface along the route', () => {
     );
     expect(ranges.map((r) => r.kind)).toEqual(['paved', 'unpaved', 'paved']);
     expect(ranges[1]).toEqual({ from: 1000, to: 1100, kind: 'unpaved' });
-    expect(sectionsToCheck(ranges)).toEqual([]);
   });
 });

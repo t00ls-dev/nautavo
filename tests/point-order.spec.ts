@@ -1,7 +1,7 @@
 import { mockBasemap } from './map-helpers';
 import { defaults, encodeState } from '../src/core';
 import { test, expect, type Page } from '@playwright/test';
-import { base, boxSettled, setLanguage, mapTool, undo } from './app-helpers';
+import { base, boxSettled, setLanguage } from './app-helpers';
 
 const coords = [
   '-22.930929, -43.238286',
@@ -90,7 +90,7 @@ test('dragging a grip moves the point, renumbering the rows as it goes', async (
     '4',
   ]);
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  await undo(page);
+  await page.locator('#undo').click();
   expect(await values(page)).toEqual(coords);
 });
 
@@ -131,7 +131,7 @@ test('the arrow keys move a point from its focused grip', async ({ page }) => {
 
 test('a locked route cannot be reordered', async ({ page }) => {
   await setup(page);
-  await mapTool(page, 'lock');
+  await page.locator('#lock').click();
   await expect(page.locator('.point-grip').first()).toBeDisabled();
   const grip = (await page.locator('.point-grip').nth(3).boundingBox())!;
   await page.mouse.move(grip.x + 20, grip.y + 20);

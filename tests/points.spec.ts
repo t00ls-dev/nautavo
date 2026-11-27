@@ -29,9 +29,7 @@ import {
   exportAs,
   saveRoute,
   setLanguage,
-  mapTool,
   openTab,
-  undo,
   openSavedRoutes,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
@@ -104,20 +102,14 @@ for (const mobile of [false, true]) {
           .evaluateAll((rows) => rows.map((row) => row.id)),
       ).toEqual(
         mobile
-          ? [
-              'itinerary',
-              'weather-section',
-              'elevation',
-              'surface',
-              'daylight-details',
-            ]
-          : ['itinerary', 'weather-section', 'surface', 'daylight-details'],
+          ? ['itinerary', 'weather-section', 'elevation']
+          : ['itinerary', 'weather-section'],
       );
       await expect(page.locator('#itinerary .chips')).toHaveText('BR-101');
       await expect(page.locator('#itinerary summary')).toHaveText(
         'Itinerary (1)',
       );
-      await undo(page);
+      await page.locator('#undo').click();
       await expect(page.locator('#location-1')).toHaveValue('');
       await expect(page.locator('#location-0')).toHaveValue(start);
       await expect(page.locator('#download')).toBeDisabled();
@@ -160,7 +152,7 @@ for (const mobile of [false, true]) {
       const requestsBefore = routeRequests;
       await expect(page.locator('.map-marker-draggable')).toHaveCount(2);
 
-      await mapTool(page, 'lock');
+      await page.locator('#lock').click();
       await expect(page.locator('#lock')).toHaveAttribute(
         'aria-pressed',
         'true',
@@ -226,7 +218,7 @@ for (const mobile of [false, true]) {
       );
       await expect(page.locator('.map-marker-draggable')).toHaveCount(2);
       // Lock toggles are not undo steps: undo still reverts the last edit.
-      await undo(page);
+      await page.locator('#undo').click();
       await expect(page.locator('#location-1')).toHaveValue('');
       await expect(page.locator('#location-0')).toHaveValue(start);
     });
@@ -384,7 +376,7 @@ test('undo restores a moved marker and a removed stop', async ({ page }) => {
   await page.mouse.move(box!.x + 45, box!.y + 30, { steps: 5 });
   await page.mouse.up();
   await expect(page.locator('#location-0')).not.toHaveValue(original);
-  await undo(page);
+  await page.locator('#undo').click();
   await expect(page.locator('#location-0')).toHaveValue(original);
   await page.locator('#add').click();
   await expect(page.locator('#points li')).toHaveCount(3);
@@ -392,7 +384,7 @@ test('undo restores a moved marker and a removed stop', async ({ page }) => {
     .getByRole('button', { name: 'Remove point 2', exact: true })
     .click();
   await expect(page.locator('#points li')).toHaveCount(2);
-  await undo(page);
+  await page.locator('#undo').click();
   await expect(page.locator('#points li')).toHaveCount(3);
 });
 /**
@@ -660,8 +652,8 @@ test('undo restores the geometry of each GPX import, even with equal points', as
   await load(gpx(-22.5, -42.8));
   const summaryB = await page.locator('#summary strong').first().innerText();
   expect(summaryB).not.toBe(summaryA);
-  await undo(page);
-  await undo(page);
+  await page.locator('#undo').click();
+  await page.locator('#undo').click();
   await expect(page.locator('#summary strong').first()).toHaveText(summaryA);
 });
 test('editing an imported track reroutes only the track around the edit', async ({
@@ -742,7 +734,7 @@ test('editing an imported track reroutes only the track around the edit', async 
   );
 
   // Undo returns to the renamed step with the exact imported track, no request.
-  await undo(page);
+  await page.locator('#undo').click();
   // Restored synchronously: a reroute would leave the download disabled.
   expect(await page.locator('#download').isEnabled()).toBe(true);
   await expect(page.locator('#route-name')).toHaveValue('Renamed spur');
@@ -766,7 +758,7 @@ test('invalid coordinates cannot enable a stale GPX download', async ({
   await page.locator('#location-1').press('Enter');
   await expect(page.locator('#status')).toHaveClass('error');
   await expect(page.locator('#download')).toBeDisabled();
-  await undo(page);
+  await page.locator('#undo').click();
   await expect(page.locator('#location-1')).toHaveValue(end);
 });
 
@@ -956,7 +948,7 @@ test('editing points keeps the map view; only loads and Fit route frame the rout
   await expect(page.locator('#status')).toHaveText('Route ready.');
   expect(await view()).toEqual(zoomed);
   // Undo restores the earlier route in place, too.
-  await undo(page);
+  await page.locator('#undo').click();
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   expect(await view()).toEqual(zoomed);
   // Fit route is the user's way back to the whole route.
@@ -1101,7 +1093,7 @@ test.describe('servers suggested by a link', () => {
     await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
     expect(hosts.at(-1)).toBe('example.org');
     await expect(page.locator('#osrm')).toHaveValue('https://example.org/osrm');
-    await undo(page);
+    await page.locator('#undo').click();
     await expect(page.locator('#osrm')).toHaveValue(
       'https://router.project-osrm.org',
     );
@@ -1171,7 +1163,7 @@ test('the edit lock disables and enables opening saved routes, however the list 
   await openSavedRoutes(page);
   const open = page.locator('#saved-list .library-open');
   await expect(open).toBeEnabled();
-  await mapTool(page, 'lock');
+  await page.locator('#lock').click();
   await expect(open).toBeDisabled();
   // A language change while locked draws the list again, still disabled.
   await setLanguage(page, 'pt');
@@ -1908,7 +1900,7 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test('the chosen language survives the logo link, undo, reloads and shared links', async ({
+test('the chosen language survives the logo link, reloads and shared links', async ({
   page,
 }) => {
   await setup(page);
@@ -1920,7 +1912,7 @@ test('the chosen language survives the logo link, undo, reloads and shared links
   await expect(page.locator('#location-0')).toHaveValue('');
   await expect(page.locator('#language')).toHaveValue('pt');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
-  await undo(page);
+  await page.locator('#undo').click();
   await expect(page.locator('#location-0')).toHaveValue(routeStart);
   await expect(page.locator('#language')).toHaveValue('pt');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');

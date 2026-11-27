@@ -17,7 +17,6 @@ import {
   saveRoute,
   openTripOptions,
   setLanguage,
-  mapTool,
   openTab,
   openSavedRoutes,
 } from './app-helpers';
@@ -175,7 +174,7 @@ for (const mobile of [false, true])
     await expect(page.locator('#trip-line')).toContainText('60 km/h, no stops');
     expect(calls).toBe(1);
   });
-test('daylight shows today without a departure, dark sections for an evening departure and translates', async ({
+test('the dark notice shows only when part of the trip is in the dark, says when to leave, shows it on the map and translates', async ({
   page,
 }) => {
   await setup(page, true);
@@ -183,53 +182,37 @@ test('daylight shows today without a departure, dark sections for an evening dep
   page.on('request', (r) => {
     if (r.url().includes('/route/v1/driving/')) routes++;
   });
-  const line = page.locator('#daylight-summary .daylight-line');
-  await expect(line).toContainText(
-    /Today at the start: Sunrise \d\d:\d\d [AP]M Sunset \d\d:\d\d [AP]M/,
-  );
-  await expect(page.locator('#daylight-summary')).toContainText(
-    'Choose a departure date to see dark sections.',
-  );
-  await expect(page.locator('#daylight-details')).toBeHidden();
+  const notice = page.locator('#daylight-alert');
+  // No departure, no notice.
+  await expect(notice).toBeHidden();
   // About 1 h 51 min at 60 km/h from 16:30 UTC; the equator gets dark near 18:06.
   await date(page, '2026-11-08T16:30');
-  await expect(line).toContainText(
-    /Sunrise \d\d:\d\d [AP]M Sunset \d\d:\d\d [AP]M · [\d.]+\skm in the dark/,
+  await expect(notice).toBeVisible();
+  await expect(notice).toHaveText(
+    /^[\d.]+\skm in the dark · Leave by \d\d:\d\d [AP]M to arrive before sunset\.$/,
   );
-  const details = page.locator('#daylight-details');
-  await openTab(page, 'daylight-details');
-  await expect(details).toBeVisible();
-  await expect(details).toContainText(
-    /Dark from [\d.]+\skm \(.+\) to 111\.2\skm/,
-  );
-  await expect(details).toContainText(/Leave by .+ to arrive before sunset\./);
-  // 1 h 51 min at the 60 km/h set by the test, after a 16:30 UTC departure.
-  await expect(page.locator('#summary dt')).toHaveText([
-    'Distance',
-    'Ascent',
-    'Arrival',
-  ]);
   await expect(page.locator('#summary dd').nth(2).locator('strong')).toHaveText(
     '06:21 PM',
   );
-  await expect(page.locator('#trip-line')).toContainText('60 km/h, no stops');
-  await expect(details).toContainText(
-    /Daylight at the start from \d\d:\d\d [AP]M\./,
-  );
+  // A trip in daylight shows nothing.
   await date(page, '2026-11-08T10:00');
-  await expect(line).toContainText('None in the dark');
-  await expect(details).not.toContainText('Dark from');
-  await setLanguage(page, 'pt');
-  await expect(line).toContainText(
-    /Nascer do sol \d\d:\d\d Pôr do sol \d\d:\d\d · Nada no escuro/,
+  await expect(notice).toBeHidden();
+  // Leaving before sunrise waits for it.
+  await date(page, '2026-11-08T03:00');
+  await expect(notice).toHaveText(
+    /in the dark · Daylight at the start from \d\d:\d\d [AP]M\.$/,
   );
-  await expect(details).toContainText('Luz do dia');
-  await expect(page.locator('#summary dt').nth(2)).toHaveText('Chegada');
-  await expect(details).toContainText(
-    /Saia até .+ para chegar antes do pôr do sol\./,
+  await setLanguage(page, 'pt');
+  await expect(notice).toHaveText(
+    /no escuro · Luz do dia no início a partir de \d\d:\d\d\.$/,
   );
   await setLanguage(page, 'en');
-  await expect(line).toContainText('None in the dark');
+  // A tap shows the dark stretches with the Daylight coloring.
+  await notice.click();
+  await expect(page.locator('.route-legend')).toHaveAttribute(
+    'aria-label',
+    'Daylight',
+  );
   expect(routes).toBe(0);
 });
 test('route coloring by daylight needs a departure, colors dark stretches, persists and translates', async ({
@@ -1602,7 +1585,7 @@ test.describe('phone page height', () => {
       .locator('.weather-marker:not(.weather-marker-clustered)')
       .last();
     const card = await marker.getAttribute('aria-controls');
-    await marker.locator('.weather-marker-badge').click();
+    await marker.click();
     await expect(page.locator(`#${card}`)).toHaveAttribute(
       'aria-current',
       'true',
@@ -1764,11 +1747,7 @@ test('consecutive samples with equivalent weather share one card and one marker'
     '22–23 °C',
   );
   await expect(merged).toHaveAttribute('aria-label', /9\.3–101\.9\skm/);
-  await page
-    .locator('.weather-marker')
-    .nth(1)
-    .locator('.weather-marker-badge')
-    .click();
+  await page.locator('.weather-marker').nth(1).click();
   await expect(merged).toHaveAttribute('aria-current', 'true');
   await setLanguage(page, 'pt');
   await expect(merged.locator('.weather-card-place')).toContainText(
@@ -2089,13 +2068,9 @@ for (const native of [false, true]) {
       );
     await openTab(page, 'weather-section');
     await page.locator('#panel-toggle').click();
-    await mapTool(page, 'fullscreen');
+    await page.locator('#fullscreen').click();
     await expect(page.locator('body')).toHaveClass(/map-fullscreen/);
-    await page
-      .locator('.weather-marker')
-      .nth(3)
-      .locator('.weather-marker-badge')
-      .click();
+    await page.locator('.weather-marker').nth(3).click();
     const target = page.locator('#weather-point-3');
     await expect(target).toBeFocused();
     await expect(target).toHaveAttribute('aria-current', 'true');
@@ -2520,11 +2495,7 @@ for (const [speed, direction, strength, angle] of [
     await expect(page.locator('.weather-card').first()).toContainText(
       expectedRelation,
     );
-    // The badge keeps the number; the unit is in the marker's name (#309).
-    await expect(marker).toHaveAttribute(
-      'aria-label',
-      /km\/h|Wind unavailable/,
-    );
+    await expect(badge.locator('.weather-marker-wind-unit')).toHaveText('km/h');
     await expect(badge.locator('.weather-marker-wind-value')).toHaveText(
       speed === null ? '-' : String(speed),
     );
@@ -2540,11 +2511,9 @@ for (const [speed, direction, strength, angle] of [
       'data-strength',
       strength,
     );
-    if (speed !== null)
-      await expect(page.locator('.weather-marker').first()).toHaveAttribute(
-        'aria-label',
-        /mph/,
-      );
+    await expect(page.locator('.weather-marker-wind-unit').first()).toHaveText(
+      'mph',
+    );
     await openTab(page, 'weather-section');
     await page.locator('#panel-toggle').click();
     await page.locator('.weather-marker-wind').first().click();
@@ -2552,9 +2521,9 @@ for (const [speed, direction, strength, angle] of [
   });
 
 // The longest badge texts: 99.9 km/h (62.1 mph) and, without decimals from
-// 100 km/h, 161 km/h (100 mph), on one line inside the marker's area (#309).
+// 100 km/h, 161 km/h (100 mph).
 for (const speed of [99.9, 160.7])
-  test(`the map wind badge keeps a long speed on one line: ${speed} km/h`, async ({
+  test(`the map wind badge keeps a long speed beside its unit: ${speed} km/h`, async ({
     page,
   }) => {
     await setup(page);
@@ -2572,34 +2541,37 @@ for (const speed of [99.9, 160.7])
     );
     await date(page);
     await fetchWeather(page);
-    const marker = page.locator('.weather-marker').first();
-    const badge = marker.locator('.weather-marker-wind');
+    const badge = page.locator('.weather-marker-wind').first();
     const check = async (value: string, unit: string) => {
       await expect(badge.locator('.weather-marker-wind-value')).toHaveText(
         value,
       );
-      await expect(marker).toHaveAttribute('aria-label', new RegExp(unit));
-      const box = await marker.evaluate((el) => {
-        const area = el
-          .querySelector('.weather-marker-content')!
-          .getBoundingClientRect();
-        const pill = el
-          .querySelector('.weather-marker-badge')!
-          .getBoundingClientRect();
-        const wind = el.querySelector<HTMLElement>('.weather-marker-wind')!;
-        const value = wind.querySelector<HTMLElement>(
-          '.weather-marker-wind-value',
-        )!;
+      await expect(badge.locator('.weather-marker-wind-unit')).toHaveText(unit);
+      const box = await badge.evaluate((el) => {
+        const outer = el.getBoundingClientRect();
+        const [arrow, text, label] = [...el.children].map((child) =>
+          child.getBoundingClientRect(),
+        );
+        const value = el.children[1] as HTMLElement;
         return {
-          right: area.right,
-          pill: pill.right,
+          left: outer.left + 4,
+          right: outer.right - 4,
+          arrow: arrow.right,
+          textLeft: text.left,
+          textRight: text.right,
           overflow: value.scrollWidth - value.clientWidth,
-          height: Math.round(wind.getBoundingClientRect().height),
+          unitLeft: label.left,
+          unitRight: label.right,
+          lines: Math.round(outer.height),
         };
       });
       expect(box.overflow, `${value} ${unit}`).toBeLessThanOrEqual(0);
-      expect(box.pill, `${value} ${unit}`).toBeLessThanOrEqual(box.right);
-      expect(box.height).toBe(22);
+      expect(box.arrow).toBeLessThanOrEqual(box.textLeft);
+      expect(box.textRight, `${value} ${unit}`).toBeLessThanOrEqual(
+        box.unitLeft,
+      );
+      expect(box.unitRight, `${value} ${unit}`).toBeLessThanOrEqual(box.right);
+      expect(box.lines).toBe(18);
     };
     const [kmh, mph] = speed < 100 ? ['99.9', '62.1'] : ['161', '100'];
     await check(kmh, 'km/h');

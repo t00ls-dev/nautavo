@@ -46,9 +46,6 @@ import { distanceUnits, temperatureUnits } from './unit-preferences';
 import { weatherPasses } from './route-marks';
 import {
   MARKER_SIZE,
-  WIND_ZOOM,
-  badgeBox,
-  overlaps,
   OUTBOUND_ANCHOR,
   RETURN_ANCHOR,
   type ClusterItem,
@@ -197,33 +194,9 @@ export function setupWeather(
   function layoutClusters() {
     if (!placed.length) return;
     if (!map.gl()) return;
-    // Zoomed out, the badges leave out the wind (#309).
-    const compact = map.getZoom() < WIND_ZOOM;
-    map.container.classList.toggle('weather-compact', compact);
-    // A badge that would cover a route pin hangs on the other side of its
-    // point (#309).
-    const origin = map.container.getBoundingClientRect();
-    const pins = [...map.container.querySelectorAll('.route-marker')].map(
-      (pin) => {
-        const r = pin.getBoundingClientRect();
-        return {
-          left: r.left - origin.left,
-          top: r.top - origin.top,
-          right: r.right - origin.left,
-          bottom: r.bottom - origin.top,
-        };
-      },
-    );
-    const other = (pass?: 'outbound' | 'return') =>
-      pass === 'return' ? 'outbound' : 'return';
     const items = placed.map((p) => {
       const at = map.project(p.coord)!;
-      const flip = pins.some((pin) =>
-        overlaps(badgeBox(at.x, at.y, p.item.pass, compact), pin),
-      );
-      p.marker.element.classList.toggle('weather-marker-flip', flip);
-      const side = flip ? other(p.item.pass) : p.item.pass;
-      return { ...p.item, box: markerBox(at.x, at.y, side, compact) };
+      return { ...p.item, box: markerBox(at.x, at.y, p.item.pass) };
     });
     clusterWeather(items).forEach((cluster, group) => {
       for (const i of cluster.members) {
@@ -235,8 +208,7 @@ export function setupWeather(
         const more = cluster.members.length - 1;
         count.hidden = !shown || !more;
         if (!shown) continue;
-        // The samples this badge stands for, itself included (#309).
-        count.textContent = more ? String(more + 1) : '';
+        count.textContent = more ? `+${more}` : '';
         count.classList.toggle('has-alerts', cluster.hiddenAlerts > 0);
         // English source text in fresh nodes, so the DOM translator handles it.
         const parts = more
@@ -673,11 +645,11 @@ export function setupWeather(
           : speedFromKmh(hour.wind, distanceUnits()).toLocaleString(locale, {
               maximumFractionDigits: hour.wind < 100 ? 1 : 0,
             });
-      // The unit is in the marker's name and the card; the badge keeps the
-      // number only (#309).
-      windBadge.append(arrow, windValue);
-      // How many samples, when this marker stands for others; tapping it
-      // zooms in.
+      const windUnit = document.createElement('span');
+      windUnit.className = 'weather-marker-wind-unit';
+      windUnit.textContent = speedUnit();
+      windBadge.append(arrow, windValue, windUnit);
+      // "+N" when this marker stands for others; tapping it zooms in.
       const count = document.createElement('span');
       count.className = 'weather-marker-count';
       count.setAttribute('aria-hidden', 'true');
@@ -686,11 +658,7 @@ export function setupWeather(
       const note = document.createElement('span');
       note.className = 'sr-only';
       note.id = `weather-cluster-${first}`;
-      // One badge: the symbol, the wind and the count (#309).
-      const badge = document.createElement('span');
-      badge.className = 'weather-marker-badge';
-      badge.append(markerIcon, windBadge, count);
-      markerBody.append(badge, note);
+      markerBody.append(markerIcon, windBadge, count, note);
       const marker = map.marker(m.point.coord, {
         // A return marker hangs to the left, beside the outbound one.
         className:
