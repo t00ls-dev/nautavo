@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
-import { base, libraryEntry, mockRouting, setLanguage } from './app-helpers';
+import {
+  base,
+  libraryEntry,
+  mockRouting,
+  setLanguage,
+  openSavedRoutes,
+} from './app-helpers';
 import { mockBasemap } from './map-helpers';
 
 const start = '-22.930929, -43.238286',
@@ -85,7 +91,7 @@ test('a point saved as a favorite is reused, renamed and deleted, never in the l
   expect(page.url()).not.toBe(link);
   expect(decodeURIComponent(page.url())).not.toContain('favorite');
   // Rename and delete in the library.
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await page.locator('.favorites > summary').click();
   await page.getByRole('button', { name: 'Edit favorite: Home' }).click();
   const edit = page.getByRole('dialog', { name: 'Edit favorite' });
@@ -269,7 +275,7 @@ for (const [width, language] of [
         }),
       );
     expect(await fits('#suggestions-1 [role=option]')).toEqual([]);
-    await page.locator('.saved-routes > summary').click();
+    await openSavedRoutes(page);
     await page.locator('.favorites > summary').click();
     expect(await fits('.library-row, .library-row button')).toEqual([]);
     // The sheet fits too, with its three icon choices on one row.

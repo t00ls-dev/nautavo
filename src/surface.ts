@@ -35,9 +35,6 @@ const KIND: Record<Surface, SurfaceKind> = {
   impassable: 'unpaved',
 };
 
-/** Stretches shorter than this are left out of the list to check, meters. */
-const MIN_SECTION = 200;
-
 export interface SurfaceRange {
   from: number;
   to: number;
@@ -90,11 +87,4 @@ export function surfaceTotals(
     ...k,
     length: sums.get(k.kind)!,
   }));
-}
-
-/** Unpaved stretches of at least `MIN_SECTION`, in route order. */
-export function sectionsToCheck(ranges: SurfaceRange[]): SurfaceRange[] {
-  return ranges.filter(
-    (r) => r.kind === 'unpaved' && r.to - r.from >= MIN_SECTION,
-  );
 }

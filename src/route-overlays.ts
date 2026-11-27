@@ -36,6 +36,13 @@ export interface Coloring {
   activityRanges?(activity: Activity): Range[];
   /** Called when the coloring is chosen, or already chosen on load. */
   activate?(): void;
+  /** A value after a kind's label in the legend (its share of the route). */
+  legendValue?(kind: string): string | null;
+  /**
+   * What the legend says while its data is not drawn yet (loading, or a
+   * failure with Try again); null once it is.
+   */
+  legendStatus?(): { text: string; retry?: () => void } | null;
   /**
    * A compact color scale instead of the item list: icons at both ends, one
    * continuous bar with a swatch per kind (same order as `legend`) and the
@@ -190,6 +197,9 @@ export function setupRouteOverlays(
   heading.textContent = 'Route coloring';
   group.append(heading);
   menu.append(group);
+  const notes = document.createElement('p');
+  notes.className = 'coloring-notes';
+  notes.setAttribute('aria-hidden', 'true');
 
   const legendBox = document.createElement('div');
   legendBox.className = 'route-legend map-control';
@@ -216,14 +226,10 @@ export function setupRouteOverlays(
     button.append(name, reason);
     button.onclick = () => {
       if (button.getAttribute('aria-disabled') === 'true') return;
-      if (activity()) activityActive = id;
-      else {
-        active = id;
-        writePreference(PREFERENCE.routeColoring, id);
-      }
-      refresh();
       // The activity view sends no request: activate loads planner data.
-      if (!activity()) colorings.find((c) => c.id === id)?.activate?.();
+      if (!activity()) return choose(id);
+      activityActive = id;
+      refresh();
     };
     group.append(button);
   }
@@ -267,6 +273,22 @@ export function setupRouteOverlays(
         });
       }),
     );
+    const status = coloring.legendStatus?.() ?? null;
+    if (status) {
+      const line = text('span', status.text, 'route-legend-status');
+      const items: HTMLElement[] = [line];
+      if (status.retry) {
+        const retry = text('button', 'Try again', 'route-legend-retry');
+        (retry as HTMLButtonElement).type = 'button';
+        retry.onclick = status.retry;
+        items.push(retry);
+      }
+      legendBox.classList.remove('route-legend-scale');
+      legendBox.replaceChildren(...items);
+      legendBox.setAttribute('aria-label', coloring.label);
+      legendBox.hidden = false;
+      return;
+    }
     const swatch = (kind: string) => {
       const mark = document.createElement('i');
       mark.className = `route-legend-swatch route-coloring-${kind}`;
@@ -308,11 +330,21 @@ export function setupRouteOverlays(
         ...coloring.legend.map(({ kind, label }) => {
           const item = document.createElement('span');
           item.append(swatch(kind), text('span', label));
+          const value = coloring.legendValue?.(kind);
+          if (value) item.append(text('span', value, 'route-legend-value'));
           return item;
         }),
       );
     legendBox.setAttribute('aria-label', coloring.label);
     legendBox.hidden = false;
+  }
+
+  /** Chooses a planner coloring, as its Map layers option does. */
+  function choose(id: string) {
+    active = id;
+    writePreference(PREFERENCE.routeColoring, id);
+    refresh();
+    colorings.find((c) => c.id === id)?.activate?.();
   }
 
   function refresh() {
@@ -333,6 +365,24 @@ export function setupRouteOverlays(
         button.setAttribute('aria-disabled', String(!!why));
         button.querySelector('.coloring-reason')!.textContent = why ?? '';
       });
+    // One row of choices (#308): why one is unavailable shows below them,
+    // named, in English source text for the DOM translator.
+    notes.replaceChildren(
+      ...[...group.querySelectorAll<HTMLButtonElement>('[data-coloring]')]
+        .filter((button) => !button.hidden)
+        .flatMap((button) => {
+          const why = button.querySelector('.coloring-reason')!.textContent;
+          if (!why) return [];
+          const line = document.createElement('span');
+          const name = document.createElement('span');
+          name.textContent = button.querySelector('span')!.textContent;
+          const text = document.createElement('span');
+          text.textContent = why;
+          line.append(name, ': ', text);
+          return [line];
+        }),
+    );
+    group.append(notes);
     draw();
   }
 
@@ -358,5 +408,6 @@ export function setupRouteOverlays(
     },
     /** The id of the planner's coloring ('none' when off). */
     active: () => active,
+    choose,
   };
 }

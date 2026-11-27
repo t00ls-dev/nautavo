@@ -76,9 +76,6 @@ const pt: Record<string, string> = {
   'Recalculate off route': 'Recalcular fora da rota',
   'Automatic recalculation on': 'Recálculo automático ativo',
   'Turn off': 'Desativar',
-  'See the route on the navigation screen before you leave: each turn, the distances and the arrival.':
-    'Veja a rota na tela de navegação antes de sair: cada conversão, as distâncias e a chegada.',
-  'Simulate navigation': 'Simular navegação',
   Then: 'Depois',
   'You have arrived': 'Você chegou',
   'Weak GPS signal': 'Sinal de GPS fraco',
@@ -263,6 +260,17 @@ const pt: Record<string, string> = {
   'Weather unavailable': 'Clima indisponível',
 
   'Map layers': 'Camadas do mapa',
+  'Base map': 'Mapa base',
+  Itinerary: 'Itinerário',
+  Language: 'Idioma',
+  Route: 'Rota',
+  'Or start from': 'Ou comece por',
+  'Place the start with the crosshair': 'Marque o início com a mira',
+  'Save route and Export appear once the route is ready.':
+    'Salvar rota e Exportar aparecem quando a rota estiver pronta.',
+  'Plan a route': 'Planeje uma rota',
+  'GPX, FIT or TCX': 'GPX, FIT ou TCX',
+  'Home screen': 'Tela inicial',
   Standard: 'Padrão',
   Topographic: 'Topográfico',
   Satellite: 'Satélite',
@@ -586,12 +594,7 @@ const pt: Record<string, string> = {
   'Valhalla returned an invalid response.':
     'O Valhalla retornou uma resposta inválida.',
   'Loading surface…': 'Buscando pavimento…',
-  'Surface unavailable. Try again.': 'Pavimento indisponível. Tente novamente.',
-  'Surface unavailable for part of the route.':
-    'Pavimento indisponível em parte da rota.',
-  'No unpaved stretches.': 'Nenhum trecho sem asfalto.',
-  'From OpenStreetMap. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.':
-    'Do OpenStreetMap. Vias sem pavimento mapeado contam como pavimentadas; os trechos sem asfalto são os mapeados. Confira antes de sair.',
+  'Surface unavailable.': 'Pavimento indisponível.',
   'Road data usage limit reached. Try again later.':
     'Limite de uso dos dados das vias atingido. Tente mais tarde.',
   Paved: 'Asfalto',
@@ -627,12 +630,6 @@ const pt: Record<string, string> = {
   Distance: 'Distância',
   Time: 'Tempo',
   Arrival: 'Chegada',
-  'Sun up all day': 'Sol o dia todo',
-  'Sun down all day': 'Sem sol o dia todo',
-  'None in the dark': 'Nada no escuro',
-  'Today at the start:': 'Hoje no início:',
-  'Choose a departure date to see dark sections.':
-    'Escolha a data de partida para ver os trechos no escuro.',
   Start: 'Início',
   Destination: 'Destino',
   Via: 'Passagem',
@@ -730,8 +727,8 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
 
   [
     // Numbers and units are joined by a no-break space (`withUnit`): \s.
-    /^At (.*?)\s(km\/h|mph) · no stops$/,
-    (n, u) => `A ${n}\u00a0${u} · sem paradas`,
+    /^(.*?)\s(km\/h|mph), no stops$/,
+    (n, u) => `${n}\u00a0${u}, sem paradas`,
   ],
   [/^Location of point (\d+)$/, (n) => `Local do ponto ${n}`],
   [/^Results for point (\d+)$/, (n) => `Resultados do ponto ${n}`],
@@ -742,12 +739,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   ],
 
   [/^(.+) in the dark$/, (distance) => `${distance} no escuro`],
-  [/^(.+) in civil twilight$/, (distance) => `${distance} no crepúsculo civil`],
-  [
-    /^Dark from (.+) \((.+)\) to (.+) \((.+)\)$/,
-    (from, start, to, end) =>
-      `No escuro de ${from} (${start}) a ${to} (${end})`,
-  ],
   [
     /^Leave by (.+) to arrive before sunset\.$/,
     (time) => `Saia até ${time} para chegar antes do pôr do sol.`,
@@ -812,7 +803,6 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
   [/^Recalculate in (\d+) s$/, (n) => `Recalcular em ${n} s`],
   [/^Step (\d+) of (\d+)$/, (a, b) => `Etapa ${a} de ${b}`],
   [/^Climbs \((\d+)\)$/, (n) => `Subidas (${n})`],
-  [/^Unpaved stretches \((\d+)\)$/, (n) => `Trechos sem asfalto (${n})`],
   [
     /^Surface is not available for this route: it would need more than (\d+) requests\.$/,
     (n) =>

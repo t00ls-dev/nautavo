@@ -1,12 +1,4 @@
-import {
-  highlightLayers,
-  lineFeature,
-  RANK,
-  type PlannerMap,
-} from './planner-map';
 import type { Coord, Route, State } from './core';
-import { byId as $ } from './dom';
-import { sheetCoversMap } from './panel';
 import {
   attributePlan,
   edgeRanges,
@@ -14,44 +6,39 @@ import {
   type EdgeRange,
 } from './road-attributes';
 import { ValhallaLimitError, valhallaAttributes } from './valhalla-trace';
-import {
-  sectionsToCheck,
-  surfaceRanges,
-  surfaceTotals,
-  SURFACE_KINDS,
-  type SurfaceRange,
-} from './surface';
+import { surfaceRanges, surfaceTotals, type SurfaceRange } from './surface';
 import { onlineAttempt } from './offline';
-import { indexTrack, legDistances, trackSlice } from './track-position';
-import { distanceLabel, milepostLabel } from './units';
-import { distanceUnits } from './unit-preferences';
+import { indexTrack, legDistances } from './track-position';
 
 /**
- * Surface row in the route summary: paved and unpaved totals, the unpaved
- * stretches to check and their place on the map. Road attributes are asked
- * from Valhalla only when the row is opened or the Surface coloring is
+ * The surface of the route, for its coloring in Map layers (#305: no tab):
+ * paved and unpaved stretches and their share of the route. Road
+ * attributes are asked from Valhalla only when the Surface coloring is
  * chosen, and stay in page memory.
  */
 
-/** Quiet time before asking for a new route while the row is open. */
+/** Quiet time before asking for a new route while the coloring is on. */
 const SETTLE_MS = 2000;
 
-export function setupSurface(
-  map: PlannerMap,
-  deps: {
-    state: () => State;
-    /** Another explicit user choice needs the surface (the Surface coloring). */
-    wanted?: () => boolean;
-    /** Called when the surface arrives or is reset, so its users redraw. */
-    onSurface?: () => void;
-  },
-) {
-  const details = $<HTMLDetailsElement>('surface'),
-    status = $('surface-status'),
-    retry = $<HTMLButtonElement>('surface-retry'),
-    content = $('surface-result');
+export function setupSurface(deps: {
+  state: () => State;
+  /** The explicit user choice that needs the surface (the Surface coloring). */
+  wanted: () => boolean;
+  /** Called when the surface or its status changes, so its users redraw. */
+  onSurface: () => void;
+}) {
   /** Surface that failed offline waits for the connection (one attempt). */
   const whenOnline = onlineAttempt();
+  let route: Route | null = null,
+    ranges: SurfaceRange[] | null = null,
+    status: { text: string; error: boolean } | null = null,
+    revision = 0,
+    settle: ReturnType<typeof setTimeout> | undefined;
+
+  function message(text: string, error = false) {
+    status = text ? { text, error } : null;
+    deps.onSurface();
+  }
   /** Offline: says so and asks once more when the connection returns. */
   function offline(current: () => boolean): boolean {
     const waiting = whenOnline(() => {
@@ -63,25 +50,6 @@ export function setupSurface(
       );
     return waiting;
   }
-  const setHighlight = map.overlay('rg-surface', RANK.highlight, () =>
-    highlightLayers('rg-surface-line'),
-  );
-  let route: Route | null = null,
-    ranges: SurfaceRange[] | null = null,
-    partial = false,
-    selected = -1,
-    revision = 0,
-    settle: ReturnType<typeof setTimeout> | undefined;
-
-  const locale = () => (deps.state().language === 'pt' ? 'pt-BR' : 'en');
-  const units = () => distanceUnits();
-  const needed = () => details.open || !!deps.wanted?.();
-
-  function message(text: string, error = false) {
-    status.textContent = text;
-    status.classList.toggle('error', error);
-    retry.hidden = !error;
-  }
 
   /** Along-track distance of each route point, so pieces restart there. */
   function legBounds(target: Route): number[] {
@@ -92,7 +60,7 @@ export function setupSurface(
   }
 
   async function load() {
-    if (!route || !needed() || ranges) return render();
+    if (!route || !deps.wanted() || ranges) return;
     const target = route,
       mine = ++revision;
     const current = () => route === target && revision === mine;
@@ -112,191 +80,61 @@ export function setupSurface(
       );
       if (!current()) return;
       if (results.every((r) => r === 'failed')) {
-        if (!offline(current)) message('Surface unavailable. Try again.', true);
+        if (!offline(current)) message('Surface unavailable.', true);
         return;
       }
       const edges: EdgeRange[] = results.flatMap((r, i) =>
         r && r !== 'failed' ? edgeRanges(plan[i], r) : [],
       );
-      partial = results.includes('failed');
       ranges = surfaceRanges(edges, indexTrack(target.segments).total);
       message('');
-      deps.onSurface?.();
-      render();
     } catch (error) {
       if (!current() || (error as Error).name === 'AbortError') return;
       if (!(error instanceof ValhallaLimitError) && offline(current)) return;
       message(
         error instanceof ValhallaLimitError
           ? error.message
-          : 'Surface unavailable. Try again.',
+          : 'Surface unavailable.',
         true,
       );
     }
   }
 
-  function render() {
-    content.replaceChildren();
-    if (!route || !ranges) return showSection(null);
-    const total = ranges.reduce((sum, r) => sum + r.to - r.from, 0) || 1;
-    const totals = document.createElement('ul');
-    totals.className = 'surface-totals';
-    for (const item of surfaceTotals(ranges)) {
-      const li = document.createElement('li');
-      const swatch = document.createElement('span');
-      swatch.className = `surface-swatch route-coloring-${item.kind}`;
-      swatch.setAttribute('aria-hidden', 'true');
-      const label = document.createElement('span');
-      label.textContent = item.label;
-      const value = document.createElement('span');
-      value.className = 'surface-value';
-      const percent = Math.round((item.length / total) * 100);
-      value.textContent = `${distanceLabel(item.length, units(), locale())} · ${percent < 1 ? '<1' : percent}%`;
-      li.append(swatch, label, value);
-      totals.append(li);
-    }
-    content.append(totals);
-    if (partial) {
-      const note = document.createElement('p');
-      note.className = 'hint error';
-      note.textContent = 'Surface unavailable for part of the route.';
-      content.append(note);
-    }
-    content.append(sectionList(sectionsToCheck(ranges)));
-    const note = document.createElement('p');
-    note.className = 'hint';
-    const language = deps.state().language === 'pt' ? 'pt' : 'en';
-    const link = document.createElement('a');
-    link.href = `./help?lang=${language}&section=surface${location.hash}`;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'See the help.';
-    note.append(
-      document.createTextNode(
-        'From OpenStreetMap. Roads without a mapped surface count as paved; unpaved stretches are the mapped ones. Check before you leave.',
-      ),
-      document.createTextNode(' '),
-      link,
-    );
-    content.append(note);
-  }
-
-  /** Unpaved stretches in route order; one can be shown on the map. */
-  function sectionList(sections: SurfaceRange[]): HTMLElement {
-    const box = document.createElement('div');
-    box.className = 'climbs surface-sections';
-    if (selected >= sections.length) selected = -1;
-    if (!sections.length) {
-      const none = document.createElement('p');
-      none.className = 'hint';
-      none.textContent = 'No unpaved stretches.';
-      box.append(none);
-      showSection(null);
-      return box;
-    }
-    const heading = document.createElement('p');
-    heading.className = 'climbs-heading';
-    heading.textContent = `Unpaved stretches (${sections.length})`;
-    const list = document.createElement('ol');
-    sections.forEach((section, i) => {
-      const item = document.createElement('li');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'climb surface-section';
-      button.setAttribute('aria-pressed', String(i === selected));
-      button.setAttribute('aria-controls', 'map');
-      const grid = document.createElement('span');
-      grid.className = 'climb-grid';
-      const swatch = document.createElement('span');
-      swatch.className = `surface-swatch route-coloring-${section.kind}`;
-      swatch.setAttribute('aria-hidden', 'true');
-      const text = document.createElement('span');
-      // The kind is its own text node so the DOM translator localizes it.
-      const kind = document.createElement('span');
-      kind.textContent = SURFACE_KINDS.find(
-        (k) => k.kind === section.kind,
-      )!.label;
-      text.append(
-        document.createTextNode(
-          `${milepostLabel(section.from, units(), locale())} · ${distanceLabel(section.to - section.from, units(), locale())} · `,
-        ),
-        kind,
-      );
-      grid.append(swatch, text);
-      button.append(grid);
-      button.onclick = () => {
-        selected = selected === i ? -1 : i;
-        render();
-        if (selected >= 0) focusSection(section);
-      };
-      item.append(button);
-      list.append(item);
-    });
-    box.append(heading, list);
-    showSection(sections[selected] ?? null);
-    return box;
-  }
-
-  function showSection(section: SurfaceRange | null) {
-    if (!section || !route || !details.open) {
-      setHighlight([]);
-      return;
-    }
-    setHighlight(
-      trackSlice(indexTrack(route.segments), section.from, section.to).map(
-        (part) => lineFeature(part),
-      ),
-    );
-  }
-
-  /** Fits the map to a stretch; on phones the panel makes room for the map. */
-  function focusSection(section: SurfaceRange) {
-    if (!route) return;
-    const parts = trackSlice(
-      indexTrack(route.segments),
-      section.from,
-      section.to,
-    );
-    if (!parts.length) return;
-    if (!$('route-panel').hidden && sheetCoversMap()) $('panel-toggle').click();
-    map.fit(parts.flat(), { padding: 40 });
-  }
-
-  details.addEventListener('toggle', () => {
-    if (details.open) {
-      clearTimeout(settle);
-      void load();
-    } else {
-      if (!needed()) clearTimeout(settle);
-      setHighlight([]);
-    }
-  });
-  retry.onclick = () => void load();
-
   return {
-    /** A new route resets the surface; an open row asks again once settled. */
+    /** A new route resets the surface; the coloring asks again once settled. */
     setRoute(next: Route | null) {
-      if (next === route) return render();
+      if (next === route) return;
       route = next;
       ranges = null;
-      partial = false;
-      selected = -1;
       revision++;
-      message('');
-      content.replaceChildren();
-      setHighlight([]);
       clearTimeout(settle);
-      deps.onSurface?.();
-      if (route && needed()) {
-        message('Loading surface…');
+      message(route && deps.wanted() ? 'Loading surface…' : '');
+      if (route && deps.wanted())
         settle = setTimeout(() => void load(), SETTLE_MS);
-      }
     },
     /** Surface ranges of the current route, when loaded. */
     ranges: () => ranges,
-    /** A user of the surface was turned on: load it now if still missing. */
+    /** Each kind's share of the route, as the legend shows it. */
+    share(kind: string): string | null {
+      if (!ranges) return null;
+      const total = ranges.reduce((sum, r) => sum + r.to - r.from, 0);
+      const length =
+        surfaceTotals(ranges).find((t) => t.kind === kind)?.length ?? 0;
+      if (!total) return null;
+      const percent = Math.round((length / total) * 100);
+      return `${percent < 1 ? '<1' : percent}%`;
+    },
+    /** Loading or failed, for the legend; a failed piece shows as Unknown. */
+    status(): { text: string; retry?: () => void } | null {
+      if (status)
+        return status.error
+          ? { text: status.text, retry: () => void load() }
+          : { text: status.text };
+      return null;
+    },
+    /** The coloring was turned on: load it now if still missing. */
     want() {
-      if (route && !ranges && needed()) {
+      if (route && !ranges && deps.wanted()) {
         clearTimeout(settle);
         void load();
       }

@@ -55,6 +55,12 @@ test('dragging a grip moves the point, renumbering the rows as it goes', async (
   page,
 }) => {
   await setup(page);
+  // The summary, Trip options and the tabs come first (#305): the rows
+  // are scrolled into the middle of the panel before the drag.
+  await page
+    .locator('#points')
+    .evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await boxSettled(page, '#points');
   const grip = (await page.locator('.point-grip').nth(3).boundingBox())!;
   const x = grip.x + grip.width / 2,
     y = grip.y + grip.height / 2;
@@ -153,6 +159,9 @@ test.describe('phone', () => {
     await page.locator('#panel-toggle').focus();
     await page.keyboard.press('ArrowUp');
     await expect(page.locator('body')).toHaveClass(/sheet-full/);
+    await page
+      .locator('#points')
+      .evaluate((e) => e.scrollIntoView({ block: 'center' }));
     await boxSettled(page, '#points');
     const grip = (await page.locator('.point-grip').first().boundingBox())!;
     const x = grip.x + grip.width / 2,
@@ -189,6 +198,9 @@ for (const language of ['en', 'pt'] as const)
   }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await page.goto(language === 'pt' ? `${base}?lang=pt` : base);
+    // Add stop shows from the first point on (#306).
+    await page.locator('#location-0').fill('-22.93, -43.24');
+    await page.locator('#location-0').press('Tab');
     await page.locator('#add').click();
     const fields = await page.locator('#points input').evaluateAll((inputs) =>
       inputs.map((element) => {

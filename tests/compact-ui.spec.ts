@@ -97,10 +97,17 @@ for (const width of [320, 360, 390, 430]) {
         'aria-expanded',
         'true',
       );
+      // Map layers is a sheet from the bottom of the screen (#308), whole
+      // without scrolling.
       const menu = (await page.locator('#layers-menu').boundingBox())!,
         column = (await page.locator('#layers-toggle').boundingBox())!;
-      expect(menu.x).toBeGreaterThanOrEqual(0);
-      expect(menu.x + menu.width).toBeLessThan(column.x);
+      expect(menu.x).toBe(0);
+      expect(Math.round(menu.y + menu.height)).toBe(width === 320 ? 568 : 844);
+      expect(
+        await page
+          .locator('#layers-menu')
+          .evaluate((e) => e.scrollHeight <= e.clientHeight),
+      ).toBe(true);
       await page.keyboard.press('Escape');
       // With the sheet open, the credits stay on the map above it, beside the
       // tool column that reaches the sheet on short screens.

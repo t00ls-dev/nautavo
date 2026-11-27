@@ -146,8 +146,8 @@
           between are stops; an empty field names its role (Starting point, Add
           a stop, Destination); tap a number to select the point and show it on
           the map. To reorder, hold the ≡ grip at the end of a field and drag it
-          up or down, or focus it and use the arrow keys. Use Undo to restore a
-          change, or × to remove a point.
+          up or down, or focus it and use the arrow keys. Use Undo, in the map
+          tools, to restore a change, or × to remove a point.
         </p>
         <p>
           On small screens, the right column contains location, layers, full
@@ -167,39 +167,41 @@
         </p>
         <h2>Map layers</h2>
         <p>
-          Route marks, in Map layers, add direction arrows along the route (on
-          by default). Where the route uses the same road twice in opposite
-          directions, as on a round trip, the two passes are drawn as parallel
-          lines, each with its own arrows, so the way out and the way back can
-          be told apart. Weather on the map (on by default) shows or hides the
-          weather icons and wind arrows on the map; the weather cards in the
-          panel stay either way. These marks are only drawn on the map and are
-          remembered on this device.
+          Map layers shows the base maps side by side, each with a small
+          preview, then Route coloring and Route marks, which are switches; on a
+          phone held upright it opens from the bottom of the screen. Route marks
+          add direction arrows along the route (on by default). Where the route
+          uses the same road twice in opposite directions, as on a round trip,
+          the two passes are drawn as parallel lines, each with its own arrows,
+          so the way out and the way back can be told apart. Weather on the map
+          (on by default) shows or hides the weather icons and wind arrows on
+          the map; the weather cards in the panel stay either way. These marks
+          are only drawn on the map and are remembered on this device.
         </p>
         <p>
           Route coloring, in Map layers, colors the route line by one theme at a
           time, with a legend at the bottom left of the map. Daylight shows,
           after you choose a departure date, which stretches you would ride in
           daylight (amber), civil twilight (violet) or dark (navy), using the
-          same passage times as the Daylight details. Grade shows where the
-          route climbs or descends: blue for descents (darker at 8% or more),
-          gray for flat stretches under 3%, orange for climbs of 3 to 8% and red
-          at 8% or more, measured over 500 m of terrain elevation (100 m for
-          elevation recorded in an imported file). Choosing it requests the
+          same passage times as the dark notice in the summary. Grade shows
+          where the route climbs or descends: blue for descents (darker at 8% or
+          more), gray for flat stretches under 3%, orange for climbs of 3 to 8%
+          and red at 8% or more, measured over 500 m of terrain elevation (100 m
+          for elevation recorded in an imported file). Choosing it requests the
           route's elevation, as opening Elevation does; a file with recorded
           elevation needs no request. Surface colors the route by road surface,
-          as in the Surface details, showing only the surfaces the route has;
-          choosing it requests the surface, as opening Surface does. None
-          returns to the plain route. The choice is remembered on this device
-          only and is never part of links or saved routes.
+          with each surface's share of the route in the legend; choosing it
+          requests the surface (see Surface below). None returns to the plain
+          route. The choice is remembered on this device only and is never part
+          of links or saved routes.
         </p>
         <p>
-          Tap the circular i button at the bottom right to open the active
-          layer's full map credits and licenses. Links open in a new tab. Close,
-          Escape or a tap outside the card closes the modal and returns focus to
-          i. Changing layers closes it and updates its contents. On small
-          screens it sits just above the route panel, and only the full-height
-          panel hides it.
+          Tap the round i button at the bottom right of the map to open the
+          active layer's full map credits and licenses. Links open in a new tab.
+          Close, Escape or a tap outside the card closes the modal and returns
+          focus to the button. Changing layers closes it and updates its
+          contents. On small screens it sits just above the route panel, and
+          only the full-height panel hides it.
         </p>
         <p>
           The planner and navigation draw the same map, OpenFreeMap vector tiles
@@ -213,8 +215,7 @@
           imagery; zooming beyond its native level enlarges pixels. Without
           access to the map, the route still shows on a plain background. A
           browser without WebGL cannot draw the map; the panel still plans,
-          calculates and exports the route, and the map tools are hidden except
-          Undo.
+          calculates and exports the route, and the map tools are hidden.
         </p>
         <p>
           Only the active layer requests tiles. Their providers receive your IP
@@ -269,19 +270,23 @@
         <p>
           The route panel is a side panel on wide screens, with a button in its
           header to hide it, and a bottom sheet on phones. Tap the handle of the
-          sheet to open or close it, or drag it to half or full height (with a
-          keyboard, the Up and Down arrow keys on the handle); with the phone
-          sideways, the sheet is a panel on the left of the map instead, and
-          closed it keeps only its header and buttons. Its header always shows
-          the route distance and time and the latest status, and closed, the
-          sheet still shows Save route and Export. On phones, the route's start
-          and end with Navigate, then its distance, ascent and arrival, come
-          first in the sheet, above the points, and tapping a point's field
-          raises the sheet to full height with the field and its menu in view,
-          then lowers it again when you leave the field. On phones, More actions
-          next to Export holds Import and Add to home screen. The panel state is
-          remembered in this tab session. Full screen expands the map; press it
-          again or Escape to leave.
+          sheet to open or close it, or drag it, or the panel itself, to half or
+          full height (with a keyboard, the Up and Down arrow keys on the
+          handle); with the phone sideways, the sheet is a panel on the left of
+          the map instead, and closed it keeps only its header and buttons. Its
+          header always shows the route distance and time and the latest status,
+          and closed, the sheet still shows Save route and Export once there is
+          a route. The route's start and end (with Navigate on a phone), its
+          distance, ascent and arrival, Trip options and the route's tabs come
+          first, above the points, which are the first tab; tapping a point's
+          field raises the sheet to full height with the field and its menu in
+          view, then lowers it again when you leave the field. On phones, More
+          actions next to Export holds Import and Travel the route. With no
+          point set, the panel shows Plan a route with the ways to start: Choose
+          on map (the crosshair places the start) and Import, with Saved routes
+          and Favorite places listed below; Save route and Export appear once
+          the route is ready. The panel state is remembered in this tab session.
+          Full screen expands the map; press it again or Escape to leave.
         </p>
         <p>
           Use my location requests your position directly. The browser asks for
@@ -564,27 +569,29 @@
         </p>
         <h2 id="elevation-en">Elevation</h2>
         <p>
-          Open Elevation in the route summary to see the elevation profile with
-          minimum, maximum and distance-weighted average altitude and the
-          estimated elevation gain and loss for the whole route. Move over the
-          chart to see the point on the map, its altitude and the elevation gain
-          and loss up to there. An imported GPX, FIT or TCX file that records
-          elevation is used as is, with no request. Otherwise, only when you
-          open Elevation, up to about 300 points along the route are sent to
-          Open-Meteo, in groups of 100, and the results stay in page memory for
-          ten minutes. After an edit, only the legs next to the changed point
-          need new points; while the route is still being recalculated,
-          Elevation waits two seconds before asking. Weather and elevation share
-          a usage budget for Open-Meteo; when it runs out, a countdown shows how
-          long to wait, then the app tries once more on its own. If it is still
-          refused, Try again appears when the next countdown ends. That data
-          comes from the Copernicus DEM GLO-90 terrain model (about 90 m), so
-          bridges, viaducts and tunnels show the ground below or above the road,
-          and short steep ramps are smoothed. To remove noise from trees,
-          buildings and the model grid, terrain elevation is smoothed over about
-          850 m and gain and loss ignore changes under 2 m; recorded elevation
-          is lightly smoothed and ignores changes under 0.3 m. Totals are
-          estimates. Elevation recorded by a GPS can be offset or noisy.
+          Open the Elevation tab (on a computer, Elevation at the bottom of the
+          map, which opens a strip as wide as the map) to see the elevation
+          profile with minimum, maximum and distance-weighted average altitude
+          and the estimated elevation gain and loss for the whole route. Move
+          over the chart to see the point on the map, its altitude and the
+          elevation gain and loss up to there. An imported GPX, FIT or TCX file
+          that records elevation is used as is, with no request. Otherwise, only
+          when you open Elevation, up to about 300 points along the route are
+          sent to Open-Meteo, in groups of 100, and the results stay in page
+          memory for ten minutes. After an edit, only the legs next to the
+          changed point need new points; while the route is still being
+          recalculated, Elevation waits two seconds before asking. Weather and
+          elevation share a usage budget for Open-Meteo; when it runs out, a
+          countdown shows how long to wait, then the app tries once more on its
+          own. If it is still refused, Try again appears when the next countdown
+          ends. That data comes from the Copernicus DEM GLO-90 terrain model
+          (about 90 m), so bridges, viaducts and tunnels show the ground below
+          or above the road, and short steep ramps are smoothed. To remove noise
+          from trees, buildings and the model grid, terrain elevation is
+          smoothed over about 850 m and gain and loss ignore changes under 2 m;
+          recorded elevation is lightly smoothed and ignores changes under 0.3
+          m. Totals are estimates. Elevation recorded by a GPS can be offset or
+          noisy.
         </p>
         <p>
           Climbs, below the statistics, lists each sustained climb in route
@@ -614,26 +621,24 @@
         </p>
         <h2 id="surface-en">Surface</h2>
         <p>
-          Open Surface in the route summary to see how much of the route is
+          Choose Surface in Route coloring, in Map layers, to color the route
           paved (asphalt, concrete, paving stones or cobblestones) or unpaved
-          (compacted, gravel, dirt or impassable), in distance and percentage,
-          and the unpaved stretches of 200 m or more in route order, with where
-          they start and their length. Select a stretch to see it on the map.
-          Only when you open Surface or choose the Surface coloring, the route's
-          geometry, routed or imported, is sent to the configured Valhalla
-          server in pieces of up to 190 km, at least 1.5 seconds apart, and the
-          answer stays in page memory for 15 minutes; after an edit, the pieces
-          before the changed point are not asked again. A route that would need
-          more than 10 pieces (about 1,900 km, or an imported file in many
-          separate parts) gets no surface. The surface comes from OpenStreetMap.
-          Where it is not mapped, Valhalla assumes one from the road type:
-          ordinary roads, including small rural ones, count as paved, and only
-          farm and forest tracks count as unpaved. So a dirt road without a
-          mapped surface shows as Paved, while unpaved stretches are almost
-          always mapped ones; the app cannot tell which stretches were assumed.
-          Stretches it cannot match to a road, or a piece that fails, show as
-          Unknown. On noisy tracks, a parallel road can be matched instead.
-          Check before you leave.
+          (compacted, gravel, dirt or impassable); the legend shows each one's
+          share of the route. Only when you choose the Surface coloring, the
+          route's geometry, routed or imported, is sent to the configured
+          Valhalla server in pieces of up to 190 km, at least 1.5 seconds apart,
+          and the answer stays in page memory for 15 minutes; after an edit, the
+          pieces before the changed point are not asked again. A route that
+          would need more than 10 pieces (about 1,900 km, or an imported file in
+          many separate parts) gets no surface. The surface comes from
+          OpenStreetMap. Where it is not mapped, Valhalla assumes one from the
+          road type: ordinary roads, including small rural ones, count as paved,
+          and only farm and forest tracks count as unpaved. So a dirt road
+          without a mapped surface shows as Paved, while unpaved stretches are
+          almost always mapped ones; the app cannot tell which stretches were
+          assumed. Stretches it cannot match to a road, or a piece that fails,
+          show as Unknown. On noisy tracks, a parallel road can be matched
+          instead. Check before you leave.
         </p>
         <h2 id="navigate-en">Navigate</h2>
         <p>
@@ -735,17 +740,17 @@
         </p>
         <h2>Travel the route</h2>
         <p>
-          Open Travel the route in the route summary and press Simulate
-          navigation to replay the route on the navigation screen before you
-          leave, as it will look on the way: the next turn and the one after it,
-          the distance to them, the time and distance left and the arrival. It
-          always opens paused at the start. Press play and choose 1×, 2×, 5× or
-          10× (1× moves 250 m per second, 10× 2.5 km per second), or drag the
-          slider at the bottom; the arrival follows your departure at your
-          average speed, or the current time without one. It has the same layout
-          as navigation, with the guidance in cards over the map on a screen
-          held sideways. It uses no location and sends no request besides the
-          map; End returns to the planner.
+          Press Travel the route (in More actions on a phone, below the route's
+          actions on a computer) to replay the route on the navigation screen
+          before you leave, as it will look on the way: the next turn and the
+          one after it, the distance to them, the time and distance left and the
+          arrival. It always opens paused at the start. Press play and choose
+          1×, 2×, 5× or 10× (1× moves 250 m per second, 10× 2.5 km per second),
+          or drag the slider at the bottom; the arrival follows your departure
+          at your average speed, or the current time without one. It has the
+          same layout as navigation, with the guidance in cards over the map on
+          a screen held sideways. It uses no location and sends no request
+          besides the map; End returns to the planner.
         </p>
         <h2>Recorded activities</h2>
         <p>
@@ -788,12 +793,11 @@
         </p>
         <h2>Daylight</h2>
         <p>
-          The route summary shows sunrise and sunset at the start, with a rising
-          and a setting sun icon. Without a departure date it shows today's
-          times; with one, it also shows how much of the route falls in the
-          dark. Open Daylight in the summary for the dark sections with their
-          passage times, the distance in civil twilight, the latest departure
-          that arrives before sunset and when daylight starts at the start.
+          When part of the trip falls in the dark, a notice below the trip line
+          says how far, with the departure that avoids it: when daylight starts
+          at the start, for a start in the dark, or the latest departure that
+          arrives before sunset. Tap it to see the dark stretches on the map,
+          with the Daylight coloring. A trip in daylight shows no notice.
         </p>
         <p>
           Everything is calculated on your device, with no request. Sunrise and
@@ -819,41 +823,41 @@
           when a departure is set, the arrival time with the time of the trip
           below it (else the time alone), with the speed used. Ascent shows Show
           until you tap it: the tap loads the elevation, as opening Elevation
-          does, and later routes show it too; a file with recorded elevation
-          shows it at once. Trip options, right below, holds the departure date,
-          the average speed and Prefer main roads; open before a route exists,
-          it then folds into one line with those values (tap it to change them).
-          Itinerary, the first row below Trip options, shows the highway
-          references, each road with its distance. When the router provides it,
-          each step shows its maneuver and an arrow, with the road and its
-          distance on the line below: turn left or right (slightly, sharp),
-          U-turn, keep left or right, ramps and exits, and the roundabout exit
-          to take. Where the road's sign is mapped, a step also shows the route
-          number on the sign and its first destination (toward Ilha do
-          Governador), in place of a road without a name or on a line of its own
-          below a named one; navigation shows them the same way. Each
-          instruction also shows its position along the route (for example km
-          12.3, or mi in miles); select it to center the map on that spot, which
-          stays marked until you click the map. With Prefer main roads, long
-          local roads are highlighted; the summary counts them with their length
-          (15 local road sections · 6.2 km), and selecting that line opens the
-          itinerary at the first one. A route point placed away from a road,
-          such as inside a park, is routed from the nearest road, and the
-          summary says how far it is. To keep each road on one line beside its
-          distance, common words in road names are abbreviated (R., Av., Estr.,
-          Prof., St, Ave) and a name still too long ends in an ellipsis; the
-          full name appears when you hover and is read by screen readers. When
-          you open the Itinerary of an imported track, the app asks the OSRM
-          server to match the track to the roads (points about every 300 to 400
-          m, 10 per request, so long tracks take up to a minute; after an edit,
-          only the stretches next to the changed point are asked again) and
-          shows the directions on the exact imported track; stretches off the
-          road network have none. A route saved before turn directions existed
-          gets them with one request when you open its Itinerary, only if the
-          road is the same; the saved route keeps its geometry and stores the
-          directions; if the road has changed, it remembers that and does not
-          ask again. Instructions follow the driving profile and describe the
-          road network.
+          does (on a computer it also opens the Elevation strip), and later
+          routes show it too; a file with recorded elevation shows it at once.
+          Trip options, right below, holds the departure date, the average speed
+          and Prefer main roads; it shows from the first point on and, once the
+          route shows, folds into one line with those values (tap it to change
+          them). Itinerary, the tab after Points, shows the highway references,
+          each road with its distance. When the router provides it, each step
+          shows its maneuver and an arrow, with the road and its distance on the
+          line below: turn left or right (slightly, sharp), U-turn, keep left or
+          right, ramps and exits, and the roundabout exit to take. Where the
+          road's sign is mapped, a step also shows the route number on the sign
+          and its first destination (toward Ilha do Governador), in place of a
+          road without a name or on a line of its own below a named one;
+          navigation shows them the same way. Each instruction also shows its
+          position along the route (for example km 12.3, or mi in miles); select
+          it to center the map on that spot, which stays marked until you click
+          the map. With Prefer main roads, long local roads are highlighted; the
+          summary counts them with their length (15 local road sections · 6.2
+          km), and selecting that line opens the itinerary at the first one. A
+          route point placed away from a road, such as inside a park, is routed
+          from the nearest road, and the summary says how far it is. To keep
+          each road on one line beside its distance, common words in road names
+          are abbreviated (R., Av., Estr., Prof., St, Ave) and a name still too
+          long ends in an ellipsis; the full name appears when you hover and is
+          read by screen readers. When you open the Itinerary of an imported
+          track, the app asks the OSRM server to match the track to the roads
+          (points about every 300 to 400 m, 10 per request, so long tracks take
+          up to a minute; after an edit, only the stretches next to the changed
+          point are asked again) and shows the directions on the exact imported
+          track; stretches off the road network have none. A route saved before
+          turn directions existed gets them with one request when you open its
+          Itinerary, only if the road is the same; the saved route keeps its
+          geometry and stores the directions; if the road has changed, it
+          remembers that and does not ask again. Instructions follow the driving
+          profile and describe the road network.
         </p>
         <h2>Units and undo</h2>
         <p>
@@ -903,10 +907,10 @@
         <h2 id="home-screen-en">Add to home screen</h2>
         <p>
           Add Nautavo to your home screen to open it from an icon, like an app.
-          On a phone, More actions has Add to home screen, which shows these
-          steps for your device. The icon opens the site in your browser, with
-          its address bar; there is nothing to install, and saved routes open
-          even without a connection.
+          On a phone, Settings has Add to home screen, which shows these steps
+          for your device. The icon opens the site in your browser, with its
+          address bar; there is nothing to install, and saved routes open even
+          without a connection.
         </p>
         <ul>
           <li>
@@ -967,10 +971,10 @@
           >
           documents a one-request/second limit and server-side route logs; the
           page spaces routing starts by at least 1.5 seconds. A separate
-          Valhalla numeric quota was not verified; when Surface is opened or its
-          coloring chosen, the route's geometry goes to the Valhalla server in
-          pieces of up to 190 km. Address text goes to https://photon.komoot.io
-          while typing or https://nominatim.openstreetmap.org on Enter; both use
+          Valhalla numeric quota was not verified; when the Surface coloring is
+          chosen, the route's geometry goes to the Valhalla server in pieces of
+          up to 190 km. Address text goes to https://photon.komoot.io while
+          typing or https://nominatim.openstreetmap.org on Enter; both use
           OSM/ODbL data.
         </p>
         <p>
@@ -1051,8 +1055,8 @@
           (Início, Adicionar parada, Destino); toque num número para selecionar
           o ponto e vê-lo no mapa. Para reordenar, segure a alça ≡ no fim de um
           campo e arraste para cima ou para baixo, ou dê foco a ela e use as
-          setas do teclado. Use Desfazer para recuperar uma alteração ou × para
-          remover um ponto.
+          setas do teclado. Use Desfazer, nas ferramentas do mapa, para
+          recuperar uma alteração ou × para remover um ponto.
         </p>
         <p>
           Em telas pequenas, a coluna à direita contém ícones de localização,
@@ -1072,38 +1076,40 @@
         </p>
         <h2>Camadas do mapa</h2>
         <p>
-          Marcas da rota, em Camadas do mapa, acrescentam setas de direção ao
-          longo da rota (ligadas por padrão). Onde a rota usa a mesma estrada
-          duas vezes em sentidos opostos, como numa ida e volta, as duas
-          passagens aparecem como linhas paralelas, cada uma com suas setas,
-          para distinguir a ida da volta. Clima no mapa (ligado por padrão)
-          mostra ou esconde os ícones de clima e as setas de vento no mapa; os
-          cards de clima no painel continuam de qualquer forma. Essas marcas só
-          aparecem no mapa e ficam guardadas neste aparelho.
+          Camadas do mapa mostra os mapas base lado a lado, cada um com uma
+          pequena prévia, e depois Colorir a rota e Marcas da rota, que são
+          chaves liga e desliga; no celular em pé, abre a partir do rodapé da
+          tela. Marcas da rota acrescentam setas de direção ao longo da rota
+          (ligadas por padrão). Onde a rota usa a mesma estrada duas vezes em
+          sentidos opostos, como numa ida e volta, as duas passagens aparecem
+          como linhas paralelas, cada uma com suas setas, para distinguir a ida
+          da volta. Clima no mapa (ligado por padrão) mostra ou esconde os
+          ícones de clima e as setas de vento no mapa; os cards de clima no
+          painel continuam de qualquer forma. Essas marcas só aparecem no mapa e
+          ficam guardadas neste aparelho.
         </p>
         <p>
           Colorir a rota, em Camadas do mapa, colore a linha da rota por um tema
           de cada vez, com uma legenda no canto inferior esquerdo do mapa. Luz
           do dia mostra, depois que você escolhe a data de partida, os trechos
           percorridos de dia (âmbar), no crepúsculo civil (violeta) ou no escuro
-          (azul-escuro), com os mesmos horários de passagem do detalhe Luz do
-          dia. Inclinação mostra onde a rota sobe ou desce: azul nas descidas
-          (mais escuro a partir de 8%), cinza nos trechos planos, abaixo de 3%,
-          laranja nas subidas de 3 a 8% e vermelho a partir de 8%, medida em 500
-          m de elevação do terreno (100 m para a elevação gravada num arquivo
-          importado). Escolhê-la pede a elevação da rota, como abrir Elevação;
-          um arquivo com elevação gravada não precisa de pedido. Pavimento
-          colore a rota pelo pavimento da via, como no detalhe Pavimento,
-          mostrando só os pavimentos que a rota tem; escolhê-lo pede o
-          pavimento, como abrir Pavimento. Nenhuma volta à rota simples. A
-          escolha fica guardada só neste aparelho e nunca entra em links nem em
-          rotas salvas.
+          (azul-escuro), com os mesmos horários de passagem do aviso de escuro
+          no resumo. Inclinação mostra onde a rota sobe ou desce: azul nas
+          descidas (mais escuro a partir de 8%), cinza nos trechos planos,
+          abaixo de 3%, laranja nas subidas de 3 a 8% e vermelho a partir de 8%,
+          medida em 500 m de elevação do terreno (100 m para a elevação gravada
+          num arquivo importado). Escolhê-la pede a elevação da rota, como abrir
+          Elevação; um arquivo com elevação gravada não precisa de pedido.
+          Pavimento colore a rota pelo pavimento da via, com a parte da rota de
+          cada pavimento na legenda; escolhê-lo pede o pavimento (veja Pavimento
+          abaixo). Nenhuma volta à rota simples. A escolha fica guardada só
+          neste aparelho e nunca entra em links nem em rotas salvas.
         </p>
         <p>
-          Toque no botão circular i no canto inferior direito para abrir os
-          créditos completos e as licenças da camada ativa. Os links abrem em
+          Toque no botão redondo i no canto inferior direito do mapa para abrir
+          os créditos completos e as licenças da camada ativa. Os links abrem em
           nova aba. Fechar, Escape ou um toque fora do card fecha o modal e
-          devolve o foco ao i. Trocar de camada fecha o modal e atualiza seu
+          devolve o foco ao botão. Trocar de camada fecha o modal e atualiza seu
           conteúdo. Em telas pequenas, ele fica logo acima do painel da rota, e
           só o painel em altura total o esconde.
         </p>
@@ -1120,7 +1126,7 @@
           Sem acesso ao mapa, a rota ainda aparece sobre um fundo neutro. Um
           navegador sem WebGL não consegue desenhar o mapa; o painel continua
           planejando, calculando e exportando a rota, e as ferramentas do mapa
-          somem, menos Desfazer.
+          somem.
         </p>
         <p>
           Só a camada ativa requisita tiles. Seus provedores recebem seu IP e a
@@ -1178,17 +1184,22 @@
         <p>
           O painel da rota é um painel lateral em telas largas, com um botão no
           cabeçalho para ocultá-lo, e uma folha inferior no celular. Toque na
-          alça da folha para abrir ou fechar, ou arraste para meia altura ou
-          altura cheia (no teclado, as setas para cima e para baixo na alça);
-          com o celular deitado, a folha vira um painel à esquerda do mapa e,
-          fechada, mantém só o topo e os botões. O topo dela sempre mostra a
-          distância e o tempo da rota e o último status, e, fechada, ela ainda
-          mostra Salvar rota e Exportar. No celular, o início e o fim da rota
-          com Navegar, depois a distância, a subida e a chegada, vêm primeiro na
-          folha, acima dos pontos, e tocar no campo de um ponto sobe a folha
-          para altura cheia com o campo e o menu à vista, e ela volta a descer
-          quando você sai do campo. No celular, Mais ações, ao lado de Exportar,
-          reúne Importar e Adicionar à tela inicial. O estado do painel é
+          alça da folha para abrir ou fechar, ou arraste a alça ou o próprio
+          painel para meia altura ou altura cheia (no teclado, as setas para
+          cima e para baixo na alça); com o celular deitado, a folha vira um
+          painel à esquerda do mapa e, fechada, mantém só o topo e os botões. O
+          topo dela sempre mostra a distância e o tempo da rota e o último
+          status, e, fechada, ela ainda mostra Salvar rota e Exportar quando há
+          uma rota. O início e o fim da rota (com Navegar no celular), a
+          distância, a subida e a chegada, Opções da viagem e as abas da rota
+          vêm primeiro, acima dos pontos, que são a primeira aba; tocar no campo
+          de um ponto sobe a folha para altura cheia com o campo e o menu à
+          vista, e ela volta a descer quando você sai do campo. No celular, Mais
+          ações, ao lado de Exportar, reúne Importar e Percorrer a rota. Sem
+          nenhum ponto, o painel mostra Planeje uma rota com os jeitos de
+          começar: Escolher no mapa (a mira marca o início) e Importar, com
+          Rotas salvas e Lugares favoritos listados abaixo; Salvar rota e
+          Exportar aparecem quando a rota estiver pronta. O estado do painel é
           lembrado durante a sessão desta aba. Tela cheia expande o mapa; toque
           novamente ou pressione Escape para sair.
         </p>
@@ -1488,7 +1499,8 @@
         </p>
         <h2 id="elevation-pt">Elevação</h2>
         <p>
-          Abra Elevação no resumo da rota para ver o perfil de elevação com as
+          Abra a aba Elevação (no computador, Elevação no pé do mapa, que abre
+          uma faixa da largura do mapa) para ver o perfil de elevação com as
           altitudes mínima, máxima e média ponderada pela distância e o ganho e
           a perda de elevação estimados para a rota inteira. Passe sobre o
           gráfico para ver o ponto no mapa, a altitude e o ganho e a perda de
@@ -1539,27 +1551,25 @@
         </p>
         <h2 id="surface-pt">Pavimento</h2>
         <p>
-          Abra Pavimento no resumo da rota para ver quanto da rota é pavimentada
-          (asfalto, concreto, bloquete ou paralelepípedo) ou sem asfalto
-          (compactada, cascalho, terra ou intransitável), em distância e
-          porcentagem, e os trechos sem asfalto de 200 m ou mais na ordem da
-          rota, com onde começam e a extensão. Selecione um trecho para vê-lo no
-          mapa. Só quando você abre Pavimento ou escolhe a coloração Pavimento,
-          a geometria da rota, calculada ou importada, é enviada ao servidor
-          Valhalla configurado em partes de até 190 km, com ao menos 1,5 segundo
-          entre elas, e a resposta fica na memória da página por 15 minutos;
-          depois de uma edição, as partes antes do ponto alterado não são
-          pedidas de novo. Uma rota que precisaria de mais de 10 partes (cerca
-          de 1.900 km, ou um arquivo importado em muitas partes separadas) fica
-          sem pavimento. O pavimento vem do OpenStreetMap. Onde não está
-          mapeado, o Valhalla supõe um pelo tipo de via: vias comuns, inclusive
-          vicinais pequenas, contam como pavimentadas, e só estradas de fazenda
-          ou florestais contam como sem asfalto. Assim, uma estrada de terra sem
-          pavimento mapeado aparece como Asfalto, enquanto os trechos sem
-          asfalto são quase sempre mapeados; o app não consegue saber quais
-          trechos foram supostos. Trechos que não casam com uma via, ou uma
-          parte que falha, aparecem como Sem dados. Em trilhas com ruído, uma
-          via paralela pode ser escolhida. Confira antes de sair.
+          Escolha Pavimento em Colorir a rota, nas Camadas do mapa, para colorir
+          a rota em pavimentada (asfalto, concreto, bloquete ou paralelepípedo)
+          ou sem asfalto (compactada, cascalho, terra ou intransitável); a
+          legenda mostra a parte da rota de cada um. Só quando você escolhe a
+          coloração Pavimento, a geometria da rota, calculada ou importada, é
+          enviada ao servidor Valhalla configurado em partes de até 190 km, com
+          ao menos 1,5 segundo entre elas, e a resposta fica na memória da
+          página por 15 minutos; depois de uma edição, as partes antes do ponto
+          alterado não são pedidas de novo. Uma rota que precisaria de mais de
+          10 partes (cerca de 1.900 km, ou um arquivo importado em muitas partes
+          separadas) fica sem pavimento. O pavimento vem do OpenStreetMap. Onde
+          não está mapeado, o Valhalla supõe um pelo tipo de via: vias comuns,
+          inclusive vicinais pequenas, contam como pavimentadas, e só estradas
+          de fazenda ou florestais contam como sem asfalto. Assim, uma estrada
+          de terra sem pavimento mapeado aparece como Asfalto, enquanto os
+          trechos sem asfalto são quase sempre mapeados; o app não consegue
+          saber quais trechos foram supostos. Trechos que não casam com uma via,
+          ou uma parte que falha, aparecem como Sem dados. Em trilhas com ruído,
+          uma via paralela pode ser escolhida. Confira antes de sair.
         </p>
         <h2 id="navigate-pt">Navegar</h2>
         <p>
@@ -1665,16 +1675,17 @@
         </p>
         <h2>Percorrer a rota</h2>
         <p>
-          Abra Percorrer a rota no resumo e toque em Simular navegação para
-          reproduzir a rota na tela de navegação antes de sair, como ela vai
-          aparecer no caminho: a próxima conversão e a seguinte, a distância até
-          elas, o tempo e a distância restantes e a chegada. Ela sempre abre
-          pausada no início. Toque em reproduzir e escolha 1×, 2×, 5× ou 10× (1×
-          anda 250 m por segundo, 10× anda 2,5 km por segundo), ou arraste o
-          controle embaixo; a chegada segue a sua partida na sua velocidade
-          média, ou o horário atual sem ela. Tem o mesmo layout da navegação,
-          com as instruções em cards sobre o mapa com a tela deitada. Não usa a
-          localização e não faz pedidos além do mapa; Sair volta ao planejador.
+          Toque em Percorrer a rota (em Mais ações no celular, abaixo das ações
+          da rota no computador) para reproduzir a rota na tela de navegação
+          antes de sair, como ela vai aparecer no caminho: a próxima conversão e
+          a seguinte, a distância até elas, o tempo e a distância restantes e a
+          chegada. Ela sempre abre pausada no início. Toque em reproduzir e
+          escolha 1×, 2×, 5× ou 10× (1× anda 250 m por segundo, 10× anda 2,5 km
+          por segundo), ou arraste o controle embaixo; a chegada segue a sua
+          partida na sua velocidade média, ou o horário atual sem ela. Tem o
+          mesmo layout da navegação, com as instruções em cards sobre o mapa com
+          a tela deitada. Não usa a localização e não faz pedidos além do mapa;
+          Sair volta ao planejador.
         </p>
         <h2>Atividades gravadas</h2>
         <p>
@@ -1721,12 +1732,12 @@
         </p>
         <h2>Luz do dia</h2>
         <p>
-          O resumo da rota mostra o nascer e o pôr do sol no início, com ícones
-          de sol nascendo e se pondo. Sem data de partida, mostra os horários de
-          hoje; com ela, mostra também quanto da rota fica no escuro. Abra Luz
-          do dia no resumo para ver os trechos no escuro com os horários de
-          passagem, a distância no crepúsculo civil, a partida mais tarde que
-          chega antes do pôr do sol e quando a luz do dia começa no início.
+          Quando parte da viagem cai no escuro, um aviso abaixo da linha da
+          viagem diz quanto, com a partida que evita isso: quando a luz do dia
+          começa no início, para quem sai no escuro, ou a partida mais tarde que
+          chega antes do pôr do sol. Toque nele para ver os trechos no escuro no
+          mapa, com a coloração Luz do dia. Uma viagem toda de dia não mostra
+          aviso.
         </p>
         <p>
           Tudo é calculado no seu aparelho, sem nenhuma requisição. O nascer e o
@@ -1753,29 +1764,30 @@
           a distância, a subida e, quando há partida, o horário de chegada com o
           tempo da viagem embaixo (senão, só o tempo), com a velocidade usada.
           Subida mostra Mostrar até você tocar: o toque carrega a elevação, como
-          abrir a Elevação, e as rotas seguintes também a mostram; um arquivo
-          com elevação gravada a mostra na hora. Opções da viagem, logo abaixo,
-          traz a data de partida, a velocidade média e Preferir vias principais;
-          aberta antes de existir uma rota, depois ela se fecha numa linha com
-          esses valores (toque nela para mudá-los). Itinerário, a primeira linha
-          abaixo de Opções da viagem, mostra as rodovias, cada via com sua
-          distância. Quando o roteador informa, cada passo mostra a manobra e
-          uma seta, com a via e sua distância na linha de baixo: virar à
-          esquerda ou à direita (levemente, acentuadamente), retorno, manter-se
-          à esquerda ou à direita, acessos e saídas e a saída a pegar na
-          rotatória. Onde a placa da via está mapeada, o passo também mostra a
-          rodovia indicada na placa e o primeiro destino (em direção a Ilha do
-          Governador), no lugar de uma via sem nome ou numa linha própria abaixo
-          de uma via com nome; a navegação mostra do mesmo jeito. Cada instrução
-          também mostra sua posição na rota (por exemplo km 12,3, ou mi em
-          milhas); selecione-a para centralizar o mapa no local, que fica
-          marcado até você clicar no mapa. Com Preferir vias principais, vias
-          locais longas ficam destacadas; o resumo as conta com o comprimento
-          (15 trechos em vias locais · 6,2 km), e selecionar essa linha abre o
-          itinerário no primeiro deles. Um ponto da rota colocado longe de uma
-          via, como dentro de um parque, é roteado a partir da via mais próxima,
-          e o resumo diz a que distância ele está. Para cada via caber em uma
-          linha ao lado da distância, palavras comuns dos nomes das vias são
+          abrir a Elevação (no computador, abre também a faixa de Elevação), e
+          as rotas seguintes também a mostram; um arquivo com elevação gravada a
+          mostra na hora. Opções da viagem, logo abaixo, traz a data de partida,
+          a velocidade média e Preferir vias principais; aparece a partir do
+          primeiro ponto e, quando a rota aparece, se fecha numa linha com esses
+          valores (toque nela para mudá-los). Itinerário, a aba depois de
+          Pontos, mostra as rodovias, cada via com sua distância. Quando o
+          roteador informa, cada passo mostra a manobra e uma seta, com a via e
+          sua distância na linha de baixo: virar à esquerda ou à direita
+          (levemente, acentuadamente), retorno, manter-se à esquerda ou à
+          direita, acessos e saídas e a saída a pegar na rotatória. Onde a placa
+          da via está mapeada, o passo também mostra a rodovia indicada na placa
+          e o primeiro destino (em direção a Ilha do Governador), no lugar de
+          uma via sem nome ou numa linha própria abaixo de uma via com nome; a
+          navegação mostra do mesmo jeito. Cada instrução também mostra sua
+          posição na rota (por exemplo km 12,3, ou mi em milhas); selecione-a
+          para centralizar o mapa no local, que fica marcado até você clicar no
+          mapa. Com Preferir vias principais, vias locais longas ficam
+          destacadas; o resumo as conta com o comprimento (15 trechos em vias
+          locais · 6,2 km), e selecionar essa linha abre o itinerário no
+          primeiro deles. Um ponto da rota colocado longe de uma via, como
+          dentro de um parque, é roteado a partir da via mais próxima, e o
+          resumo diz a que distância ele está. Para cada via caber em uma linha
+          ao lado da distância, palavras comuns dos nomes das vias são
           abreviadas (R., Av., Estr., Prof., St, Ave) e um nome ainda longo
           demais termina em reticências; o nome completo aparece ao passar o
           mouse e é lido por leitores de tela. Ao abrir o Itinerário de uma
@@ -1842,10 +1854,10 @@
         <h2 id="home-screen-pt">Adicionar à tela inicial</h2>
         <p>
           Adicione o Nautavo à tela inicial para abri-lo por um ícone, como um
-          app. No celular, Mais ações tem Adicionar à tela inicial, que mostra
-          estes passos para o seu aparelho. O ícone abre o site no navegador,
-          com a barra de endereço; não há nada a instalar, e as rotas salvas
-          abrem mesmo sem conexão.
+          app. No celular, as Configurações têm Adicionar à tela inicial, que
+          mostra estes passos para o seu aparelho. O ícone abre o site no
+          navegador, com a barra de endereço; não há nada a instalar, e as rotas
+          salvas abrem mesmo sem conexão.
         </p>
         <ul>
           <li>
@@ -1908,9 +1920,9 @@
           documenta o limite de uma requisição/segundo e logs de rotas no
           servidor; a página espaça inícios de roteamento por ao menos 1,5
           segundo. Não foi verificada uma cota numérica separada para o
-          Valhalla; quando Pavimento é aberto ou sua coloração escolhida, a
-          geometria da rota vai ao servidor Valhalla em partes de até 190 km. O
-          texto de endereço vai a https://photon.komoot.io ao digitar ou a
+          Valhalla; quando a coloração Pavimento é escolhida, a geometria da
+          rota vai ao servidor Valhalla em partes de até 190 km. O texto de
+          endereço vai a https://photon.komoot.io ao digitar ou a
           https://nominatim.openstreetmap.org por Enter; ambos usam dados
           OSM/ODbL.
         </p>

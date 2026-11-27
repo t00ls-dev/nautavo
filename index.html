@@ -187,7 +187,13 @@
             <p>Route locked. Map, export and sharing still work.</p>
             <button id="unlock" type="button">Unlock editing</button>
           </div>
-          <section class="points-section" aria-label="Route points">
+          <h2 id="plan-title" class="plan-title">Plan a route</h2>
+          <section
+            id="points-section"
+            class="points-section"
+            role="tabpanel"
+            aria-labelledby="tab-points"
+          >
             <div class="section-line">
               <h2>Points</h2>
               <span id="point-count"></span>
@@ -201,8 +207,27 @@
               </button>
             </div>
           </section>
+          <section
+            id="start-options"
+            class="start-options"
+            aria-labelledby="start-title"
+          >
+            <h2 id="start-title">Or start from</h2>
+            <div class="start-grid">
+              <button id="start-map" type="button">
+                <strong>Choose on map</strong
+                ><span>Place the start with the crosshair</span>
+              </button>
+              <button id="start-import" type="button">
+                <strong>Import</strong><span>GPX, FIT or TCX</span>
+              </button>
+            </div>
+            <p class="hint">
+              Save route and Export appear once the route is ready.
+            </p>
+          </section>
           <div class="status-row">
-            <p id="status" role="status" aria-live="polite">
+            <p id="status" role="status" aria-live="polite" data-empty-prompt>
               Set your start and destination.
             </p>
             <button id="calculate" class="ghost" type="button" disabled hidden>
@@ -233,7 +258,13 @@
             <div id="summary-content"></div>
             <div id="summary-notes"></div>
           </section>
-          <details id="trip-options" class="trip-options" open>
+          <button
+            id="daylight-alert"
+            class="daylight-alert"
+            type="button"
+            hidden
+          ></button>
+          <details id="trip-options" class="trip-options">
             <summary>
               <span>Trip options</span>
               <span id="trip-line" class="trip-line"></span>
@@ -279,6 +310,46 @@
               >
             </div>
           </details>
+          <div
+            id="route-tabs"
+            class="route-tabs"
+            role="tablist"
+            aria-label="Route"
+          >
+            <button
+              id="tab-points"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="points-section"
+            >
+              Points</button
+            ><button
+              id="tab-itinerary"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="itinerary"
+            >
+              Itinerary</button
+            ><button
+              id="tab-weather-section"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="weather-section"
+            >
+              Weather</button
+            ><button
+              id="tab-elevation"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="elevation"
+            >
+              Elevation
+            </button>
+          </div>
           <section id="route-details" aria-label="Route details" hidden>
             <div id="itinerary"></div>
             <details id="weather-section">
@@ -305,26 +376,6 @@
               </button>
               <div id="elevation-chart"></div>
               <div id="elevation-stats" class="elevation-stats"></div>
-            </details>
-            <details id="surface" class="surface">
-              <summary>Surface</summary>
-              <p id="surface-status" class="hint" role="status"></p>
-              <button id="surface-retry" type="button" hidden>Try again</button>
-              <div id="surface-result"></div>
-            </details>
-            <details id="daylight-details" class="daylight-details" hidden>
-              <summary>Daylight</summary>
-              <ul id="daylight-list"></ul>
-            </details>
-            <details id="travel-details" class="travel-details">
-              <summary>Travel the route</summary>
-              <p class="hint">
-                See the route on the navigation screen before you leave: each
-                turn, the distances and the arrival.
-              </p>
-              <button id="travel-route" type="button">
-                Simulate navigation
-              </button>
             </details>
           </section>
           <details class="saved-routes">
@@ -374,13 +425,8 @@
                   aria-label="Import GPX, FIT or TCX"
                   title="Import GPX, FIT or TCX"
               /></label>
-              <button
-                id="add-home"
-                type="button"
-                aria-haspopup="dialog"
-                aria-controls="home-dialog"
-              >
-                Add to home screen
+              <button id="travel-route" type="button" disabled>
+                Travel the route
               </button>
             </div>
           </div>
@@ -432,6 +478,7 @@
         </div>
       </div>
       <section class="map-container" aria-label="Interactive map">
+        <div id="elevation-strip" class="elevation-strip"></div>
         <div id="map"></div>
         <div class="map-note" id="map-note">Place your start on the map</div>
         <p id="map-no-gl" class="map-notice" hidden>
@@ -469,30 +516,44 @@
             ><span>Map layers</span>
           </button>
           <div id="layers-menu" role="menu" aria-label="Map layers" hidden>
-            <button
-              type="button"
-              role="menuitemradio"
-              data-layer="standard"
-              aria-checked="true"
-            >
-              Standard
-            </button>
-            <button
-              type="button"
-              role="menuitemradio"
-              data-layer="topographic"
-              aria-checked="false"
-            >
-              Topographic
-            </button>
-            <button
-              type="button"
-              role="menuitemradio"
-              data-layer="satellite"
-              aria-checked="false"
-            >
-              Satellite
-            </button>
+            <div class="layer-options" role="group" aria-label="Base map">
+              <button
+                type="button"
+                role="menuitemradio"
+                data-layer="standard"
+                aria-checked="true"
+              >
+                <span
+                  class="layer-thumb layer-thumb-standard"
+                  aria-hidden="true"
+                ></span
+                >Standard
+              </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                data-layer="topographic"
+                aria-checked="false"
+              >
+                <span
+                  class="layer-thumb layer-thumb-topographic"
+                  aria-hidden="true"
+                ></span
+                >Topographic
+              </button>
+              <button
+                type="button"
+                role="menuitemradio"
+                data-layer="satellite"
+                aria-checked="false"
+              >
+                <span
+                  class="layer-thumb layer-thumb-satellite"
+                  aria-hidden="true"
+                ></span
+                >Satellite
+              </button>
+            </div>
           </div>
         </div>
         <div class="map-tools">
@@ -517,7 +578,7 @@
       </div>
       <div class="dialog-body">
         <section class="settings-section" aria-labelledby="settings-language">
-          <h3 id="settings-language">Language / Idioma</h3>
+          <h3 id="settings-language">Language</h3>
           <select id="language" aria-labelledby="settings-language">
             <option value="en" lang="en">English</option>
             <option value="pt" lang="pt">Português</option>
@@ -584,6 +645,20 @@
               >Speak the directions</span
             ></label
           >
+        </section>
+        <section
+          class="settings-section settings-home"
+          aria-labelledby="settings-home"
+        >
+          <h3 id="settings-home">Home screen</h3>
+          <button
+            id="add-home"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="home-dialog"
+          >
+            Add to home screen
+          </button>
         </section>
         <details class="settings-advanced">
           <summary>Advanced</summary>

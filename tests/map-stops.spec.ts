@@ -209,8 +209,10 @@ test.describe('desktop', () => {
     // Its number, as on the marker, and its place on the route.
     await expect(popup(page).locator('.point-popup-number')).toHaveText('2');
     await expect(popup(page).locator('strong')).toHaveText(/^(km|mi)\s\d/);
-    // A click elsewhere on the map closes it.
-    await page.mouse.click(700, 300);
+    // A click elsewhere on the map closes it: its left edge, clear of the
+    // route and the popup.
+    const map = (await page.locator('#map').boundingBox())!;
+    await page.mouse.click(map.x + 30, map.y + map.height / 2);
     await expect(popup(page)).toHaveCount(0);
     await markers(page).nth(1).click({ button: 'right' });
     // Not the map point menu: the stop's own popup.

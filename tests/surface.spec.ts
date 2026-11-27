@@ -2,7 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import { defaults, encodeState, meters } from '../src/core';
 import { decodePolyline } from '../src/routing';
 import { chooseUnits } from './unit-settings';
-import { coloringKinds, overlayCount } from './map-helpers';
+import { coloringKinds } from './map-helpers';
 import { base, setLanguage } from './app-helpers';
 
 /**
@@ -85,19 +85,27 @@ async function mockTrace(
   return requests;
 }
 
-test('surface is asked only when opened, totals and stretches translate and convert without another request', async ({
+/** Chooses the Surface coloring in Map layers: the request's explicit choice. */
+async function chooseSurface(page: Page) {
+  await page.locator('#layers-toggle').click();
+  await page.locator('[data-coloring="surface"]').click();
+  await page.keyboard.press('Escape');
+}
+const legend = (page: Page) => page.locator('.route-legend');
+const items = (page: Page) => legend(page).locator(':scope > span');
+
+test('surface is asked only when its coloring is chosen, and the legend gives each share and translates', async ({
   page,
 }) => {
   await setup(page);
   const requests = await mockTrace(page);
   await page.waitForTimeout(300);
   expect(requests).toHaveLength(0);
-  await page.locator('#surface > summary').click();
-  const totals = page.locator('.surface-totals li');
-  await expect(totals).toHaveCount(2);
+  await chooseSurface(page);
+  await expect.poll(() => coloringKinds(page)).toContain('unpaved');
+  await expect.poll(() => coloringKinds(page)).toContain('paved');
   // About 89 km paved and 22 km gravel on a 111 km route.
-  await expect(totals.nth(0)).toHaveText(/^Paved(8[89]|90)(\.\d)?\skm · 80%$/);
-  await expect(totals.nth(1)).toHaveText(/^Unpaved2[12](\.\d)?\skm · 20%$/);
+  await expect(items(page)).toHaveText(['Paved80%', 'Unpaved20%']);
   expect(requests).toHaveLength(1);
   // A POST to the Valhalla server with the sent shape and attributes.
   const sent = JSON.parse(requests[0].body) as {
@@ -105,30 +113,15 @@ test('surface is asked only when opened, totals and stretches translate and conv
   };
   expect(sent).toMatchObject({ costing: 'auto', shape_match: 'map_snap' });
   expect(sent.filters.attributes).toContain('edge.surface');
-  const sections = page.locator('.surface-section');
-  await expect(page.locator('.surface-sections .climbs-heading')).toHaveText(
-    'Unpaved stretches (1)',
-  );
-  await expect(sections).toHaveText(
-    /^km\s33\.\d · 2[12](\.\d)?\skm · Unpaved$/,
-  );
-  await sections.first().click();
-  await expect(sections.first()).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => overlayCount(page, 'rg-surface')).toBe(1);
-  await expect(page.locator('#surface')).toContainText(
-    'Roads without a mapped surface count as paved',
-  );
-  await chooseUnits(page, { distance: 'imperial' });
-  await expect(totals.nth(1)).toContainText(' mi · 20%');
   await setLanguage(page, 'pt');
-  await expect(totals.nth(1)).toContainText('Sem asfalto');
-  await expect(sections.first()).toContainText('Sem asfalto');
-  await expect(page.locator('#surface > summary')).toHaveText('Pavimento');
-  // Closing hides the stretch on the map; reopening uses the answer kept.
-  await page.locator('#surface > summary').click();
-  await expect.poll(() => overlayCount(page, 'rg-surface')).toBe(0);
-  await page.locator('#surface > summary').click();
-  await expect(totals).toHaveCount(2);
+  await expect(items(page)).toHaveText(['Asfalto80%', 'Sem asfalto20%']);
+  // Units and another coloring and back reuse the answer kept.
+  await chooseUnits(page, { distance: 'imperial' });
+  await page.locator('#layers-toggle').click();
+  await page.locator('[data-coloring="none"]').click();
+  await page.keyboard.press('Escape');
+  await chooseSurface(page);
+  await expect(items(page)).toHaveCount(2);
   expect(requests).toHaveLength(1);
 });
 
@@ -144,34 +137,38 @@ test('surface that fails without a connection loads once it returns', async ({
       : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
   );
   await context.setOffline(true);
-  await page.locator('#surface > summary').click();
-  await expect(page.locator('#surface-status')).toHaveText(
+  await chooseSurface(page);
+  await expect(legend(page)).toHaveText(
     'No connection. The surface will load when the connection returns.',
   );
-  await expect(page.locator('#surface-retry')).toBeHidden();
+  await expect(legend(page).locator('.route-legend-retry')).toHaveCount(0);
   const asked = requests.length;
   await page.waitForTimeout(1500);
   expect(requests).toHaveLength(asked);
   offline = false;
   await context.setOffline(false);
-  await expect(page.locator('.surface-totals li')).toHaveCount(2);
+  await expect(items(page)).toHaveCount(2);
   expect(requests).toHaveLength(asked + 1);
 });
 
-test('the Surface coloring asks on its own choice and shows only the surfaces present', async ({
+test('a failed surface says so in the legend, and Try again asks once more', async ({
   page,
 }) => {
   await setup(page);
-  const requests = await mockTrace(page);
-  await page.locator('#layers-toggle').click();
-  await page.locator('[data-coloring="surface"]').click();
-  await expect.poll(() => coloringKinds(page)).toContain('unpaved');
-  await expect.poll(() => coloringKinds(page)).toContain('paved');
-  await expect(page.locator('.route-legend > span')).toHaveText([
-    'Paved',
-    'Unpaved',
-  ]);
-  expect(requests).toHaveLength(1);
+  let fail = true;
+  const requests = await mockTrace(page, (r) =>
+    fail
+      ? r.fulfill({ status: 503 })
+      : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
+  );
+  await chooseSurface(page);
+  await expect(legend(page).locator('.route-legend-status')).toHaveText(
+    'Surface unavailable.',
+  );
+  fail = false;
+  await legend(page).locator('.route-legend-retry').click();
+  await expect(items(page)).toHaveText(['Paved80%', 'Unpaved20%']);
+  expect(requests).toHaveLength(2);
 });
 
 test('a long route is asked in spaced pieces and a failed piece shows as unknown', async ({
@@ -184,16 +181,13 @@ test('a long route is asked in spaced pieces and a failed piece shows as unknown
       ? r.fulfill({ status: 503 })
       : r.fulfill({ json: traceAnswer(r.request().postData()!) }),
   );
-  await page.locator('#surface > summary').click();
-  await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 15000 });
+  await chooseSurface(page);
+  await expect(items(page)).toHaveCount(3, { timeout: 15000 });
   expect(requests).toHaveLength(3);
   // Serialized on the routing queue, at least 1.5 s apart.
   for (let i = 1; i < requests.length; i++)
     expect(requests[i].at - requests[i - 1].at).toBeGreaterThanOrEqual(1400);
-  await expect(page.locator('#surface')).toContainText(
-    'Surface unavailable for part of the route.',
-  );
-  await expect(page.locator('.surface-totals')).toContainText('Unknown');
+  await expect(items(page).last()).toContainText('Unknown');
 });
 
 test('editing a point asks again only for the pieces that changed', async ({
@@ -201,14 +195,14 @@ test('editing a point asks again only for the pieces that changed', async ({
 }) => {
   await setup(page, 4);
   const requests = await mockTrace(page);
-  await page.locator('#surface > summary').click();
-  await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 15000 });
+  await chooseSurface(page);
+  await expect(items(page)).toHaveCount(2, { timeout: 15000 });
   expect(requests).toHaveLength(3);
   // The same road comes back: every piece is in the page-memory cache.
   await page.locator('#location-1').fill('0, 4.0000001');
   await page.locator('#location-1').press('Tab');
-  await expect(page.locator('#surface-status')).toHaveText('Loading surface…');
-  await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 10000 });
+  await expect(legend(page)).toHaveText('Loading surface…');
+  await expect(items(page)).toHaveCount(2, { timeout: 10000 });
   expect(requests).toHaveLength(3);
 });
 
@@ -220,53 +214,24 @@ test('an answer for an older route is discarded', async ({ page }) => {
     if (i === 0) await held;
     return r.fulfill({ json: traceAnswer(r.request().postData()!) });
   });
-  await page.locator('#surface > summary').click();
+  await chooseSurface(page);
   await expect.poll(() => requests.length).toBe(1);
   // A new route while the first answer is pending.
   await page.locator('#location-1').fill('0, 0.5');
   await page.locator('#location-1').press('Tab');
+  // The new route waits on the routing queue behind the held answer.
   release();
-  await expect(page.locator('.surface-totals')).toBeVisible({ timeout: 10000 });
   // Only the new route's surface: about 55 km, gravel from 33 to 55 km.
-  await expect(page.locator('.surface-totals li').nth(1)).toHaveText(
-    /^Unpaved2[12](\.\d)?\skm · 40%$/,
-  );
+  await expect(items(page)).toHaveText(['Paved60%', 'Unpaved40%'], {
+    timeout: 10000,
+  });
   expect(requests).toHaveLength(2);
 });
 
-for (const width of [320, 360, 390, 430, 1280])
-  for (const language of ['en', 'pt'] as const)
-    test(`surface rows stay on one line at ${width}px in ${language}`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 844 });
-      await setup(page);
-      await mockTrace(page);
-      await chooseUnits(page, { distance: 'imperial' });
-      await setLanguage(page, language);
-      if (width < 760 && !(await page.locator('#route-panel').isVisible()))
-        await page.locator('#panel-toggle').click();
-      await page.locator('#surface > summary').click();
-      await expect(page.locator('.surface-totals li')).toHaveCount(2);
-      const lines = await page.evaluate(() =>
-        [
-          ...document.querySelectorAll(
-            '.surface-totals li > span, .surface-section .climb-grid > span:last-child',
-          ),
-        ].map((e) => {
-          const r = document.createRange();
-          r.selectNodeContents(e);
-          return r.getClientRects().length > 0
-            ? new Set([...r.getClientRects()].map((x) => Math.round(x.top)))
-                .size
-            : 1;
-        }),
-      );
-      for (const count of lines) expect(count).toBe(1);
-    });
-
-for (const width of [320, 390])
-  test(`three surface kinds stay beside the credits, on one line from 390 px, at ${width}px`, async ({
+// Each kind keeps its swatch, name and share together; the two usual kinds
+// share one line from 320 px, and a third (Unknown) wraps whole.
+for (const width of [320, 360, 390, 430])
+  test(`the surface legend keeps its items whole and beside the credits at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 800 });
@@ -282,32 +247,33 @@ for (const width of [320, 390])
     );
     // The legend shows on the map once the sheet is lowered.
     await page.locator('#panel-toggle').click();
-    const legend = page.locator('.route-legend');
-    await expect(legend.locator(':scope > span')).toHaveCount(3, {
-      timeout: 15000,
-    });
-    for (const language of ['pt', 'en']) {
-      await setLanguage(page, language);
-      await expect(legend).toContainText(
-        language === 'pt' ? 'Sem dados' : 'Unknown',
-      );
-      const layout = await legend.evaluate((box) => {
-        const own = box.getBoundingClientRect();
+    await expect(items(page)).toHaveCount(3, { timeout: 15000 });
+    const layout = () =>
+      legend(page).evaluate((box) => {
         const credits = document
           .querySelector('.map-credits')!
           .getBoundingClientRect();
+        const tops = [...box.children].map((c) =>
+          Math.round(c.getBoundingClientRect().top),
+        );
         return {
-          lines: new Set(
-            [...box.children].map((c) =>
-              Math.round(c.getBoundingClientRect().top),
-            ),
-          ).size,
-          right: own.right,
+          right: box.getBoundingClientRect().right,
           credits: credits.left,
+          // An item on two lines is taller than one line of the legend.
+          tallest: Math.max(
+            ...[...box.children].map((c) => c.getBoundingClientRect().height),
+          ),
+          firstTwo: tops[0] === tops[1],
         };
       });
-      expect(layout.right).toBeLessThanOrEqual(layout.credits);
-      // The narrowest phones wrap these three; from 390 px they fit.
-      if (width >= 390) expect(layout.lines).toBe(1);
+    for (const language of ['pt', 'en']) {
+      await setLanguage(page, language);
+      await expect(items(page).last()).toContainText(
+        language === 'pt' ? 'Sem dados' : 'Unknown',
+      );
+      const { right, credits, tallest, firstTwo } = await layout();
+      expect(right).toBeLessThanOrEqual(credits);
+      expect(tallest).toBeLessThan(26);
+      expect(firstTwo).toBe(true);
     }
   });

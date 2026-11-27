@@ -996,9 +996,11 @@ test('already allowed, a slow GPS still opens the map on the device at street zo
   expect(dot.y + dot.height / 2).toBeCloseTo(sheet.y / 2, -1);
   // Once the traveler moves the map, fixes no longer frame it.
   await mapIdle(page);
+  // Released on the map, clear of the credits: MapLibre ends a mouse drag
+  // released over a control only at the next move.
   await page.mouse.move(200, 300);
   await page.mouse.down();
-  await page.mouse.move(260, 360, { steps: 8 });
+  await page.mouse.move(260, 250, { steps: 8 });
   await page.mouse.up();
   await mapIdle(page);
   const moved = await mapView(page);

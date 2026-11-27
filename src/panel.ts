@@ -1,3 +1,4 @@
+import { popupMenu } from './popup-menu';
 import type { PlannerMap } from './planner-map';
 import { type IconName, icon, iconControl } from './icons';
 import { byId as $, text } from './dom';
@@ -32,7 +33,7 @@ export function visibleMapHeight(container: HTMLElement): number {
  */
 export function placeLibrary(first: boolean): void {
   const lists = document.querySelectorAll('.saved-routes, .favorites');
-  if (first) $('trip-options').before(...lists);
+  if (first) $('start-options').after(...lists);
   else $('route-details').after(...lists);
 }
 
@@ -49,6 +50,9 @@ function sheetHeights(): Record<SheetSize, number> {
   };
 }
 const DRAG_THRESHOLD = 8;
+/** Inside the panel, what keeps its own drag rather than moving the sheet. */
+const OWN_GESTURES =
+  'input, textarea, select, [contenteditable="true"], .point-grip, .chart-frame';
 
 /**
  * The route panel around the map: a sidebar on wide screens and a bottom
@@ -113,6 +117,8 @@ export function setupPanel(map: PlannerMap): void {
   document
     .querySelector('.secondary-actions .file-button')!
     .prepend(icon('upload'));
+  // Travel the route replays it, as the replay's own play button shows.
+  $('travel-route').prepend(icon('play'));
   iconControl($('library-import'), 'upload', 'Import GPX, FIT or TCX');
   $('library-import').onclick = () => $('import').click();
 
@@ -157,26 +163,22 @@ export function setupPanel(map: PlannerMap): void {
   // Dragging the handle resizes the sheet; a press without movement toggles
   // it on release. Browsers may drop the click of a tap that follows a drag
   // (tap suppression after a fling), so taps do not rely on `click`.
-  let drag: { id: number; y: number; height: number; moved: boolean } | null =
-    null;
+  type Drag = { y: number; height: number; moved: boolean };
+  let drag: (Drag & { id: number }) | null = null;
   let pointerToggle = -Infinity;
-  handle.addEventListener('pointerdown', (event) => {
-    if (!compactLayout() || matchMedia(SIDE_SHEET).matches) return;
-    if (event.button > 0) return;
-    drag = {
-      id: event.pointerId,
-      y: event.clientY,
-      height: sheet.getBoundingClientRect().height,
-      moved: false,
-    };
+  const sheetDrags = () => compactLayout() && !matchMedia(SIDE_SHEET).matches;
+  const startDrag = (y: number): Drag => ({
+    y,
+    height: sheet.getBoundingClientRect().height,
+    moved: false,
   });
-  handle.addEventListener('pointermove', (event) => {
-    if (!drag || event.pointerId !== drag.id) return;
-    const dy = drag.y - event.clientY;
-    if (!drag.moved) {
-      if (Math.abs(dy) < DRAG_THRESHOLD) return;
-      drag.moved = true;
-      handle.setPointerCapture(event.pointerId);
+  /** Follows the finger once it has moved; false while it has not. */
+  const followDrag = (move: Drag, y: number, capture: () => void) => {
+    const dy = move.y - y;
+    if (!move.moved) {
+      if (Math.abs(dy) < DRAG_THRESHOLD) return false;
+      move.moved = true;
+      capture();
       // The panel shows while the sheet follows the finger.
       document.body.classList.remove('panel-closed');
       document.body.classList.add('sheet-dragging');
@@ -184,8 +186,30 @@ export function setupPanel(map: PlannerMap): void {
     }
     sheet.style.height = `${Math.max(
       handle.offsetHeight,
-      Math.min(sheetHeights().full, drag.height + dy),
+      Math.min(sheetHeights().full, move.height + dy),
     )}px`;
+    return true;
+  };
+  /** Settles a moved sheet on the nearest height: closed, half or full. */
+  const settle = () => {
+    const height = sheet.getBoundingClientRect().height;
+    const { half, full } = sheetHeights();
+    sheet.style.height = '';
+    document.body.classList.remove('sheet-dragging');
+    open = height > half / 2;
+    if (open) size = height > (half + full) / 2 ? 'full' : 'half';
+    remember();
+    layout();
+  };
+  handle.addEventListener('pointerdown', (event) => {
+    if (!sheetDrags() || event.button > 0) return;
+    drag = { id: event.pointerId, ...startDrag(event.clientY) };
+  });
+  handle.addEventListener('pointermove', (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    followDrag(drag, event.clientY, () =>
+      handle.setPointerCapture(event.pointerId),
+    );
   });
   const release = (event: PointerEvent) => {
     if (!drag || event.pointerId !== drag.id) return;
@@ -202,14 +226,7 @@ export function setupPanel(map: PlannerMap): void {
       }
       return;
     }
-    const height = sheet.getBoundingClientRect().height;
-    const { half, full } = sheetHeights();
-    sheet.style.height = '';
-    document.body.classList.remove('sheet-dragging');
-    open = height > half / 2;
-    if (open) size = height > (half + full) / 2 ? 'full' : 'half';
-    remember();
-    layout();
+    settle();
   };
   handle.addEventListener('pointerup', release);
   handle.addEventListener('pointercancel', release);
@@ -218,6 +235,61 @@ export function setupPanel(map: PlannerMap): void {
     if (event.detail > 0 && event.timeStamp - pointerToggle < 1000) return;
     toggle();
   });
+  // The whole panel drags the sheet too, by touch, so the finger need not
+  // find the handle: a vertical drag that would not scroll the panel, that
+  // is upward while the sheet is below full height, or downward with the
+  // panel at its top. Fields, sliders, the points' grips and the charts keep
+  // their own gestures, and a sideways drag stays the browser's.
+  let touchDrag: (Drag & { id: number; x: number; sheet?: boolean }) | null =
+    null;
+  panel.addEventListener(
+    'touchstart',
+    (event) => {
+      touchDrag = null;
+      const [touch] = event.touches;
+      if (event.touches.length !== 1 || !touch || !sheetDrags()) return;
+      if (event.target instanceof Element && event.target.closest(OWN_GESTURES))
+        return;
+      touchDrag = {
+        id: touch.identifier,
+        x: touch.clientX,
+        ...startDrag(touch.clientY),
+      };
+    },
+    { passive: true },
+  );
+  panel.addEventListener(
+    'touchmove',
+    (event) => {
+      const touch = [...event.changedTouches].find(
+        (item) => item.identifier === touchDrag?.id,
+      );
+      if (!touchDrag || !touch) return;
+      if (touchDrag.sheet === undefined) {
+        const dx = Math.abs(touch.clientX - touchDrag.x);
+        const up = touchDrag.y - touch.clientY;
+        if (dx === 0 && up === 0) return;
+        touchDrag.sheet =
+          Math.abs(up) > dx &&
+          (up > 0 ? !(open && size === 'full') : panel.scrollTop <= 0);
+      }
+      if (!touchDrag.sheet) return;
+      event.preventDefault();
+      followDrag(touchDrag, touch.clientY, () => undefined);
+    },
+    { passive: false },
+  );
+  const touchRelease = (event: TouchEvent) => {
+    const ended = [...event.changedTouches].some(
+      (item) => item.identifier === touchDrag?.id,
+    );
+    if (!touchDrag || !ended) return;
+    const moved = touchDrag.moved;
+    touchDrag = null;
+    if (moved) settle();
+  };
+  panel.addEventListener('touchend', touchRelease);
+  panel.addEventListener('touchcancel', touchRelease);
   // Arrow keys move the sheet between closed, half and full height.
   handle.addEventListener('keydown', (event) => {
     if (!compactLayout()) return;
@@ -240,16 +312,24 @@ export function setupPanel(map: PlannerMap): void {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', layout);
 
-  // On the sheet the route's numbers come first, above the points (#206).
-  // The element moves rather than being reordered by CSS, so the focus order
-  // follows what is seen.
-  const summary = $('summary'),
-    points = panel.querySelector('.points-section')!,
-    afterSummary = $('trip-options');
-  const placeSummary = () =>
-    compactLayout() ? points.before(summary) : afterSummary.before(summary);
-  placeSummary();
-  matchMedia(COMPACT).addEventListener('change', placeSummary);
+  // The route's numbers, its trip options and its tabs come first, above the
+  // points, which are the first tab (#206, #305). The elements move rather
+  // than being reordered by CSS, so the focus order follows what is seen.
+  const points = panel.querySelector('.points-section')!;
+  points.before(
+    $('summary'),
+    $('trip-options'),
+    $('daylight-alert'),
+    $('route-tabs'),
+  );
+  // On wide screens Elevation opens in a strip under the map (#305), where
+  // its profile has the map's width; on the sheet it is one of the tabs.
+  const placeElevation = () => {
+    if (compactLayout()) $('route-details').append($('elevation'));
+    else $('elevation-strip').append($('elevation'));
+  };
+  placeElevation();
+  matchMedia(COMPACT).addEventListener('change', placeElevation);
 
   // A point field brings its menu into view (#204): on the sheet, focusing
   // it raises the sheet to full height and scrolls the field to the top of
@@ -299,41 +379,19 @@ export function setupPanel(map: PlannerMap): void {
     document.body.classList.toggle('more-open', expanded);
     if (expanded) showExports(false);
   };
-  // Export opens its menu above the action bar; a choice, a click elsewhere
-  // or Escape closes it.
-  const exports = $('export'),
-    exportMenu = $('export-menu');
-  const showExports = (open: boolean) => {
-    exports.setAttribute('aria-expanded', String(open));
-    exportMenu.hidden = !open;
-  };
-  exports.onclick = () => {
-    const open = exportMenu.hasAttribute('hidden');
-    showExports(open);
-    if (!open) return;
+  // Export opens its menu above the action bar (#301).
+  const showExports = popupMenu($('export'), $('export-menu'), () => {
     more.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('more-open');
-    exportMenu
-      .querySelector<HTMLButtonElement>('button:not(:disabled)')
-      ?.focus();
-  };
-  exportMenu.addEventListener('click', (event) => {
-    if ((event.target as Element).closest('button')) showExports(false);
-  });
-  document.addEventListener('click', (event) => {
-    const target = event.target as Element;
-    if (!exportMenu.hidden && !target.closest('#export, #export-menu'))
-      showExports(false);
-  });
-  exportMenu.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    showExports(false);
-    exports.focus();
   });
 
   // The closed sheet still shows the latest status message.
   const mirror = () => {
     $('peek-status').textContent = $('status').textContent;
+    $('peek-status').toggleAttribute(
+      'data-empty-prompt',
+      $('status').hasAttribute('data-empty-prompt'),
+    );
     $('panel-toggle').classList.toggle(
       'error',
       $('status').classList.contains('error'),
@@ -344,7 +402,7 @@ export function setupPanel(map: PlannerMap): void {
     characterData: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['class'],
+    attributeFilter: ['class', 'data-empty-prompt'],
   });
   mirror();
 

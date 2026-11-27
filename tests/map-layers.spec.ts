@@ -287,7 +287,7 @@ test('menu works by keyboard, closes outside and translates both ways', async ({
   await page.keyboard.press('Escape');
   await expect(page.locator('#layers-toggle')).toBeFocused();
   await page.locator('#layers-toggle').click();
-  await page.locator('#fit').click();
+  await page.locator('#route-panel').click({ position: { x: 5, y: 5 } });
   await expect(page.locator('#layers-menu')).toBeHidden();
   await setLanguage(page, 'pt');
   await expect(page.locator('#layers-toggle')).toContainText('Camadas do mapa');
@@ -334,11 +334,19 @@ test('mobile layers stay accessible without overlapping other map controls or th
     ).toBe(true);
   }
   await page.locator('#layers-toggle').click();
-  const menu = (await page.locator('#layers-menu').boundingBox())!,
-    sheet = (await page.locator('#panel-toggle').boundingBox())!;
-  expect(menu.x).toBeGreaterThanOrEqual(0);
-  expect(menu.x + menu.width).toBeLessThanOrEqual(390);
-  expect(menu.y + menu.height).toBeLessThanOrEqual(sheet.y);
+  // A sheet from the bottom of the screen, over the route panel (#308).
+  const menu = (await page.locator('#layers-menu').boundingBox())!;
+  expect(menu.x).toBe(0);
+  expect(menu.width).toBe(390);
+  expect(Math.round(menu.y + menu.height)).toBe(844);
+  expect(
+    await page.locator('#layers-menu').evaluate((m) => {
+      const r = m.getBoundingClientRect();
+      return m.contains(
+        document.elementFromPoint(r.left + r.width / 2, r.bottom - 20),
+      );
+    }),
+  ).toBe(true);
   await page
     .getByRole('menuitemradio', { name: 'Satellite', exact: true })
     .click();

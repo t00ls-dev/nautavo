@@ -29,6 +29,8 @@ import {
   exportAs,
   saveRoute,
   setLanguage,
+  openTab,
+  openSavedRoutes,
 } from './app-helpers';
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
@@ -88,23 +90,21 @@ for (const mobile of [false, true]) {
         'Arrival',
       ]);
       // Our own estimate from the default 20 km/h, never the router's 49 min.
-      await expect(page.locator('#summary')).toContainText(
-        'At 20 km/h · no stops',
+      await expect(page.locator('#trip-line')).toContainText(
+        '20 km/h, no stops',
       );
       await expect(page.locator('#summary')).toContainText('2h 6 min');
-      // Route detail rows in order, below the trip options.
+      // The route's analyses, in the order of their tabs (#305); on wide
+      // screens Elevation is the strip under the map.
       expect(
         await page
           .locator('#route-details > *')
           .evaluateAll((rows) => rows.map((row) => row.id)),
-      ).toEqual([
-        'itinerary',
-        'weather-section',
-        'elevation',
-        'surface',
-        'daylight-details',
-        'travel-details',
-      ]);
+      ).toEqual(
+        mobile
+          ? ['itinerary', 'weather-section', 'elevation']
+          : ['itinerary', 'weather-section'],
+      );
       await expect(page.locator('#itinerary .chips')).toHaveText('BR-101');
       await expect(page.locator('#itinerary summary')).toHaveText(
         'Itinerary (1)',
@@ -441,11 +441,13 @@ test('the itinerary shows turn directions in both languages', async ({
   await page.locator('#location-1').fill(end);
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
-  // Long local roads: the card warning opens the itinerary at the first one.
+  // Long local roads: in the Itinerary (#305), the review line goes to the
+  // first one.
   await expect(page.locator('#itinerary details')).not.toHaveAttribute(
     'open',
     '',
   );
+  await openTab(page, 'itinerary');
   await page.locator('.review-link').click();
   await expect(page.locator('#itinerary details')).toHaveAttribute('open', '');
   await expect(page.locator('#itinerary')).toContainText(
@@ -586,7 +588,7 @@ test('imports FIT and TCX files by content and reports damaged files', async ({
   page.on('request', (r) => {
     if (r.url().includes('/v1/elevation')) requests.push(r.url());
   });
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-stats')).toContainText(
     'Recorded in the imported file.',
   );
@@ -806,7 +808,7 @@ test('a new device starts at 13 mph in miles, the counterpart of 20 km/h', async
   await chooseUnits(page, { distance: 'imperial' });
   await fillPair(page);
   await expect(page.locator('#average-speed-value')).toHaveText('13');
-  await expect(page.locator('#summary')).toContainText('At 13 mph · no stops');
+  await expect(page.locator('#trip-line')).toContainText('13 mph, no stops');
   // Back in km, the default is 20 km/h again.
   await chooseUnits(page, { distance: 'metric' });
   await expect(page.locator('#average-speed-value')).toHaveText('20');
@@ -857,12 +859,12 @@ test('average speed: keyboard steps, units, kept on the device and never taken f
   await expect(page.locator('#summary')).toContainText('21 min');
   await chooseUnits(page, { distance: 'metric' });
   await setSpeed(page, 25);
-  await expect(page.locator('#summary')).toContainText('At 25 km/h · no stops');
+  await expect(page.locator('#trip-line')).toContainText('25 km/h, no stops');
   // Kept on this device across reloads, not in the link.
   await page.reload();
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
   await expect(page.locator('#average-speed-value')).toHaveText('25');
-  await expect(page.locator('#summary')).toContainText('At 25 km/h · no stops');
+  await expect(page.locator('#trip-line')).toContainText('25 km/h, no stops');
 });
 
 test('an older route link with a speed opens with its points and the device speed', async ({
@@ -882,9 +884,7 @@ test('an older route link with a speed opens with its points and the device spee
     await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
     await expect(page.locator('#location-0')).toHaveValue(start);
     await expect(page.locator('#location-1')).toHaveValue(end);
-    await expect(page.locator('#summary')).toContainText(
-      'At 20 km/h · no stops',
-    );
+    await expect(page.locator('#trip-line')).toContainText('20 km/h, no stops');
     await expect(page.locator('#summary')).toContainText('2h 6 min');
   }
 });
@@ -1160,7 +1160,7 @@ test('the edit lock disables and enables opening saved routes, however the list 
   await page.locator('#route-name').fill('Locked route');
   await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   const open = page.locator('#saved-list .library-open');
   await expect(open).toBeEnabled();
   await page.locator('#lock').click();
@@ -1204,7 +1204,7 @@ for (const language of ['en', 'pt'] as const)
     await expect(page.locator('#status')).toHaveText(say.saved);
     const saved = await libraryEntry(page, 'routes', 'weekend route');
     expect(saved).not.toBeNull();
-    await page.locator('.saved-routes > summary').click();
+    await openSavedRoutes(page);
     const message = page.locator('#library-status');
     // The save is said once, at the top (#213).
     await expect(message).toBeEmpty();
@@ -1235,7 +1235,7 @@ test('Undo never overwrites a route saved again under the same name', async ({
   await fillPair(page);
   await saveRoute(page, 'Weekend route');
   await expect(page.locator('#saved-count')).toHaveText('(1)');
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await page
     .getByRole('button', { name: 'Delete saved route: Weekend route' })
     .click();
@@ -1280,7 +1280,7 @@ test('only explicitly saved named routes persist, and reopening does not reroute
   );
   await expect(page.locator('#saved-count')).toHaveText('(1)');
   await page.goto(base);
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await expect(page.locator('#saved-list strong')).toHaveText('Weekend route');
   let requests = 0;
   page.on('request', (r) => {
@@ -1328,7 +1328,7 @@ test('route backups restore deleted routes and skip existing names', async ({
     (JSON.parse(backup.toString()) as { routes: unknown[] }).routes,
   ).toHaveLength(1);
   await page.locator('#close-settings').click();
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await page
     .getByRole('button', {
       name: 'Delete saved route: Backup test',
@@ -1458,7 +1458,7 @@ test('a route saved before turn directions gets them once, keeping its geometry'
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(backup)),
   });
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   const open = () =>
     page
       .getByRole('button', { name: 'Open saved route: Old route', exact: true })
@@ -1466,7 +1466,7 @@ test('a route saved before turn directions gets them once, keeping its geometry'
   await open();
   await expect(page.locator('#download')).toBeEnabled();
   expect(routeRequests).toHaveLength(0);
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
   await expect(page.locator('#itinerary li')).toHaveText([
     'km 0.0 Depart R. A 5 km',
     'km 5.1 Turn left R. B 5.2 km',
@@ -1491,9 +1491,9 @@ test('a route saved before turn directions gets them once, keeping its geometry'
   // A fresh page without the route link, which would calculate the linked
   // route itself if opening took longer than the route-change debounce.
   await page.goto(base);
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await open();
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
   await expect(page.locator('#itinerary li').nth(1)).toContainText('Turn left');
   expect(routeRequests).toHaveLength(1);
 });
@@ -1591,7 +1591,7 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(backup)),
   });
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   const open = () =>
     page
       .getByRole('button', {
@@ -1600,7 +1600,7 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
       })
       .click();
   await open();
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
   await expect(page.locator('#directions-status')).toHaveText(
     'Directions not added: the road has changed. Calculate route to update it.',
   );
@@ -1609,9 +1609,9 @@ test('a saved route whose road changed keeps its steps and is not asked again', 
   // Remembered in the saved entry: after a reload, no new request.
   await page.waitForTimeout(500);
   await page.reload();
-  await page.locator('.saved-routes > summary').click();
+  await openSavedRoutes(page);
   await open();
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
   await expect(page.locator('#directions-status')).toContainText(
     'the road has changed',
   );
@@ -1693,7 +1693,7 @@ test('an imported track gets directions by map matching when the itinerary opens
   await page.goto(base);
   await importRide(page);
   expect(matches).toHaveLength(0);
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
   // 6.5 km traced every 300 m: 23 points in 3 chunks of up to 10.
   await expect(page.locator('#itinerary li').first()).toContainText(
     'Depart R. A',
@@ -1716,8 +1716,8 @@ test('an imported track gets directions by map matching when the itinerary opens
   const xml = await readFile(await download.path(), 'utf8');
   expect((xml.match(/<trkpt /g) || []).length).toBe(60);
   // Closing and reopening asks nothing more.
-  await page.locator('#itinerary summary').click();
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
+  await openTab(page, 'itinerary');
   expect(matches).toHaveLength(3);
 });
 test('a TCX course carries the turns, asking an imported track for them once (#288)', async ({
@@ -1810,7 +1810,7 @@ test('downloads carry the elevation the page already has, never asking for it (#
   expect(await file('download-tcx')).not.toContain('<AltitudeMeters>');
   expect(asked).toEqual([]);
   // Opened by the user: every track point takes the loaded profile.
-  await page.locator('#elevation > summary').click();
+  await openTab(page, 'elevation');
   await expect(page.locator('#elevation-chart svg')).toBeVisible();
   const requests = asked.length;
   const gpx = await file('download');
@@ -1860,7 +1860,7 @@ test('directions that fail without a connection are added once it returns', asyn
   await importRide(page);
   offline = true;
   await context.setOffline(true);
-  await page.locator('#itinerary summary').click();
+  await openTab(page, 'itinerary');
   await expect(page.locator('#directions-status')).toHaveText(
     'No connection. Directions will be added when the connection returns.',
     { timeout: 15000 },
@@ -1900,7 +1900,7 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test('the chosen language survives the logo link, undo, reloads and shared links', async ({
+test('the chosen language survives the logo link, reloads and shared links', async ({
   page,
 }) => {
   await setup(page);

@@ -294,3 +294,34 @@ export async function setLanguage(page: Page, language: string) {
   await page.locator('#language').selectOption(language);
   if (opens) await page.locator('#close-settings').click();
 }
+
+type RouteTab = 'points' | 'itinerary' | 'weather-section' | 'elevation';
+/**
+ * Opens one of the route's tabs (#305); on wide screens Elevation is no tab
+ * but the strip under the map, opened by its button.
+ */
+export async function openTab(page: Page, id: RouteTab) {
+  const { width, height } = page.viewportSize()!;
+  if (id === 'elevation' && width >= 760 && height > 500) {
+    const strip = page.locator('#elevation');
+    await expect(strip.locator('> summary')).toBeVisible();
+    if ((await strip.getAttribute('open')) === null)
+      await strip.locator('> summary').click();
+    return;
+  }
+  await page.locator(`#tab-${id}`).click();
+}
+
+/** Travel the route: in More actions on phones, below the actions on wide screens (#305). */
+export async function travelRoute(page: Page) {
+  if (await page.locator('#travel-route').isHidden())
+    await page.locator('#more-actions').click();
+  await page.locator('#travel-route').click();
+}
+
+/** Opens Saved routes, listed below the points on the empty planner too (#306). */
+export async function openSavedRoutes(page: Page) {
+  const list = page.locator('.saved-routes');
+  if ((await list.getAttribute('open')) === null)
+    await list.locator('> summary').click();
+}

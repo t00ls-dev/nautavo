@@ -4,6 +4,7 @@ import {
   CIVIL_ANGLE,
   SUNRISE_ANGLE,
   lightAt,
+  nextSunrise,
   routeDaylight,
   solarElevation,
   sunAhead,
@@ -77,6 +78,16 @@ describe('sun times', () => {
     });
     expect(lightAt(Date.UTC(2026, 5, 21, 23), tromso)).toBe('day');
     expect(lightAt(Date.UTC(2026, 11, 21, 23), tromso)).toBe('night');
+  });
+  it('finds the next sunrise, the same morning or after sunset the next', () => {
+    const greenwich: Coord = [51.4769, 0];
+    const sunrise = sunTimes(Date.UTC(2024, 5, 21, 12), greenwich).sunrise!;
+    // Before dawn: that morning's; after sunset: the next day's.
+    expect(nextSunrise(Date.UTC(2024, 5, 21, 1), greenwich)).toBe(sunrise);
+    const next = nextSunrise(Date.UTC(2024, 5, 21, 22), greenwich)!;
+    expect(minutes(next, sunrise + 86_400_000)).toBeLessThan(2);
+    // Under the polar night none comes.
+    expect(nextSunrise(Date.UTC(2026, 11, 21, 11), [69.65, 18.96])).toBeNull();
   });
 });
 

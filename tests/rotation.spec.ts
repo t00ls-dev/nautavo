@@ -63,9 +63,10 @@ test.describe('desktop', () => {
     await page.locator('#fit').click();
     const compass = page.locator('#compass');
     await expect(compass).toBeHidden();
-    await page.mouse.move(800, 400);
+    // Above the route, clear of the handle that adds a stop from its line.
+    await page.mouse.move(800, 250);
     await page.mouse.down({ button: 'right' });
-    await page.mouse.move(900, 400, { steps: 10 });
+    await page.mouse.move(900, 250, { steps: 10 });
     await page.mouse.up({ button: 'right' });
     await mapIdle(page);
     expect(Math.abs(await bearing(page))).toBeGreaterThan(20);

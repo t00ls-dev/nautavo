@@ -14,6 +14,7 @@ import {
   exportAs,
   saveRoute,
   setLanguage,
+  openSavedRoutes,
 } from './app-helpers';
 const features = {
   features: [
@@ -556,16 +557,16 @@ for (const language of ['en', 'pt'] as const)
     await page.goto(base);
     if (language === 'pt') await setLanguage(page, 'pt');
     const label = language === 'pt' ? 'Compartilhar GPX' : 'Share GPX';
-    // The Export menu's first choice (#301).
-    await page.locator('#export').click();
-    await expect(page.locator('#download')).toHaveAccessibleName(label);
-    await page.locator('#export').click();
     await page.locator('#import').setInputFiles({
       name: 'dense.gpx',
       mimeType: 'application/gpx+xml',
       buffer: Buffer.from(gpx),
     });
     await expect(page.locator('#download')).toBeEnabled();
+    // The Export menu's first choice (#301), once there is a route (#306).
+    await page.locator('#export').click();
+    await expect(page.locator('#download')).toHaveAccessibleName(label);
+    await page.locator('#export').click();
     // Saving names the route (#301); the shared file takes that name, and
     // Share GPX merged into the menu's first choice.
     await saveRoute(page, 'Shared ride');
@@ -576,7 +577,7 @@ for (const language of ['en', 'pt'] as const)
       .poll(() => sharedFiles(page))
       .toEqual(['shared-ride.gpx application/gpx+xml']);
     // Saved routes and the backup share too.
-    await page.locator('.saved-routes > summary').click();
+    await openSavedRoutes(page);
     await page
       .getByRole('button', {
         name:
@@ -615,15 +616,15 @@ test('a touch device without file sharing keeps Download GPX', async ({
   await page.route('https://**/*', (r) => r.fulfill({ status: 204 }));
   await mockBasemap(page);
   await page.goto(base);
-  await page.locator('#export').click();
-  await expect(page.locator('#download')).toHaveAccessibleName('Download GPX');
-  await page.locator('#export').click();
   await expect(page.locator('#backup-routes')).toHaveText('Export backup');
   await page.locator('#import').setInputFiles({
     name: 'dense.gpx',
     mimeType: 'application/gpx+xml',
     buffer: Buffer.from(gpx),
   });
+  await page.locator('#export').click();
+  await expect(page.locator('#download')).toHaveAccessibleName('Download GPX');
+  await page.locator('#export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     exportAs(page, 'download'),
@@ -648,7 +649,14 @@ for (const width of [320, 360, 390, 430, 760])
       await page.addInitScript(shareMock);
       await page.goto(base);
       if (language === 'pt') await setLanguage(page, 'pt');
+      // Export shows once there is a route (#306).
+      await page.locator('#import').setInputFiles({
+        name: 'dense.gpx',
+        mimeType: 'application/gpx+xml',
+        buffer: Buffer.from(gpx),
+      });
       const button = page.locator('#download');
+      await expect(button).toBeEnabled();
       await page.locator('#export').click();
       await expect(button).toHaveAccessibleName(
         language === 'pt' ? 'Compartilhar GPX' : 'Share GPX',

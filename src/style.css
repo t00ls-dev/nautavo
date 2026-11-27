@@ -847,6 +847,49 @@ header button.icon-control {
 .trip-line:empty {
   display: none;
 }
+/* Closed with its line, only the line shows, as the mockup (#303); the
+   title stays for screen readers. */
+.trip-options:not([open])
+  > summary:has(.trip-line:not(:empty))
+  > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.trip-options:not([open]) .trip-line {
+  color: var(--color-text);
+  font-size: 15px;
+}
+/* Part of the trip in the dark (#305): a notice under the trip line, shown
+   only then; a tap shows the Daylight coloring. */
+.daylight-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--control);
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-subtle);
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: left;
+  white-space: normal;
+}
+.daylight-alert[hidden] {
+  display: none;
+}
+.daylight-alert > .button-icon:last-child {
+  transform: rotate(90deg);
+  color: var(--color-text-muted);
+}
 /* The label sits above the field, which takes the full width. */
 .departure-field {
   display: flex;
@@ -894,6 +937,10 @@ header button.icon-control {
   padding: 2px 4px 2px 12px;
   border-radius: var(--radius-large);
   background: var(--color-soft);
+}
+/* Nothing to show while Route ready is only announced (#305). */
+.status-row:has(#status[data-quiet]):has(#calculate[hidden]) {
+  display: none;
 }
 .status-row:has(#status.error) {
   background: var(--color-danger-bg);
@@ -946,9 +993,9 @@ header button.icon-control {
   border: 0;
   background: none;
   color: var(--color-primary);
-  font-size: 17px;
+  font-size: 14px;
   line-height: 26px;
-  font-weight: 650;
+  font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -974,6 +1021,9 @@ header button.icon-control {
   color: var(--color-text-muted);
 }
 .stats dd {
+  /* Room for a value and its note, so the cards keep their height when the
+     arrival's note comes or goes and the panel below never moves. */
+  min-height: 44px;
   margin: 0;
 }
 .stats strong {
@@ -990,9 +1040,6 @@ header button.icon-control {
   font-size: 13px;
   line-height: 18px;
   color: var(--color-text-muted);
-}
-.stats-basis {
-  margin: 8px 0 0;
 }
 #summary-notes {
   display: flex;
@@ -1036,10 +1083,6 @@ header button.icon-control {
 .saved-routes,
 .favorites {
   border-top: 1px solid var(--color-border);
-}
-/* Travel the route: a short note and the button that starts the replay. */
-.travel-details .hint {
-  margin: 0 0 10px;
 }
 #travel-route {
   width: 100%;
@@ -1187,11 +1230,6 @@ div.step-item {
 }
 .local-road {
   color: var(--color-warning);
-}
-.sun-time {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
 }
 
 /* Saved routes. */
@@ -1423,6 +1461,12 @@ button:disabled .export-note {
 }
 #library-import {
   margin: 0 0 8px;
+}
+/* On phones Import is in More actions (#305); Saved routes keeps its list. */
+@media (max-width: 759px), (max-height: 500px) {
+  #library-import {
+    display: none;
+  }
 }
 /* Guided navigation is offered in the phone layout only, in the summary
    (#301): planning comes first. */
@@ -1689,7 +1733,7 @@ dialog.settings::backdrop {
   right: calc(100% + 10px);
   display: grid;
   gap: 4px;
-  width: 230px;
+  width: 360px;
   max-height: min(520px, calc(100dvh - 90px));
   padding: 8px;
   overflow-y: auto;
@@ -1712,7 +1756,56 @@ dialog.settings::backdrop {
   box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 #layers-menu .check {
-  margin: 0 4px;
+  min-height: 40px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.25;
+}
+/* Map layers (#308): the base maps side by side, each with a small drawn
+   preview, then the route coloring and the route marks as two-column
+   choices, so the menu fits a 320 px phone without scrolling. */
+.layer-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+#layers-menu .layer-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px 4px 6px;
+  font-size: 12px;
+}
+.layer-thumb {
+  display: block;
+  height: 40px;
+  border-radius: 6px;
+}
+.layer-thumb-standard {
+  background:
+    linear-gradient(170deg, transparent 44%, #f5d79a 44% 54%, transparent 54%),
+    linear-gradient(80deg, transparent 46%, #fff 46% 53%, transparent 53%),
+    #f2efe9;
+}
+.layer-thumb-topographic {
+  background:
+    radial-gradient(
+      circle at 70% 90%,
+      transparent 20%,
+      #c9b48a 21% 23%,
+      transparent 24% 34%,
+      #c9b48a 35% 37%,
+      transparent 38% 48%,
+      #c9b48a 49% 51%,
+      transparent 52%
+    ),
+    #eef1e4;
+}
+.layer-thumb-satellite {
+  background:
+    linear-gradient(160deg, transparent 55%, #c9c2b0 55% 60%, transparent 60%),
+    linear-gradient(90deg, #5f7350 45%, #3d4d34 45%), #4b5d3f;
 }
 /* The compass, only on a turned map; its needle points to the map's north. */
 .map-compass {
@@ -1780,12 +1873,29 @@ dialog.settings::backdrop {
   height: 44px;
 }
 .planner .map-credits-toggle {
+  position: relative;
+  isolation: isolate;
   width: 44px;
   height: 44px;
   padding: 0;
   border: 0;
   border-radius: 50%;
+  background: none;
+  box-shadow: none;
+}
+/* Drawn 32 px wide, a quiet mark on the map, in a 44 px button to tap (#307). */
+.planner .map-credits-toggle::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--color-surface);
   box-shadow: var(--shadow-control);
+}
+.planner .map-credits-toggle .button-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* Phones: the panel is a bottom sheet over a full-screen map. */
@@ -1990,12 +2100,18 @@ dialog.settings::backdrop {
   .planner .map-zoom {
     display: none;
   }
+  /* On phones Map layers opens as a sheet from the bottom of the screen,
+     over the route panel (#308). */
   #layers-menu {
-    width: min(230px, calc(100vw - 76px));
-    max-height: calc(100dvh - var(--sheet-height, var(--sheet-half)) - 76px);
-  }
-  .map-fullscreen #layers-menu {
-    max-height: calc(100dvh - 90px);
+    position: fixed;
+    z-index: 1200;
+    inset: auto 0 0;
+    width: auto;
+    max-width: 480px;
+    max-height: calc(100dvh - 76px);
+    margin-inline: auto;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
   }
   .planner .map-bottom-left {
     bottom: calc(var(--sheet-height, var(--sheet-half)) + 10px);
@@ -2050,9 +2166,14 @@ dialog.settings::backdrop {
   .map-tool-group > :last-child > button {
     border-radius: 0 10px 10px 0;
   }
+  /* Too short for a sheet: Map layers drops below the tools instead. */
   #layers-menu {
-    top: calc(100% + 8px);
-    right: 0;
+    position: absolute;
+    inset: calc(100% + 8px) 0 auto auto;
+    width: 360px;
+    margin: 0;
+    padding: 8px;
+    border-radius: var(--radius-large);
   }
 }
 /* Phones in landscape (#252): the sheet becomes a panel on the left, under
@@ -2623,24 +2744,6 @@ input[type='range'].range-input:disabled {
   font-size: 16px;
 }
 
-.daylight-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 6px 0;
-  font-size: 13px;
-}
-.daylight-line .button-icon {
-  flex: 0 0 auto;
-}
-.daylight-details {
-  margin: 8px 0;
-  font-size: 13px;
-}
-.daylight-details ul {
-  margin: 0;
-  padding-left: 18px;
-}
 #weather-status:empty {
   display: none;
 }
@@ -2888,11 +2991,47 @@ input[type='range'].range-input:disabled {
 .route-coloring-steep-up {
   --route-coloring: #b8261c;
 }
-.coloring-group {
+.marks-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
   border-top: 1px solid var(--color-border);
   margin-top: 6px;
   padding-top: 6px;
 }
+/* Route coloring in two columns, cards wide enough that no name wraps (#308). */
+.coloring-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.coloring-group > .coloring-heading,
+.coloring-group > .coloring-notes,
+.marks-group > .coloring-heading {
+  grid-column: 1 / -1;
+}
+.coloring-group .coloring-reason {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.coloring-notes {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.coloring-notes:empty {
+  display: none;
+}
+
 .coloring-heading {
   margin: 0 0 4px;
   font-size: 12px;
@@ -2902,10 +3041,12 @@ input[type='range'].range-input:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100%;
-}
-.coloring-group button + button {
-  margin-top: 6px;
+  min-width: 0;
+  min-height: 40px;
+  padding-inline: 4px;
+  font-size: 13px;
 }
 .coloring-group button[aria-disabled='true'] {
   color: var(--color-text-disabled);
@@ -2940,6 +3081,8 @@ input[type='range'].range-input:disabled {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  /* An item (swatch, name and share) never splits across lines. */
+  white-space: nowrap;
 }
 .route-legend-swatch {
   display: inline-block;
@@ -2947,6 +3090,19 @@ input[type='range'].range-input:disabled {
   height: 5px;
   border-radius: 3px;
   background: var(--route-coloring);
+}
+/* A kind's share of the route, after its label (surface). */
+.route-legend-value {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.route-legend-status {
+  align-self: center;
+}
+.route-legend .route-legend-retry {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 /* Compact color scale (grade): a slope icon at each end, one continuous bar
    and the limits under ticks on the boundaries, placed by percentage and
@@ -3012,12 +3168,6 @@ input[type='range'].range-input:disabled {
   }
 }
 
-/* Route marks (route-marks.ts): direction arrows. */
-.marks-group {
-  border-top: 1px solid var(--color-border);
-  margin-top: 6px;
-  padding-top: 6px;
-}
 /* Profile charts (profile-chart.ts): the Elevation row and the activity
    view's charts. */
 .chart-frame {
@@ -3359,16 +3509,6 @@ input[type='range'].range-input:disabled {
 .weather-card-severity {
   font-size: 13px;
 }
-.daylight-line {
-  flex-wrap: wrap;
-  margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 20px;
-}
-.daylight-details {
-  margin: 0;
-  font-size: 14px;
-}
 .climbs ol {
   font-size: 14px;
 }
@@ -3382,47 +3522,26 @@ input[type='range'].range-input:disabled {
 .coloring-heading {
   font-size: 13px;
 }
-.coloring-group button,
-.coloring-group button + button {
-  margin-top: 4px;
-}
+
 .route-legend {
   border: 0;
   box-shadow: var(--shadow-control);
   font-size: 13px;
 }
+/* Under 360 px the two usual kinds and their shares stay on one line
+   (Asfalto 92% Sem asfalto 8%, in the widest fonts too). */
+@media (max-width: 359px) {
+  .route-legend {
+    font-size: 12px;
+  }
+  .route-legend:not(.route-legend-scale) .route-legend-swatch {
+    width: 14px;
+  }
+}
 .credits-dialog {
   border: 0;
   border-radius: 16px;
   box-shadow: var(--shadow-raised);
-}
-
-/* Surface row: totals with a swatch, the stretches to check (climb rows). */
-.surface-totals {
-  margin: 4px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-}
-.surface-totals li {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
-  column-gap: 6px;
-  align-items: center;
-  min-height: 22px;
-}
-.surface-value {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.surface-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: var(--route-coloring);
-}
-.surface-section .climb-grid {
-  grid-template-columns: 12px minmax(0, 1fr);
 }
 
 /* Guided navigation (#31): start notice and the full-screen navigation view. */
@@ -4990,5 +5109,318 @@ body.activity-open #fit {
   }
   #navigate .button-label {
     display: none;
+  }
+}
+
+/* The empty planner (#306): with no point set, the ways to start a plan show
+   instead of the route's actions, which wait for a route. */
+.start-options {
+  display: none;
+}
+body.plan-empty:not(.activity-open) .start-options {
+  display: grid;
+  gap: 8px;
+}
+.start-options h2 {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.start-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.start-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+.start-grid button[hidden] {
+  display: none;
+}
+.start-grid strong {
+  font-size: 15px;
+}
+.start-grid span {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 450;
+  overflow-wrap: anywhere;
+}
+body.plan-empty .points-section .inline-actions,
+body.plan-empty .points-section .section-line,
+body.plan-empty:not(.panel-closed) #peek-status[data-empty-prompt],
+body.plan-empty #status[data-empty-prompt],
+body.plan-empty .gpx-name,
+body.plan-empty #save-route,
+body.plan-empty #export,
+body.plan-empty #export-menu {
+  display: none;
+}
+/* As the mockup: a title, the points, the ways to start and a note; the
+   closed sheet keeps the prompt. The route's actions wait for a point. */
+.plan-title {
+  display: none;
+  margin: 0;
+  font-size: 20px;
+}
+/* The title heads the open sheet, right below its handle. */
+@media (max-width: 759px) and (min-height: 501px) {
+  body.plan-empty:not(.panel-closed) #panel-toggle {
+    min-height: 0;
+    padding-bottom: 0;
+  }
+}
+body.plan-empty:not(.activity-open) .plan-title {
+  display: block;
+}
+.start-options .hint {
+  margin: 0;
+}
+body.plan-empty:not(.activity-open) .action-bar {
+  display: none;
+}
+
+/* The route's tabs (#305): Points and the analyses, one shown at a time
+   below the summary and Trip options (closed, from the first point on). Each analysis
+   is its <details>, opened by its tab; its own summary row steps aside. */
+body.plan-empty #trip-options,
+.route-tabs {
+  display: none;
+}
+body.route-shown .route-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+}
+.route-tabs button {
+  flex: none;
+  min-height: var(--control);
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.route-tabs button[aria-selected='true'] {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+}
+.route-tabs button[hidden] {
+  display: none;
+}
+body.route-shown #route-panel:not([data-tab='points-section']) .points-section,
+body.route-shown #route-details > details > summary,
+body.route-shown #itinerary details > summary,
+body.route-shown #route-details > details:not([open]),
+body.route-shown #itinerary:not(:has(details[open])) {
+  display: none;
+}
+/* Travel the route (#154) waits in More actions on phones and below the
+   route's actions on wide screens (#305). */
+@media (min-width: 760px) and (min-height: 501px) {
+  .more-panel {
+    display: block;
+  }
+  .more-panel .file-button,
+  .settings-home {
+    display: none;
+  }
+  .more-panel #travel-route {
+    min-height: 36px;
+    margin-bottom: 4px;
+    border-color: transparent;
+    background: none;
+    color: var(--color-primary);
+  }
+  #tab-elevation {
+    display: none;
+  }
+  /* Elevation under the map, the map's width (#305): a small button while
+     closed, a strip with the profile once opened. */
+  body.route-shown .elevation-strip {
+    position: absolute;
+    z-index: 850;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .elevation-strip #elevation {
+    pointer-events: auto;
+  }
+  .elevation-strip #elevation:not([open]) {
+    margin-bottom: 10px;
+  }
+  .elevation-strip #elevation:not([open]) > summary {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-control);
+  }
+  .elevation-strip #elevation[open] {
+    flex: 1;
+    max-height: 240px;
+    padding: 4px 16px 10px;
+    overflow-y: auto;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .planner:has(.elevation-strip #elevation[open]) .map-credits,
+  .planner:has(.elevation-strip #elevation[open]) .map-bottom-left {
+    bottom: 250px;
+  }
+}
+.elevation-strip {
+  display: none;
+}
+
+/* Route ready is announced, not shown: the route on screen says it (#305). */
+#status[data-quiet] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+body.route-shown .points-section .section-line h2 {
+  display: none;
+}
+
+/* Add to home screen, in Settings on phones (#306). */
+.settings-home #add-home {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* In the tabs each section is the tab's content: no rule above it, close
+   to its tab, its parts apart, and one scroll, the panel's. */
+body.route-shown #route-details > details,
+body.route-shown #itinerary > details {
+  border-top: 0;
+  padding-top: 0;
+}
+body.route-shown .route-tabs {
+  margin-bottom: -4px;
+}
+body.route-shown #route-details > details > :not(summary),
+body.route-shown #itinerary > details > :not(summary) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+body.route-shown #route-details > details > :not(summary) + *,
+body.route-shown #itinerary > details > :not(summary) + * {
+  margin-top: 10px;
+}
+body.route-shown #itinerary ul {
+  max-height: none;
+  overflow: visible;
+}
+/* The side panel's tabs fit its width in one row. */
+@media (min-width: 760px) and (min-height: 501px) {
+  .route-tabs button {
+    padding: 0 4px;
+    font-size: 13px;
+  }
+}
+/* On a phone held upright the open sheet's header keeps the status line
+   only: the summary below shows the distance and time. Sideways, the header
+   keeps them in view (#252). The status line stays, so a message that comes
+   and goes never moves the panel under the finger. */
+@media (max-width: 759px) and (min-height: 501px) {
+  body.route-shown:not(.panel-closed) #peek-main {
+    display: none;
+  }
+}
+
+/* Route marks as switches (#308): the name, then the switch at the row's
+   end; the checkbox under it is the control. */
+.marks-group {
+  grid-template-columns: minmax(0, 1fr);
+}
+#layers-menu .marks-group .check {
+  position: relative;
+  justify-content: space-between;
+  min-height: 44px;
+}
+#layers-menu .marks-group .check input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.marks-group .switch {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--color-border-strong);
+  transition: background-color 0.15s;
+}
+.marks-group .switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  transition: transform 0.15s;
+}
+.marks-group input:checked ~ .switch {
+  background: var(--color-primary);
+}
+.marks-group input:checked ~ .switch::before {
+  transform: translateX(18px);
+}
+.marks-group input:focus-visible ~ .switch {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marks-group .switch,
+  .marks-group .switch::before {
+    transition: none;
+  }
+}
+
+/* On phones the header is a floating card: a short rule parts the logo
+   from Settings. */
+@media (max-width: 759px), (max-height: 500px) {
+  .planner .brand::after {
+    content: '';
+    align-self: center;
+    width: 1px;
+    height: 24px;
+    margin-left: 12px;
+    background: var(--color-border);
   }
 }
