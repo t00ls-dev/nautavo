@@ -90,16 +90,8 @@ for (const [width, language] of [
             'Mapa e pontos',
             'Cópia de segurança',
             'Navegação',
-            'Tela inicial',
           ]
-        : [
-            'Language',
-            'Units',
-            'Map and points',
-            'Backup',
-            'Navigation',
-            'Home screen',
-          ],
+        : ['Language', 'Units', 'Map and points', 'Backup', 'Navigation'],
     );
     // The language lives here, not in the header (#304), and the
     // Navigation switches keep to one line each.
@@ -601,58 +593,13 @@ for (const mobile of [false, true])
     }
   });
 
-test.describe('add to home screen', () => {
+test.describe('on an iPhone', () => {
   test.use({
     isMobile: true,
     hasTouch: true,
     userAgent:
       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
   });
-  for (const [width, lang] of [
-    [320, 'pt'],
-    [320, 'en'],
-    [430, 'pt'],
-  ] as const)
-    test(`Settings shows the steps for this phone at ${width} px in ${lang}`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 700 });
-      await page.goto(`${base}?lang=${lang}`);
-      // In Settings, always at hand (#306).
-      await page.locator('#open-settings').click();
-      const button = page.locator('#add-home');
-      await expect(button).toBeVisible();
-      // The label stays on one line inside the button.
-      expect(
-        await button.evaluate((e) => {
-          const label = e.querySelector('.button-label')!;
-          return (
-            e.scrollWidth <= e.clientWidth + 1 &&
-            label.getBoundingClientRect().height < 24
-          );
-        }),
-      ).toBe(true);
-      await button.click();
-      const dialog = page.locator('#home-dialog');
-      await expect(dialog).toBeVisible();
-      await expect(dialog.locator('[data-platform="ios"]')).toBeVisible();
-      await expect(dialog.locator('[data-platform="android"]')).toBeHidden();
-      await expect(dialog).toContainText(
-        lang === 'pt' ? 'Adicionar à Tela de Início' : 'Add to Home Screen',
-      );
-      // Help opens at its section, in the same language.
-      await expect(page.locator('#home-help')).toHaveAttribute(
-        'href',
-        new RegExp(`help\\?lang=${lang}&section=home-screen`),
-      );
-      expect(
-        await dialog.evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
-      ).toBe(true);
-      await page.locator('#close-home').click();
-      await expect(dialog).toBeHidden();
-      await expect(button).toBeFocused();
-    });
-
   test('only the map zooms: the planner page blocks page zoom, Help keeps pinch', async ({
     page,
   }) => {
@@ -670,12 +617,6 @@ test.describe('add to home screen', () => {
     expect(await touch('html')).toBe('manipulation');
     expect(await touch('body')).toBe('auto');
   });
-});
-
-test('Add to home screen is a phone action only', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(base);
-  await expect(page.locator('#add-home')).toBeHidden();
 });
 
 for (const path of ['', 'help'])

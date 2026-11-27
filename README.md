@@ -11,11 +11,11 @@ A static web tool that turns addresses, coordinates and map points into a GPX 1.
 - **Review** distance, time from your own average speed, an itinerary with turn directions, elevation and climbs, road surface and daylight.
 - **Weather** along the route for the departure time, with wind relative to the route and risk alerts.
 - **Import** GPX, FIT and TCX tracks, aligned to the roads actually taken, and **export** GPX 1.1 with the complete track and named waypoints, or a TCX or FIT course with the turns for GPS devices and watches, all with the elevation already loaded.
-- **Navigate** on a phone with turn directions, a heading-up map, a way back to the route and optional spoken directions.
+- **Navigate** on a phone (experimental) with turn directions, a heading-up map, a way back to the route and optional spoken directions.
 - **Replay** recorded activities at their own pace, with moving time, speeds, heart rate, cadence, power and temperature, charts with a shared cursor and the track colored by speed, heart rate, power or grade, apart from the route you are planning.
 - **Map layers:** standard, topographic and satellite, with route coloring by daylight, grade or surface.
 - **Save and share:** route links, saved routes and favorite places in this browser, and backups.
-- Works offline after the first visit, in English and Portuguese.
+- Available in English and Portuguese.
 
 ## Quick start
 
@@ -31,8 +31,8 @@ Gestures, shortcuts and every control are explained on the [Help page](https://n
 - Nothing is saved automatically: **Save route** keeps the route in this browser; export backups, since clearing browser data removes saved routes and favorite places.
 - Routing uses a car profile; **Prefer main roads** favors highways but does not guarantee it, and estimates exclude stops and traffic.
 - Share links store points and options, not an imported track's geometry: share the GPX for the exact track.
-- Offline, saved routes open and download, but map tiles, routing, search, weather, elevation and surface need a connection; what could not load is fetched once when it returns.
-- Navigation needs the tab open and the screen on (iOS Safari is the strictest). Weather risks are a review aid, not an official warning.
+- Nautavo needs a connection to open. A page already open keeps working without one: saved routes open and download, but map tiles, routing, search, weather, elevation and surface need a connection; what could not load is fetched once when it returns.
+- Navigation is experimental: it needs the tab open and the screen on (iOS Safari is the strictest) and can lose the route without signal; for long trips, export the route to a navigation app. Weather risks are a review aid, not an official warning.
 
 Every control, gesture and limit is explained on the [Help page](https://nautavo.com/help).
 

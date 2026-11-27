@@ -208,9 +208,12 @@ export function setupNavigation(deps: {
   iconControl($('nav-stop'), 'close', 'End');
   $('nav-stop').title = 'End navigation';
   $('nav-stop').setAttribute('aria-label', 'End navigation');
+  $('nav-notice')
+    .querySelector('.nav-notice-experimental')!
+    .prepend(icon('info'));
   $('nav-notice').querySelector('.nav-notice-warning')!.prepend(icon('alert'));
   $('nav-notice')
-    .querySelector('li:not(.nav-notice-warning)')!
+    .querySelector('.nav-notice-warning + li')!
     .prepend(icon('weather-sun'));
   $('nav-notice').querySelector('.nav-notice-reroute')!.prepend(icon('route'));
   $('nav-gps').prepend(icon('alert'));
@@ -1443,7 +1446,18 @@ export function setupNavigation(deps: {
       hide.checked = false;
       switches.syncNotice();
       notice.showModal();
+      // The notice itself takes focus, not its first control, the export
+      // the route link.
+      notice.focus();
     } else start(true);
+  };
+  // Planning comes first: the notice offers the route to a navigation app
+  // through the Export menu instead. The click stops here, or the menu's own
+  // click-outside handler would close it at once.
+  $('nav-notice-export').onclick = (event) => {
+    event.stopPropagation();
+    notice.close();
+    $('export').click();
   };
   $('nav-notice-start').onclick = () => {
     if (hide.checked) {

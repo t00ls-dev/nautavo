@@ -181,11 +181,15 @@
           <h3 data-kind="Changed">Changed</h3>
           <ul>
             <li>
+              Navigation is marked experimental: the start notice says it is
+              still being tested and can go wrong, especially without signal,
+              and for long trips offers to export the route to a navigation app.
+            </li>
+            <li>
               The empty planner shows the ways to start a plan: choose the start
               on the map with the crosshair, import a GPX, FIT or TCX file, open
               a saved route or use or add a favorite place. Save route, Export
-              and the other route actions appear once there is a route, and Add
-              to home screen moves to Settings.
+              and the other route actions appear once there is a route.
             </li>
             <li>
               Below the route summary, tabs show Points, Itinerary, Weather and
@@ -315,6 +319,20 @@
               keywords, only Nautavo.
             </li>
           </ul>
+          <h3 data-kind="Removed">Removed</h3>
+          <ul>
+            <li>
+              Settings no longer has Add to home screen; the browser's own menu
+              can still add Nautavo to the home screen.
+            </li>
+            <li>
+              Nautavo no longer opens without a connection: it keeps no copy of
+              itself for offline use, and a browser that kept one deletes it on
+              the next visit. A page already open keeps working without a
+              connection as before, and a reload during navigation continues it
+              once the connection is back.
+            </li>
+          </ul>
           <h3 data-kind="Fixed">Fixed</h3>
           <ul>
             <li>
@@ -332,8 +350,8 @@
               say the connection is not secure. The connection always was
               secure; two things confused those browsers: a security header that
               isolates the page from other windows, now removed, and pages
-              answered by the copy kept for offline use, which now answers only
-              without a connection.
+              answered by the copy kept for offline use, which is no longer
+              kept.
             </li>
             <li>
               While navigating, the way ahead always draws above the way
@@ -1131,11 +1149,16 @@
           <h3 data-kind="Changed">Alterado</h3>
           <ul>
             <li>
+              A navegação aparece como experimental: o aviso inicial diz que ela
+              ainda está em teste e pode errar, principalmente sem sinal, e para
+              trajetos longos oferece exportar a rota para um app de navegação.
+            </li>
+            <li>
               O planejador vazio mostra os jeitos de começar um plano: escolher
               o início no mapa com a mira, importar um arquivo GPX, FIT ou TCX,
               abrir uma rota salva ou usar ou adicionar um lugar favorito.
               Salvar rota, Exportar e as outras ações da rota aparecem quando há
-              uma rota, e Adicionar à tela inicial vai para as Configurações.
+              uma rota.
             </li>
             <li>
               Abaixo do resumo da rota, abas mostram Pontos, Itinerário, Clima e
@@ -1268,6 +1291,20 @@
               palavras-chave, só Nautavo.
             </li>
           </ul>
+          <h3 data-kind="Removed">Removido</h3>
+          <ul>
+            <li>
+              As Configurações não têm mais Adicionar à tela inicial; o menu do
+              próprio navegador ainda pode colocar o Nautavo na tela inicial.
+            </li>
+            <li>
+              O Nautavo não abre mais sem conexão: ele não guarda mais uma cópia
+              de si para uso sem internet, e o navegador que guardou uma a apaga
+              na próxima visita. Uma página já aberta continua funcionando sem
+              conexão como antes, e uma recarga durante a navegação a continua
+              quando a conexão volta.
+            </li>
+          </ul>
           <h3 data-kind="Fixed">Corrigido</h3>
           <ul>
             <li>
@@ -1286,7 +1323,7 @@
               segura; duas coisas confundiam esses navegadores: um cabeçalho de
               segurança que isola a página de outras janelas, agora retirado, e
               páginas entregues pela cópia guardada para uso sem internet, que
-              agora só responde sem conexão.
+              não é mais guardada.
             </li>
             <li>
               Durante a navegação, o caminho à frente fica sempre por cima do já

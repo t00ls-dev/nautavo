@@ -8,12 +8,13 @@ import {
   setLanguage,
   openSavedRoutes,
 } from './app-helpers';
-// The app-shell service worker only runs in production builds: these tests
-// use the preview server started by playwright.config.ts.
+// Without a connection, an open page keeps working with what it has; these
+// tests use the production preview started by playwright.config.ts, where the
+// retired service worker (src/sw.ts) is built.
 const start = '-22.930929, -43.238286',
   end = '-23.050160, -43.535240';
 
-/** Mocks every public service at the context, which also sees requests the page sends while a service worker controls it. Routing fails like a real network while `network.offline` is set. */
+/** Mocks every public service at the context. Routing fails like a real network while `network.offline` is set. */
 const network = { offline: false, routing: 0 };
 async function mockServices(context: BrowserContext) {
   network.offline = false;
@@ -41,17 +42,6 @@ async function mockServices(context: BrowserContext) {
   });
 }
 
-/** Opens the app and waits until the service worker controls the page. */
-async function controlled(page: Page) {
-  await page.goto(base);
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  await expect
-    .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
-    .toBe(true);
-}
-
-const cacheKeys = (page: Page) => page.evaluate(() => caches.keys());
-
 async function goOffline(context: BrowserContext, offline: boolean) {
   network.offline = offline;
   await context.setOffline(offline);
@@ -65,60 +55,6 @@ async function routedPair(page: Page) {
   await page.locator('#location-1').press('Tab');
   await expect(page.locator('#download')).toBeEnabled({ timeout: 15000 });
 }
-
-test('online, pages come from the network, not the service worker', async ({
-  page,
-  context,
-}) => {
-  await mockServices(context);
-  await controlled(page);
-  // Chrome and Brave on iOS call a page the service worker answered not
-  // secure, so it answers pages only without a connection.
-  for (const path of ['', 'help', 'changelog']) {
-    const response = (await page.goto(base + path))!;
-    expect(response.fromServiceWorker()).toBe(false);
-  }
-  // Its own files still come from its cache.
-  const assets = await page.evaluate(() =>
-    performance
-      .getEntriesByType('resource')
-      .filter((e) => new URL(e.name).pathname.startsWith('/assets/'))
-      .map((e) => (e as PerformanceResourceTiming).workerStart > 0),
-  );
-  expect(assets.length).toBeGreaterThan(0);
-  expect(assets.every(Boolean)).toBe(true);
-});
-
-test("after one online visit, the app, help and What's new open offline", async ({
-  page,
-  context,
-}) => {
-  await mockServices(context);
-  await controlled(page);
-  await expect(page.locator('#offline-notice')).toBeHidden();
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.locator('#location-0')).toBeVisible();
-  await expect(page.locator('#offline-notice')).toBeVisible();
-  await setLanguage(page, 'pt');
-  await expect(page.locator('#offline-notice')).toContainText(
-    'Você está sem conexão',
-  );
-  // `?lang=pt` and the route hash are kept: the cached page answers any query.
-  expect(new URL(page.url()).search).toBe('?lang=pt');
-  await page.goto(base + 'help?lang=pt');
-  await expect(page.locator('#help-pt')).toBeVisible();
-  await page.goto(base + 'changelog?lang=en');
-  await expect(page.locator('#changelog-en')).toBeVisible();
-  // An old .html address also opens its page offline.
-  await page.goto(base + 'help.html?lang=en');
-  await expect(page.locator('#help-en')).toBeVisible();
-  await page.goto(base + 'changelog/?lang=en');
-  await expect(page.locator('#changelog-en')).toBeVisible();
-  await context.setOffline(false);
-  await page.goto(base);
-  await expect(page.locator('#offline-notice')).toBeHidden();
-});
 
 test('the preview redirects .html and trailing-slash pages to their public URL, as Cloudflare does', async ({
   request,
@@ -135,19 +71,74 @@ test('the preview redirects .html and trailing-slash pages to their public URL, 
   }
 });
 
-test('a saved route opens offline, without routing requests, and downloads', async ({
+test('a browser that installed the former service worker is released from it and its cache', async ({
   page,
   context,
 }) => {
   await mockServices(context);
-  await controlled(page);
+  // The former app shell: a worker that caches the page and answers it.
+  const former = `
+    self.addEventListener('install', (e) => e.waitUntil(
+      caches.open('nautavo-shell-0000000000000000')
+        .then((c) => c.add('/')).then(() => self.skipWaiting())));
+    self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+    self.addEventListener('fetch', (e) => e.respondWith(
+      caches.match(e.request).then((r) => r || fetch(e.request))));`;
+  await context.route('**/former-sw.js', (r) =>
+    r.fulfill({ body: former, contentType: 'text/javascript' }),
+  );
+  await page.goto(base + 'changelog');
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register('/former-sw.js');
+    await navigator.serviceWorker.ready;
+  });
+  await expect
+    .poll(() => page.evaluate(() => caches.keys()))
+    .toEqual(['nautavo-shell-0000000000000000']);
+  // The next visit removes it: no worker left and no cache.
+  await page.goto(base);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => ({
+        workers: (await navigator.serviceWorker.getRegistrations()).length,
+        caches: await caches.keys(),
+      })),
+    )
+    .toEqual({ workers: 0, caches: [] });
+});
+
+test('the retired service worker deletes the caches and removes itself', async ({
+  page,
+  context,
+}) => {
+  await mockServices(context);
+  await page.goto(base);
+  await page.evaluate(async () => {
+    await caches.open('nautavo-shell-0000000000000000');
+    await navigator.serviceWorker.register('/sw.js');
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(async () => ({
+        workers: (await navigator.serviceWorker.getRegistrations()).length,
+        caches: await caches.keys(),
+      })),
+    )
+    .toEqual({ workers: 0, caches: [] });
+});
+
+test('a saved route opens without a connection, without routing requests, and downloads', async ({
+  page,
+  context,
+}) => {
+  await mockServices(context);
+  await page.goto(base);
   await routedPair(page);
   await page.locator('#route-name').fill('Offline route');
   await saveRoute(page);
   await expect(page.locator('#saved-count')).toHaveText('(1)');
 
   await goOffline(context, true);
-  await page.goto(base);
   let routing = 0;
   context.on('request', (r) => {
     if (r.url().includes('/route/v1/')) routing++;
@@ -169,155 +160,6 @@ test('a saved route opens offline, without routing requests, and downloads', asy
   expect(routing).toBe(0);
 });
 
-test.describe('on a phone', () => {
-  test.use({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
-    permissions: ['geolocation'],
-    geolocation: { latitude: -22.931, longitude: -43.239, accuracy: 6 },
-  });
-
-  test('a reload without a connection during navigation continues it', async ({
-    page,
-    context,
-  }) => {
-    await mockServices(context);
-    await controlled(page);
-    await routedPair(page);
-    await page.locator('#navigate').click();
-    await page.locator('#nav-notice-start').click();
-    await expect(page.locator('#nav-screen')).toBeVisible();
-    await goOffline(context, true);
-    const before = network.routing;
-    await page.reload();
-    const prompt = page.getByRole('dialog', { name: 'Continue navigation?' });
-    await expect(prompt).toBeVisible();
-    await prompt.getByRole('button', { name: 'Continue navigation' }).click();
-    await expect(page.locator('#nav-screen')).toBeVisible();
-    expect(network.routing).toBe(before);
-  });
-});
-
-test('the service worker caches only same-origin files and never answers cross-origin requests', async ({
-  page,
-  context,
-}) => {
-  await mockServices(context);
-  let tiles = 0;
-  await context.route('https://tiles.openfreemap.org/**', (r) => {
-    tiles++;
-    return r.request().url().includes('/styles/')
-      ? r.fulfill({ json: BASEMAP_STYLE })
-      : r.fulfill({ status: 204 });
-  });
-  await controlled(page);
-  tiles = 0;
-  await page.reload();
-  // A controlled page's map style and tiles still reach the network (here, the mock).
-  await expect.poll(() => tiles).toBeGreaterThan(0);
-  const urls = await page.evaluate(async () => {
-    const all: string[] = [];
-    for (const key of await caches.keys()) {
-      const cache = await caches.open(key);
-      all.push(...(await cache.keys()).map((request) => request.url));
-    }
-    return all;
-  });
-  expect(urls.length).toBeGreaterThan(0);
-  expect(urls.every((url) => url.startsWith(base))).toBe(true);
-  // Pages are kept under their public URLs, as published (no .html).
-  expect(urls).toEqual(expect.arrayContaining([base, base + 'help']));
-  expect(urls.some((url) => url.endsWith('.html'))).toBe(false);
-  expect(urls).not.toContain(base + 'sw.js');
-});
-
-test('a new deploy replaces the cached build', async ({ page, context }) => {
-  await mockServices(context);
-  // The first visit gets an older deploy: the same sw.js with another build
-  // version (the browser's update checks are not routed, so the real sw.js
-  // then plays the new deploy).
-  await context.route('**/sw.js', async (r) => {
-    const response = await r.fetch();
-    const body = (await response.text()).replace(
-      /\\"version\\":\\"[0-9a-f]{16}\\"/,
-      '\\"version\\":\\"0000000000000000\\"',
-    );
-    await r.fulfill({ response, body });
-  });
-  await controlled(page);
-  expect(await cacheKeys(page)).toEqual(['nautavo-shell-0000000000000000']);
-  await context.unroute('**/sw.js');
-  // The new build takes over and the untouched page reloads into it.
-  await Promise.all([
-    page.waitForEvent('load'),
-    page.evaluate(() =>
-      navigator.serviceWorker.getRegistration().then((r) => r?.update()),
-    ),
-  ]);
-  // Only the new build's cache is left.
-  await expect
-    .poll(() => cacheKeys(page))
-    .toEqual([expect.stringMatching(/^nautavo-shell-(?!0{16})[0-9a-f]{16}$/)]);
-  await page.reload();
-  await expect(page.locator('#location-0')).toBeVisible();
-});
-
-test('a page shown again after a deploy reloads into the new build, once untouched', async ({
-  page,
-  context,
-}) => {
-  await mockServices(context);
-  // The page's visibility, which the test switches as a phone would when the
-  // web app goes to the background and comes back.
-  await context.addInitScript(() => {
-    const w = window as unknown as { hidden: boolean };
-    w.hidden = false;
-    Object.defineProperty(document, 'visibilityState', {
-      get: () => (w.hidden ? 'hidden' : 'visible'),
-    });
-  });
-  const show = (hidden: boolean) =>
-    page.evaluate((value) => {
-      (window as unknown as { hidden: boolean }).hidden = value;
-      document.dispatchEvent(new Event('visibilitychange'));
-    }, hidden);
-  // An older deploy controls the page first, as in the test above.
-  await context.route('**/sw.js', async (r) => {
-    const response = await r.fetch();
-    const body = (await response.text()).replace(
-      /\\"version\\":\\"[0-9a-f]{16}\\"/,
-      '\\"version\\":\\"0000000000000000\\"',
-    );
-    await r.fulfill({ response, body });
-  });
-  await controlled(page);
-  await context.unroute('**/sw.js');
-  const mark = () =>
-    page.evaluate(() => ((window as unknown as { mark?: number }).mark = 1));
-  const marked = () =>
-    page.evaluate(() => (window as unknown as { mark?: number }).mark === 1);
-  await mark();
-  // Touched since it was shown: the new build waits for the next showing.
-  await page.locator('#location-0').click();
-  await page.evaluate(() =>
-    navigator.serviceWorker.getRegistration().then((r) => r?.update()),
-  );
-  await expect
-    .poll(() => cacheKeys(page))
-    .toEqual([expect.stringMatching(/^nautavo-shell-(?!0{16})/)]);
-  await page.waitForTimeout(500);
-  expect(await marked()).toBe(true);
-  // Shown again, untouched: it reloads into the new build, once.
-  await show(true);
-  await Promise.all([page.waitForEvent('load'), show(false)]);
-  expect(await marked()).toBe(false);
-  await expect(page.locator('#location-0')).toBeVisible();
-  await mark();
-  await page.waitForTimeout(1000);
-  expect(await marked()).toBe(true);
-});
-
 for (const width of [320, 1280])
   test(`the offline notice fits the panel at ${width} px in both languages`, async ({
     page,
@@ -325,9 +167,8 @@ for (const width of [320, 1280])
   }) => {
     await page.setViewportSize({ width, height: 800 });
     await mockServices(context);
-    await controlled(page);
+    await page.goto(base);
     await context.setOffline(true);
-    await page.reload();
     for (const language of ['en', 'pt']) {
       await setLanguage(page, language);
       const notice = page.locator('#offline-notice');
@@ -350,7 +191,7 @@ test('Calculate route without a connection keeps the route on screen and its dow
   context,
 }) => {
   await mockServices(context);
-  await controlled(page);
+  await page.goto(base);
   // A planned route needs no button (#296); an imported track shows it.
   await routedPair(page);
   await expect(page.locator('#calculate')).toBeHidden();
@@ -378,7 +219,7 @@ test('a route edited without a connection is calculated once when it returns', a
   context,
 }) => {
   await mockServices(context);
-  await controlled(page);
+  await page.goto(base);
   await routedPair(page);
   await goOffline(context, true);
   await page.locator('#location-1').fill('-23.000000, -43.400000');
@@ -419,7 +260,7 @@ test('map tiles that failed without a connection are asked again, once, when it 
     tiles.loaded++;
     return r.fulfill({ status: 204 });
   });
-  await controlled(page);
+  await page.goto(base);
   // The production build exposes no map object: its first tiles mean ready.
   await page.locator('#map canvas.maplibregl-canvas').waitFor();
   await expect.poll(() => tiles.loaded).toBeGreaterThan(0);

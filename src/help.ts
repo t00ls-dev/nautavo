@@ -5,7 +5,7 @@ import {
   translate,
 } from './i18n';
 import { updateSeo } from './seo';
-import { markHomeScreenApp, registerServiceWorker } from './offline';
+import { markHomeScreenApp, removeServiceWorker } from './offline';
 import { byId as $, optionalById } from './dom';
 import './style.css';
 // Shared by the separate pages: help and What's new.
@@ -41,7 +41,7 @@ select.onchange = () => {
 const section = new URLSearchParams(location.search).get('section');
 apply();
 markHomeScreenApp();
-registerServiceWorker();
+removeServiceWorker();
 if (section && /^[a-z-]{1,40}$/.test(section))
   optionalById(
     `${section}-${select.value === 'pt' ? 'pt' : 'en'}`,

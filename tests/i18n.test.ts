@@ -127,6 +127,8 @@ describe('translation coverage', () => {
     'PT',
     'English',
     'Português',
+    // The navigation notice's tag: the same word in both languages.
+    'Experimental',
     'km',
     'mi',
     'Celsius',

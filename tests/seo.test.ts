@@ -30,7 +30,7 @@ describe('SEO metadata', () => {
     // scripts/lighthouse.mjs audits the sitemap, which the last test below
     // compares with these pages: a new Vite entry must be added to `pages`.
     const input = config.build?.rollupOptions?.input as Record<string, string>;
-    // The service worker entry (src/sw.ts) is not a page.
+    // The retired service worker entry (src/sw.ts) is not a page.
     const htmlInputs = Object.values(input).filter((file) =>
       file.endsWith('.html'),
     );
