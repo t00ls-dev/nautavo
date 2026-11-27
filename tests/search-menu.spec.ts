@@ -195,20 +195,26 @@ test.describe('phone', () => {
     const box = (await place.boundingBox())!;
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     // The list closes as the finger lifts; the click the browser sends after
-    // the touch then lands on whatever moved under it.
+    // the touch then lands on whatever moved under it. Counted as it reaches
+    // the page (before the app's own listener) and as it would leave it.
+    await page.evaluate(() => {
+      const counts = { reached: 0, passed: 0 };
+      Object.assign(window, { clickCounts: counts });
+      document.addEventListener('click', () => counts.reached++, true);
+      window.addEventListener('click', () => counts.passed++);
+    });
     await page.touchscreen.tap(point.x, point.y);
     await expect(field).toHaveValue(/^Posto Shell/);
-    // The case only means something while a control sits under the finger.
-    expect(
-      await page.evaluate(
-        ({ x, y }) =>
-          document.elementFromPoint(x, y)?.closest('button, summary, input')
-            ?.tagName,
-        point,
-      ),
-    ).toBeTruthy();
     // A click that slipped through would land right after the tap.
     await page.waitForTimeout(300);
+    // The browser did send that click, and it pressed nothing.
+    expect(
+      await page.evaluate(
+        () =>
+          (window as unknown as { clickCounts: Record<string, number> })
+            .clickCounts,
+      ),
+    ).toEqual({ reached: 1, passed: 0 });
     await expect(field).toHaveValue(/^Posto Shell/);
     await expect(page.locator('#location-1')).toHaveValue('');
     // Trip options, which show from the first point on (#306), stay closed.
