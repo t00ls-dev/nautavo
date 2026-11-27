@@ -368,16 +368,15 @@
           saved route.
         </p>
         <p>
-          After one visit with a connection, Nautavo also opens without one, in
-          the same browser: a saved route opens with its geometry, summary and
+          Nautavo needs a connection to open. A page already open keeps working
+          without one: a saved route opens with its geometry, summary and
           directions and downloads as GPX, and a notice says you are offline.
           Map tiles, routing, search, weather, elevation and surface still need
           a connection, so the map background may be empty. Offline, Calculate
           route keeps the route on screen. When the connection returns, what
           could not load meanwhile loads once on its own: a route changed
           offline is calculated, and the map, weather, elevation, surface and
-          directions asked for without a connection are fetched. A new version
-          is used on the next visit with a connection.
+          directions asked for without a connection are fetched.
         </p>
         <h2>GPX, import and sharing</h2>
         <p>
@@ -642,6 +641,20 @@
         </p>
         <h2 id="navigate-en">Navigate</h2>
         <p>
+          Navigation is experimental. Nautavo is made for planning routes:
+          following one in the browser works, but it is still being tested and
+          can go wrong. Browsers stop following you with the screen off or the
+          tab hidden, iOS Safari especially, and without signal your position
+          and the route can be lost; the page does not open without a
+          connection. For long trips or places with little signal, you can plan
+          here and follow the route with a navigation app or device: tap Export,
+          choose Download GPX, or the TCX or FIT course with turns for bike
+          computers and watches, and open the file in that app. Open source apps
+          such as OsmAnd and Organic Maps import GPX and work offline with maps
+          you download. The start notice says this too and its export the route
+          link opens the Export menu.
+        </p>
+        <p>
           On a phone, press Navigate in the route summary, beside the route's
           start and end, to follow the route on screen. The top of the screen
           shows the next turn, the distance to it and its road, with the turn
@@ -733,10 +746,10 @@
           once, 30 minutes before. There is no live traffic. Your location is
           watched only from Start navigation until End, pauses while the page is
           hidden and is never stored; if the page reloads during navigation, it
-          offers Continue navigation, on the same route and even without a
-          connection, because this tab keeps the route and the distance
-          travelled until you end, arrive or 30 minutes pass; a recalculation
-          sends only your current position to the routing server.
+          offers Continue navigation, on the same route, because this tab keeps
+          the route and the distance travelled until you end, arrive or 30
+          minutes pass; a recalculation sends only your current position to the
+          routing server.
         </p>
         <h2>Travel the route</h2>
         <p>
@@ -904,30 +917,6 @@
             >services and privacy details</a
           >.
         </p>
-        <h2 id="home-screen-en">Add to home screen</h2>
-        <p>
-          Add Nautavo to your home screen to open it from an icon, like an app.
-          On a phone, Settings has Add to home screen, which shows these steps
-          for your device. The icon opens the site in your browser, with its
-          address bar; there is nothing to install, and saved routes open even
-          without a connection.
-        </p>
-        <ul>
-          <li>
-            iPhone and iPad: tap Share (in Safari, at the bottom of the screen
-            or in the ⋯ menu; in Chrome, in the address bar), choose Add to Home
-            Screen and tap Add.
-          </li>
-          <li>
-            Android: open the browser menu ⋮, choose Add to home screen (in
-            Samsung Internet: Add page to, then Home screen) and confirm with
-            Add.
-          </li>
-          <li>
-            Computer: Chrome can create a desktop shortcut from its menu (Cast,
-            save and share, then Create shortcut).
-          </li>
-        </ul>
         <h2>Public services and privacy</h2>
         <p>
           The default servers are public and shared, with limited capacity.
@@ -947,12 +936,10 @@
           IndexedDB. It also remembers your preferences and the panel state; the
           only location among them is the map view you last left (center and
           zoom), and while navigating this tab keeps the route and the distance
-          travelled, never your position, until navigation ends. A service
-          worker keeps only Nautavo's own files so it opens offline; it stores
-          no locations and never caches map tiles or answers from other
-          services. A recorded activity's times, heart rate and other sensor
-          values are read on this device and kept only while the page is open.
-          Do not enter confidential addresses.
+          travelled, never your position, until navigation ends. A recorded
+          activity's times, heart rate and other sensor values are read on this
+          device and kept only while the page is open. Do not enter confidential
+          addresses.
         </p>
         <p>
           <a href="https://operations.osmfoundation.org/policies/nominatim/"
@@ -1287,8 +1274,8 @@
           iguais no backup mantêm a rota que já está salva.
         </p>
         <p>
-          Depois de uma visita com conexão, o Nautavo também abre sem ela, no
-          mesmo navegador: uma rota salva abre com geometria, resumo e
+          O Nautavo precisa de conexão para abrir. Uma página já aberta continua
+          funcionando sem ela: uma rota salva abre com geometria, resumo e
           instruções e pode ser baixada em GPX, e um aviso diz que você está sem
           conexão. Os blocos do mapa, o roteamento, a busca, o clima, a elevação
           e o pavimento continuam precisando de conexão, então o fundo do mapa
@@ -1296,8 +1283,7 @@
           Quando a conexão volta, o que não pôde carregar nesse meio-tempo
           carrega uma vez sozinho: uma rota alterada sem conexão é calculada, e
           o mapa, o clima, a elevação, o pavimento e as direções pedidos sem
-          conexão são buscados. Uma versão nova é usada na próxima visita com
-          conexão.
+          conexão são buscados.
         </p>
         <h2>GPX, importação e links</h2>
         <p>
@@ -1573,6 +1559,20 @@
         </p>
         <h2 id="navigate-pt">Navegar</h2>
         <p>
+          A navegação é experimental. O Nautavo é feito para planejar rotas:
+          seguir uma no navegador funciona, mas ainda está em teste e pode
+          errar. Os navegadores param de acompanhar você com a tela apagada ou a
+          aba em segundo plano, o Safari do iOS principalmente, e sem sinal a
+          sua posição e a rota podem se perder; a página não abre sem conexão.
+          Para trajetos longos ou lugares com pouco sinal, você pode planejar
+          aqui e seguir a rota num app ou aparelho de navegação: toque em
+          Exportar, escolha Baixar GPX, ou o curso TCX ou FIT com as curvas para
+          ciclocomputadores e relógios, e abra o arquivo nesse app. Apps de
+          código aberto como OsmAnd e Organic Maps importam GPX e funcionam sem
+          conexão com mapas baixados. O aviso inicial diz isso também, e o link
+          exportar a rota abre o menu Exportar.
+        </p>
+        <p>
           No celular, toque em Navegar no resumo da rota, ao lado do início e do
           fim, para seguir a rota na tela. No alto aparecem a próxima conversão,
           a distância até ela e a via, com a conversão seguinte logo abaixo;
@@ -1668,10 +1668,9 @@
           minutos antes. Não há trânsito ao vivo. Sua localização é acompanhada
           só de Iniciar navegação até Sair, pausa com a página oculta e nunca é
           guardada; se a página recarregar durante a navegação, ela oferece
-          Continuar navegação, na mesma rota e mesmo sem conexão, porque esta
-          aba guarda a rota e a distância percorrida até você encerrar, chegar
-          ou passarem 30 minutos; um recálculo envia ao roteador só a sua
-          posição atual.
+          Continuar navegação, na mesma rota, porque esta aba guarda a rota e a
+          distância percorrida até você encerrar, chegar ou passarem 30 minutos;
+          um recálculo envia ao roteador só a sua posição atual.
         </p>
         <h2>Percorrer a rota</h2>
         <p>
@@ -1851,30 +1850,6 @@
           (em inglês) descrevem o comportamento e os limites de uso dos
           provedores.
         </p>
-        <h2 id="home-screen-pt">Adicionar à tela inicial</h2>
-        <p>
-          Adicione o Nautavo à tela inicial para abri-lo por um ícone, como um
-          app. No celular, as Configurações têm Adicionar à tela inicial, que
-          mostra estes passos para o seu aparelho. O ícone abre o site no
-          navegador, com a barra de endereço; não há nada a instalar, e as rotas
-          salvas abrem mesmo sem conexão.
-        </p>
-        <ul>
-          <li>
-            iPhone e iPad: toque em Compartilhar (no Safari, na parte de baixo
-            da tela ou no menu ⋯; no Chrome, na barra de endereço), escolha
-            Adicionar à Tela de Início e toque em Adicionar.
-          </li>
-          <li>
-            Android: abra o menu do navegador ⋮, escolha Adicionar à tela
-            inicial (no Samsung Internet: Adicionar página a, depois Tela
-            inicial) e confirme em Adicionar.
-          </li>
-          <li>
-            Computador: o Chrome cria um atalho na área de trabalho pelo menu
-            (Transmitir, salvar e compartilhar, depois Criar atalho).
-          </li>
-        </ul>
         <h2>Serviços públicos e privacidade</h2>
         <p>
           Os servidores padrão são públicos, compartilhados e têm capacidade
@@ -1895,12 +1870,9 @@
           estado do painel; o único local entre eles é a vista do mapa onde você
           parou (centro e zoom), e durante a navegação esta aba guarda a rota e
           a distância percorrida, nunca a sua posição, até a navegação acabar.
-          Um service worker guarda só os arquivos do próprio Nautavo para ele
-          abrir sem conexão; não guarda locais e nunca guarda blocos do mapa nem
-          respostas de outros serviços. Os horários, a frequência cardíaca e os
-          outros valores de sensores de uma atividade gravada são lidos neste
-          aparelho e ficam só enquanto a página está aberta. Não informe
-          endereços confidenciais.
+          Os horários, a frequência cardíaca e os outros valores de sensores de
+          uma atividade gravada são lidos neste aparelho e ficam só enquanto a
+          página está aberta. Não informe endereços confidenciais.
         </p>
         <p>
           <a href="https://operations.osmfoundation.org/policies/nominatim/"

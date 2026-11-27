@@ -646,20 +646,6 @@
             ></label
           >
         </section>
-        <section
-          class="settings-section settings-home"
-          aria-labelledby="settings-home"
-        >
-          <h3 id="settings-home">Home screen</h3>
-          <button
-            id="add-home"
-            type="button"
-            aria-haspopup="dialog"
-            aria-controls="home-dialog"
-          >
-            Add to home screen
-          </button>
-        </section>
         <details class="settings-advanced">
           <summary>Advanced</summary>
           <label for="osrm">OSRM server</label><input id="osrm" type="url" />
@@ -706,9 +692,26 @@
       id="nav-notice"
       class="nav-notice"
       aria-labelledby="nav-notice-title"
+      tabindex="-1"
     >
-      <h2 id="nav-notice-title">Before you go</h2>
+      <h2 id="nav-notice-title">
+        Before you go <span class="experimental-tag">Experimental</span>
+      </h2>
       <ul>
+        <li class="nav-notice-experimental">
+          <!-- Each part is its own text: the spaces between them stay when the
+               parts are translated. -->
+          <span
+            ><span
+              >Navigation is still being tested and can go wrong, especially
+              without signal. For long trips, you can</span
+            >
+            <button id="nav-notice-export" class="link-button" type="button">
+              export the route
+            </button>
+            <span>to a navigation app.</span></span
+          >
+        </li>
         <li class="nav-notice-warning">
           <span
             >Avoid handling the phone while moving: use a mount in view and
@@ -838,50 +841,6 @@
         Continue navigation
       </button>
       <button id="nav-resume-dismiss" type="button">Not now</button>
-    </dialog>
-    <dialog
-      id="home-dialog"
-      class="home-dialog"
-      aria-labelledby="home-dialog-title"
-    >
-      <h2 id="home-dialog-title">Add to home screen</h2>
-      <p>
-        Open Nautavo from an icon, like an app. It opens in your browser, and
-        saved routes open even without a connection.
-      </p>
-      <section data-platform="ios">
-        <h3>iPhone and iPad</h3>
-        <ol>
-          <li>
-            Tap Share: in Safari, at the bottom of the screen or in the ⋯ menu;
-            in Chrome, in the address bar.
-          </li>
-          <li>Choose Add to Home Screen. Scroll down if you don't see it.</li>
-          <li>Tap Add.</li>
-        </ol>
-      </section>
-      <section data-platform="android">
-        <h3>Android</h3>
-        <ol>
-          <li>Open the browser menu ⋮, at the top right in Chrome.</li>
-          <li>
-            Choose Add to home screen. In Samsung Internet: Add page to, then
-            Home screen.
-          </li>
-          <li>
-            Confirm with Add. The phone may ask once more where to put it.
-          </li>
-        </ol>
-      </section>
-      <div class="home-dialog-actions">
-        <a
-          id="home-help"
-          href="./help?section=home-screen"
-          target="_blank"
-          rel="noopener noreferrer"
-          >More in Help</a
-        ><button id="close-home" class="primary" type="button">Close</button>
-      </div>
     </dialog>
     <dialog
       id="nav-screen"

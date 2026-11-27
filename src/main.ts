@@ -41,7 +41,7 @@ import { languageQuery } from './seo';
 import {
   markHomeScreenApp,
   onlineAttempt,
-  registerServiceWorker,
+  removeServiceWorker,
   watchConnection,
 } from './offline';
 import './style.css';
@@ -94,7 +94,6 @@ import { courseCues, generateFit, generateTcx } from './course-export';
 import { setupPointMenu } from './point-menu';
 import { setupNavigation } from './navigation-ui';
 import { resumableNavigation } from './navigation-resume';
-import { setupHomeScreen } from './home-screen';
 import { setupElevation } from './elevation-ui';
 import { setupSurface } from './surface-ui';
 import { SURFACE_KINDS } from './surface';
@@ -2292,7 +2291,7 @@ renderPoints();
 observeTranslations();
 watchConnection($('offline-notice'));
 markHomeScreenApp();
-registerServiceWorker();
+removeServiceWorker();
 $<HTMLSelectElement>('language').onchange = () => {
   const lang = $<HTMLSelectElement>('language').value as Language;
   rememberLanguage(lang);
@@ -2369,7 +2368,6 @@ function openSavedRoute(record: SavedRoute) {
 setupPanel(map);
 setupRouteTabs({ elevationInStrip: () => !compactLayout() });
 stopTapHoldLoupe();
-setupHomeScreen();
 const navigation = setupNavigation({
   route: () => current,
   state: () => state,

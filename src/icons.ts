@@ -110,9 +110,6 @@ const paths = {
   /** Compass needle, filled (see `#nav-compass-button` in style.css). */
   compass:
     '<path class="needle-north" d="M12 1.5 17.5 12h-11Z"/><path class="needle-south" d="M6.5 12h11L12 22.5Z"/>',
-  /** Add to home screen: a phone with a plus. */
-  homescreen:
-    '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 8v6m-3-3h6"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .5-1.5 1-1.5 2M12 16v1"/>',
   // Recorded activity values (#156).
   heart:

@@ -374,6 +374,34 @@ test.describe('phone navigation', () => {
     await expect(page.locator('#nav-notice')).toBeVisible();
   });
 
+  test('the notice says navigation is experimental and offers the Export menu', async ({
+    page,
+  }) => {
+    await setup(page);
+    const notice = page.locator('#nav-notice');
+    // The link keeps its spaces in both languages.
+    await setLanguage(page, 'pt');
+    await page.locator('#navigate').click();
+    await expect(notice.locator('li').first()).toContainText(
+      'você pode exportar a rota para um app de navegação.',
+    );
+    await page.keyboard.press('Escape');
+    await setLanguage(page, 'en');
+    await page.locator('#navigate').click();
+    await expect(notice.getByRole('heading')).toHaveText(
+      'Before you go Experimental',
+    );
+    // The notice opens focused on itself, not on the link.
+    await expect(notice).toBeFocused();
+    await expect(notice.locator('li').first()).toContainText(
+      'Navigation is still being tested',
+    );
+    await notice.getByRole('button', { name: 'export the route' }).click();
+    await expect(notice).toBeHidden();
+    await expect(page.locator('#export-menu')).toBeVisible();
+    await expect(page.locator('#nav-screen')).toBeHidden();
+  });
+
   test('location is watched only while navigating and the page is visible', async ({
     page,
   }) => {
@@ -1391,9 +1419,8 @@ test.describe('phone navigation', () => {
   }) => {
     await setup(page);
     // Only the browser's connection state and the style's server go offline:
-    // the development server has no service worker, so a real offline
-    // context would also fail MapLibre's own worker, which the published
-    // site keeps in its app-shell cache.
+    // a real offline context would also fail the files MapLibre loads on
+    // demand, which a page open on the way has already loaded.
     const onLine = (value: boolean) =>
       page.evaluate((now) => {
         Object.defineProperty(navigator, 'onLine', {

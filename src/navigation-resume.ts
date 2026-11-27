@@ -6,7 +6,7 @@ import { readSession, SESSION, writeSession } from './preferences';
  * tabs, a pull-to-refresh or a browser restart reloads the page. While
  * navigating, this tab's sessionStorage keeps the planned route's geometry
  * and the distance travelled along it, never a position, so the same route
- * resumes on the right pass, offline too. A reloaded link would recalculate
+ * resumes on the right pass, with no routing request. A reloaded link would recalculate
  * its route instead, and an imported track would come back different.
  * Cleared on exit, arrival, Not now, after `RESUME_LIMIT`, or with the tab.
  */

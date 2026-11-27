@@ -1,6 +1,5 @@
-import { createHash } from 'node:crypto';
-import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import type { Connect, Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import {
@@ -8,7 +7,6 @@ import {
   hashedBrandUrls,
   UNLINKED_BRAND_FILES,
 } from './src/brand-assets.ts';
-import { precacheList, precacheUrl } from './src/precache.ts';
 import { REGION_PATH } from './src/region.ts';
 import {
   DEV_SECURITY_HEADERS,
@@ -23,51 +21,16 @@ const SW_ENTRY = 'sw';
 // The published address (src/site.ts); SITE_URL sets it for another host.
 const SITE = siteUrl(process.env.SITE_URL);
 
-async function listFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true, recursive: true });
-  return entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => relative(dir, join(entry.parentPath, entry.name)));
-}
-
 /**
- * Writes this build's version and URL list into `sw.js` (src/sw.ts), once
- * every file, public ones included, is in the output folder. The version
- * hashes the files' contents, so each deploy that changes them installs a new
- * service worker and cache.
+ * A page's public URL, as Cloudflare's `html_handling: auto-trailing-slash`
+ * publishes it: `/index.html` is `/`, `/help.html` and `/help/` are `/help`;
+ * any other path is itself.
  */
-function serviceWorkerManifest(): Plugin {
-  let outDir = 'dist';
-  return {
-    name: 'service-worker-manifest',
-    apply: 'build',
-    configResolved(config) {
-      outDir = resolve(config.root, config.build.outDir);
-    },
-    async closeBundle() {
-      const files = precacheList(await listFiles(outDir));
-      const hash = createHash('sha256');
-      for (const file of files) {
-        hash.update(file);
-        hash.update(await readFile(join(outDir, file)));
-      }
-      const version = hash.digest('hex').slice(0, 16);
-      // Pages are cached and requested by their public URL (`/help`).
-      const urls = files.map(precacheUrl);
-      const path = join(outDir, 'sw.js');
-      const source = await readFile(path, 'utf8');
-      const token = /(["'`])__NAUTAVO_BUILD__\1/;
-      if (!token.test(source))
-        throw new Error('sw.js has no build manifest placeholder');
-      await writeFile(
-        path,
-        source.replace(
-          token,
-          JSON.stringify(JSON.stringify({ version, urls })),
-        ),
-      );
-    },
-  };
+function publicUrl(path: string): string {
+  const slash = /^(\/[^/.]+)\/$/.exec(path);
+  if (slash) return slash[1];
+  if (!/^\/[^/]+\.html$/.test(path)) return path;
+  return path === '/index.html' ? '/' : path.slice(0, -'.html'.length);
 }
 
 /**
@@ -182,7 +145,7 @@ function publicRewrites(): Plugin {
  * depends on it: /api/region is answered by the Worker's own code (204
  * without a Cloudflare location, as in production), and the preview, a
  * production build, redirects `.html` page addresses to their public URL as
- * `html_handling: auto-trailing-slash` does, so the offline tests see the
+ * `html_handling: auto-trailing-slash` does, so the preview tests see the
  * same redirects as the published site.
  */
 function workersParity(): Plugin {
@@ -200,7 +163,7 @@ function workersParity(): Plugin {
   };
   const cleanUrls: Connect.NextHandleFunction = (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
-    const target = precacheUrl(url.pathname);
+    const target = publicUrl(url.pathname);
     if (target === url.pathname) return next();
     res.statusCode = 307;
     res.setHeader('Location', target + url.search);
@@ -225,7 +188,6 @@ export default defineConfig({
     headersStamp(SITE),
     publicRewrites(),
     brandAssets(),
-    serviceWorkerManifest(),
     workersParity(),
   ],
   define: { 'import.meta.env.SITE_URL': JSON.stringify(SITE) },
@@ -250,8 +212,8 @@ export default defineConfig({
         main: 'index.html',
         help: 'help.html',
         changelog: 'changelog.html',
-        // The service worker is served at the root, unhashed, so its scope is
-        // the whole site and the browser finds each new version at one URL.
+        // The retired service worker (src/sw.ts) stays at the URL browsers
+        // installed it from, unhashed, so their update check finds it.
         [SW_ENTRY]: 'src/sw.ts',
       },
       output: {

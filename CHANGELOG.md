@@ -18,7 +18,8 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 
 ### Changed
 
-- The empty planner shows the ways to start a plan: choose the start on the map with the crosshair, import a GPX, FIT or TCX file, open a saved route or use or add a favorite place. Save route, Export and the other route actions appear once there is a route, and Add to home screen moves to Settings.
+- Navigation is marked experimental: the start notice says it is still being tested and can go wrong, especially without signal, and for long trips offers to export the route to a navigation app.
+- The empty planner shows the ways to start a plan: choose the start on the map with the crosshair, import a GPX, FIT or TCX file, open a saved route or use or add a favorite place. Save route, Export and the other route actions appear once there is a route.
 - Below the route summary, tabs show Points, Itinerary, Weather and Elevation one at a time, instead of a list of folded sections; each still loads its data only when you open it. On a computer, Elevation opens in a strip under the map, as wide as the map, from its button or from Show in Ascent. Travel the route is in More actions on a phone, and below the route's actions on a computer.
 - The map credits button is smaller.
 - On a phone, the route sheet moves by dragging the panel itself, not only its handle.
@@ -42,11 +43,16 @@ The site is deployed from `main` after every merge, so entries under Unreleased 
 - On a computer without a graphics processor, or one the browser does not use, the map draws at standard resolution so it stays responsive; screens with a graphics processor are unchanged.
 - Downloaded GPX files no longer name a means of transport in their keywords, only Nautavo.
 
+### Removed
+
+- Settings no longer has Add to home screen; the browser's own menu can still add Nautavo to the home screen.
+- Nautavo no longer opens without a connection: it keeps no copy of itself for offline use, and a browser that kept one deletes it on the next visit. A page already open keeps working without a connection as before, and a reload during navigation continues it once the connection is back.
+
 ### Fixed
 
 - The highest and lowest point labels of the elevation profile stay inside the map near its edges instead of being cut.
 - On a computer, a click on the map no longer moves the start of a route whose points are all set: it sets the next empty point, or the point whose number you chose in the list, and the hint on the map shows only while a click would set one.
-- In Chrome and Brave on iPhone and iPad, Nautavo's pages no longer say the connection is not secure. The connection always was secure; two things confused those browsers: a security header that isolates the page from other windows, now removed, and pages answered by the copy kept for offline use, which now answers only without a connection.
+- In Chrome and Brave on iPhone and iPad, Nautavo's pages no longer say the connection is not secure. The connection always was secure; two things confused those browsers: a security header that isolates the page from other windows, now removed, and pages answered by the copy kept for offline use, which is no longer kept.
 - While navigating, the way ahead always draws above the way travelled, so on a road the route uses both ways it no longer disappears under the gray; close up, the two passes draw side by side, as on the planning map, and with the whole route in view the lines are thinner and the way travelled lighter.
 - A point menu opened on the map right after the page opens, with a right click or the keyboard, stays open; before, the map could still move to your approximate region and close it.
 - While navigating, the distance to the next turn and the distance left no longer lag up to 30 m behind your position.

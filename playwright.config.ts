@@ -28,8 +28,8 @@ export default defineConfig({
       timeout: 30000,
     },
     {
-      // A production build for the service worker tests (offline.spec.ts),
-      // which the development server does not register. Built fresh every
+      // A production build for the offline tests (offline.spec.ts), with the
+      // retired service worker the development server lacks. Built fresh every
       // run into an ignored folder, so it always matches the checkout.
       command:
         'npx vite build --outDir .preview-test.local --emptyOutDir && npx vite preview --outDir .preview-test.local --host 127.0.0.1 --port 4175 --strictPort',

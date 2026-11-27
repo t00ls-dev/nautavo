@@ -6,7 +6,7 @@ import { LIBRARY_DATABASE } from '../src/saved-routes';
 
 /** The development server Playwright starts (playwright.config.ts). */
 export const base = 'http://127.0.0.1:5173/';
-/** The production preview the service worker tests use. */
+/** The production preview the offline tests use. */
 export const previewBase = 'http://127.0.0.1:4175/';
 
 /** The site's approximate-region endpoint (src/worker.ts) as a route pattern. */

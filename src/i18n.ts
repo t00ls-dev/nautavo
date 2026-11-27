@@ -37,22 +37,6 @@ export function preferredLanguage(): Language {
  * recorded activity) Altitude, as in English.
  */
 const pt: Record<string, string> = {
-  'Add to home screen': 'Adicionar à tela inicial',
-  'Open Nautavo from an icon, like an app. It opens in your browser, and saved routes open even without a connection.':
-    'Abra o Nautavo por um ícone, como um app. Ele abre no navegador, e as rotas salvas abrem mesmo sem conexão.',
-  'iPhone and iPad': 'iPhone e iPad',
-  'Tap Share: in Safari, at the bottom of the screen or in the ⋯ menu; in Chrome, in the address bar.':
-    'Toque em Compartilhar: no Safari, na parte de baixo da tela ou no menu ⋯; no Chrome, na barra de endereço.',
-  "Choose Add to Home Screen. Scroll down if you don't see it.":
-    'Escolha Adicionar à Tela de Início. Role a lista se não aparecer.',
-  'Tap Add.': 'Toque em Adicionar.',
-  'Open the browser menu ⋮, at the top right in Chrome.':
-    'Abra o menu do navegador ⋮, no canto superior direito no Chrome.',
-  'Choose Add to home screen. In Samsung Internet: Add page to, then Home screen.':
-    'Escolha Adicionar à tela inicial. No Samsung Internet: Adicionar página a, depois Tela inicial.',
-  'Confirm with Add. The phone may ask once more where to put it.':
-    'Confirme em Adicionar. O celular pode perguntar mais uma vez onde colocar o ícone.',
-  'More in Help': 'Mais na Ajuda',
   Navigate: 'Navegar',
   'Start navigation': 'Iniciar navegação',
   'End navigation': 'Sair da navegação',
@@ -60,6 +44,10 @@ const pt: Record<string, string> = {
   Stop: 'Parar',
   Navigation: 'Navegação',
   'Before you go': 'Antes de sair',
+  'Navigation is still being tested and can go wrong, especially without signal. For long trips, you can':
+    'A navegação ainda está em teste e pode errar, principalmente sem sinal. Para trajetos longos, você pode',
+  'export the route': 'exportar a rota',
+  'to a navigation app.': 'para um app de navegação.',
   'Continue navigation?': 'Continuar a navegação?',
   'The page reloaded during navigation. Continue on the same route?':
     'A página recarregou durante a navegação. Continuar na mesma rota?',
@@ -270,7 +258,6 @@ const pt: Record<string, string> = {
     'Salvar rota e Exportar aparecem quando a rota estiver pronta.',
   'Plan a route': 'Planeje uma rota',
   'GPX, FIT or TCX': 'GPX, FIT ou TCX',
-  'Home screen': 'Tela inicial',
   Standard: 'Padrão',
   Topographic: 'Topográfico',
   Satellite: 'Satélite',
