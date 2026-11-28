@@ -422,7 +422,7 @@ export function generateGpx(
 export function filename(
   points: Point[],
   customName = '',
-  extension: 'gpx' | 'tcx' | 'fit' = 'gpx',
+  extension: 'gpx' | 'tcx' | 'fit' | 'png' = 'gpx',
 ): string {
   const clean = (s: string, limit = 48) =>
     s

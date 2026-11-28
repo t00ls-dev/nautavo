@@ -253,7 +253,13 @@ export function coveredControls(page: Page, scope: string) {
 /** An action of the Export menu (#301): opens the menu, then chooses it. */
 export async function exportAs(
   page: Page,
-  id: 'download' | 'download-tcx' | 'download-fit' | 'share-gpx' | 'share',
+  id:
+    | 'download'
+    | 'download-tcx'
+    | 'download-fit'
+    | 'share-gpx'
+    | 'share'
+    | 'share-image',
 ) {
   if (await page.locator('#export-menu').isHidden())
     await page.locator('#export').click();

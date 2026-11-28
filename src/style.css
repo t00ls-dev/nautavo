@@ -3656,6 +3656,115 @@ dialog.nav-notice::backdrop {
   margin: 0 0 12px;
   font-size: 16px;
 }
+/* Share image sheet (#45): preview, format, what to show and the message. */
+.share-image-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.share-image-head h2 {
+  margin: 0;
+  /* One line from 320 px, in both languages. */
+  font-size: clamp(18px, 5.6vw, 22px);
+}
+.share-image-head button {
+  flex: none;
+  min-width: var(--control);
+  min-height: var(--control);
+  border: 0;
+  background: none;
+}
+.share-image-preview {
+  display: grid;
+  /* The image's own 1080 px never widen the sheet past the screen. */
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  min-height: 160px;
+  margin: 4px 0 12px;
+}
+.share-image-preview img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 34dvh;
+  min-height: 160px;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgb(27 41 52 / 25%);
+}
+.share-image-preview p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.share-image-preview p:empty {
+  display: none;
+}
+.share-image-format {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 8px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.share-image-format label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: var(--control);
+  cursor: pointer;
+}
+.share-image-format label + label {
+  border-left: 1px solid var(--color-border-strong);
+}
+.share-image-format input {
+  position: absolute;
+  opacity: 0;
+}
+.share-image-format input:checked + span {
+  font-weight: 700;
+}
+.share-image-format label:has(input:checked) {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+.share-image-format label:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+.share-image-option > span {
+  display: flex;
+  flex-direction: column;
+}
+.share-image-option .hint {
+  margin: 0;
+}
+.share-image-option:has(input:disabled) {
+  cursor: default;
+}
+.share-image-option:has(input:disabled) > span > span:first-child {
+  color: var(--color-text-disabled);
+}
+.share-image-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  font-weight: 650;
+}
+.share-image-message textarea {
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  resize: vertical;
+}
+.share-image-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
 /* Favorite place sheet (#52): icon choice, name and the place it keeps. */
 .favorite-dialog h2 {
   margin: 0 0 4px;
@@ -4895,12 +5004,19 @@ body.activity-open #fit {
   border-left-color: var(--extreme);
 }
 .activity-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
-.activity-actions > button {
-  flex: 1 1 auto;
+/* Share image on its own row, the other two in equal halves below. */
+#activity-share {
+  grid-column: 1 / -1;
+}
+/* Too narrow for two labels side by side: one button per row. */
+@media (max-width: 379px) {
+  .activity-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 #activity-replay {
   flex: 1 1 0;

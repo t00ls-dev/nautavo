@@ -109,6 +109,12 @@ export function setupPanel(map: PlannerMap): void {
     'Opening it calculates the route again',
   );
   $('share').title = 'Copy route link';
+  exportChoice(
+    'share-image',
+    'image',
+    'Route image',
+    'The plan as a picture for messages and social media',
+  );
   iconControl($('save-route'), 'bookmark', 'Save route');
   iconControl($('export'), exportIcon, 'Export');
   iconControl($('more-actions'), 'more', 'More actions', true);

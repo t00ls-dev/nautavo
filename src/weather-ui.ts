@@ -53,6 +53,7 @@ import {
   markerBox,
 } from './weather-clusters';
 import { PREFERENCE, readPreference, writePreference } from './preferences';
+import type { ShareWeather } from './share-data';
 const AUTOMATIC = 'automatic-departure';
 /**
  * Runs a change that resizes content above `element` (weather cards, arrival)
@@ -92,6 +93,13 @@ interface Placed {
 }
 /** Alerts the UV line itself carries on a weather card. */
 const UV_RISKS = new Set(['Very high UV', 'Extreme UV']);
+/** Alerts that mean rain on the way, for the share image's summary. */
+const RAIN_RISKS = new Set([
+  'Rain risk',
+  'Heavy rain',
+  'Light rain likely',
+  'Thunderstorm',
+]);
 
 export function setupWeather(
   map: PlannerMap,
@@ -303,9 +311,16 @@ export function setupWeather(
         : 'smooth',
     });
   }
+  /** The samples Weather shows, for the share image (#45). */
+  let shown: {
+    route: Route;
+    departure: string;
+    samples: ShareWeather[];
+  } | null = null;
   function render() {
     markers.clearLayers();
     placed = [];
+    shown = null;
     showDeparture();
     if (!departureOf(getState())) {
       $('weather-result').hidden = true;
@@ -398,6 +413,19 @@ export function setupWeather(
         pass: passes[i],
       };
     });
+    shown = {
+      route: sourceRoute!,
+      departure: sourceDeparture!,
+      samples: facts.map((f, i) => ({
+        time: passage[i],
+        distance: f.point.distance,
+        temperature: f.hour.temperature,
+        icon: f.weather.icon,
+        relation: f.relation,
+        wind: f.hour.wind,
+        rain: f.risks.some((risk) => RAIN_RISKS.has(risk.text)),
+      })),
+    };
     const groups = groupWeather(
       facts.map((f) => ({
         stop: !!f.point.stop,
@@ -997,6 +1025,14 @@ export function setupWeather(
     invalidate,
     render,
     syncInputs: showDeparture,
+    /** The samples shown for the current route and departure, else null. */
+    shared(): ShareWeather[] | null {
+      return shown &&
+        shown.route === getRoute() &&
+        shown.departure === departureOf(getState())
+        ? shown.samples
+        : null;
+    },
     /** The Open-Meteo base URL (device preference), also used for elevation. */
     endpoint: () => endpoint,
     applyServer() {
