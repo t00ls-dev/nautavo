@@ -176,12 +176,11 @@ test.describe('phone', () => {
     for (let k = 1; k <= 8; k++) await touch('touchMove', y + 9 * k);
     await expect(page.locator('#points li.dragging')).toHaveCount(1);
     await touch('touchEnd');
-    expect(await values(page)).toEqual([
-      coords[1],
-      coords[0],
-      coords[2],
-      coords[3],
-    ]);
+    // The touch is acknowledged before the page handles it (its listeners do
+    // not block it), so the drop is waited for, not read at once.
+    await expect
+      .poll(() => values(page))
+      .toEqual([coords[1], coords[0], coords[2], coords[3]]);
     // Every row keeps its controls on one line at 320 px.
     const rows = await page
       .locator('#points li')

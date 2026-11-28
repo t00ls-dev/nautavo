@@ -19,6 +19,7 @@ import {
   setLanguage,
   openTab,
   openSavedRoutes,
+  pauseClock,
 } from './app-helpers';
 const gpx =
   '<gpx><trk><name>Weather route</name><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0" lon="1"/></trkseg></trk></gpx>';
@@ -1091,8 +1092,10 @@ test('a usage limit counts down, retries once by itself, then offers the button'
   await setup(page, true);
   let refusals = 2;
   const requests: string[] = [];
-  await page.route('**/v1/elevation?**', (r) => {
+  await page.route('**/v1/elevation?**', async (r) => {
     requests.push(r.request().url());
+    // The first refusal starts the countdown: it waits for the test's clock.
+    if (requests.length === 1) await pauseClock(page);
     if (refusals-- > 0)
       // Exposed, as a cross-origin script can only read exposed headers.
       return r.fulfill({
@@ -1119,6 +1122,8 @@ test('a usage limit counts down, retries once by itself, then offers the button'
   await expect(status).toHaveText(
     'Elevation usage limit reached. Try again in 1s.',
   );
+  // Both seconds checked: time runs again, for the retry's queue too.
+  await page.clock.resume();
   // It retried once on its own, was refused again, counted down again and
   // only then offers the button: two requests, no third attempt.
   await page.clock.runFor(1000);
@@ -1265,6 +1270,8 @@ for (const failure of ['429', 'network', 'invalid', 'timeout'])
         return r.fulfill({ json: weatherResponse(new URL(r.request().url())) });
       if (failure === 'network') return r.abort();
       if (failure === 'timeout') return;
+      // The countdown starts with this answer: it waits for the test's clock.
+      if (failure === '429') await pauseClock(page);
       return r.fulfill(
         failure === '429' ? { status: 429 } : { json: { broken: true } },
       );
@@ -1290,6 +1297,8 @@ for (const failure of ['429', 'network', 'invalid', 'timeout'])
         'Weather usage limit reached. Try again in 60s.',
       );
       await expect(page.locator('#weather-retry')).toBeHidden();
+      // Checked at its first second: time runs again, as before the limit.
+      await page.clock.resume();
       for (let i = 0; i < 61; i++) await page.clock.runFor(1000);
       await page.clock.fastForward(6500);
       await fetchWeather(page);

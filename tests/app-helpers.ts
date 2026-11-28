@@ -135,6 +135,18 @@ export const gpxPoints = (xml: string): number[][] =>
   ]);
 
 /**
+ * Pauses the page clock (installed with `page.clock.install`) a moment ahead
+ * of now, so a countdown the app starts next holds its first value until the
+ * test moves time on with `runFor`: the real seconds a busy CI machine takes
+ * before the assertion can no longer tick it (a running clock showed 59s
+ * where the test expected 60s). Called before the response that starts the
+ * countdown, so the jump ahead passes before it begins.
+ */
+export async function pauseClock(page: Page, ahead = 1000) {
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + ahead);
+}
+
+/**
  * Waits until an element's box stops moving or resizing, before positions
  * are measured or touches aimed at it: the phone's bottom sheet after a point
  * field raises or lowers it, the point rows as the summary above them fills.
