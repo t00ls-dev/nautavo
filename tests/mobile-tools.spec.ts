@@ -516,7 +516,10 @@ test('a tap then touch and hold is cancelled outside controls, so iOS opens no l
   await touch('touchEnd');
   await touch('touchStart', map.x + 150, map.y + 380);
   await touch('touchEnd');
-  expect(await cancelled()).toEqual([false, true, false, false, false, false]);
+  // The last touches are acknowledged before the page handles them: wait.
+  await expect
+    .poll(cancelled)
+    .toEqual([false, true, false, false, false, false]);
   await session.detach();
   await context.close();
 });
