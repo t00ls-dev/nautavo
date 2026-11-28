@@ -149,6 +149,7 @@ import { setupRouteDrag } from './route-drag';
 import { createPointPopup, createTrash, pointRole } from './point-removal';
 import { activityOf, activityProfile, type Activity } from './activity';
 import { setupActivityView } from './activity-ui';
+import { setupShareImage } from './share-image-ui';
 import { activityColorings } from './activity-colorings';
 import { icon, iconControl } from './icons';
 import { coordText, FAVORITE_ICONS } from './favorite-dialog';
@@ -2050,7 +2051,7 @@ function renameRoute() {
 $<HTMLInputElement>('route-name').onchange = renameRoute;
 /** The route's exports (GPX and the courses) follow the route shown. */
 function exportable(ready: boolean) {
-  for (const id of ['download', 'download-tcx', 'download-fit'])
+  for (const id of ['download', 'download-tcx', 'download-fit', 'share-image'])
     $<HTMLButtonElement>(id).disabled = !ready;
 }
 const exportName = () =>
@@ -2397,6 +2398,31 @@ const activityView = setupActivityView({
 });
 activityCoords = activityView.coords;
 openActivity = activityView.current;
+/** Route image and Share image (#45): the route as a boarding pass, or the activity. */
+const shareImage = setupShareImage({
+  state: () => state,
+  route: () => current,
+  speedKmh: () => speedKmh,
+  weather: () => weather.shared(),
+  profile: () => elevation.profile(),
+  activity: activityView.current,
+  title: () =>
+    state.name ||
+    (state.points.some(generatedName)
+      ? t('Route')
+      : `${state.points[0].name} ${t('to')} ${state.points.at(-1)!.name}`),
+  placeName: (i) =>
+    generatedName(state.points[i]) ? null : state.points[i].name,
+  link: () => {
+    syncUrl();
+    return location.href;
+  },
+  fileName: (extension) => filename(state.points, state.name, extension),
+  locale: () => (state.language === 'pt' ? 'pt-BR' : 'en'),
+  status,
+});
+$('share-image').onclick = () => shareImage.open('route');
+$('activity-share').onclick = () => shareImage.open('activity');
 // Settings always open with the values in use; unapplied edits are dropped.
 $('open-settings').addEventListener('click', () => {
   settings();

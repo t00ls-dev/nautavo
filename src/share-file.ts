@@ -33,8 +33,11 @@ export const FIT_TYPES = [
 ];
 /** The type of a downloaded FIT course. */
 export const FIT_DOWNLOAD = 'application/vnd.ant.fit';
-/** A text file, or the bytes of a binary one (FIT). */
-type Content = string | Uint8Array<ArrayBuffer>;
+/** The share image (#45). */
+export const PNG_TYPES = ['image/png'];
+export const PNG_DOWNLOAD = 'image/png';
+/** A text file, or the bytes of a binary one (FIT, an image). */
+type Content = string | Uint8Array<ArrayBuffer> | Blob;
 /** MIME types to offer for a JSON backup, most specific first. */
 export const JSON_TYPES = [
   'application/json',
@@ -94,6 +97,8 @@ export async function exportFile(
     share: boolean;
     types: readonly string[];
     downloadType: string;
+    /** Text sent with the file (the share image's message and link). */
+    text?: string;
   },
 ): Promise<ExportResult> {
   const file =
@@ -107,8 +112,13 @@ export async function exportFile(
       : null;
   if (file) {
     try {
-      // Only the file: iOS saves a title or text as a second, text file.
-      await navigator.share({ files: [file] });
+      // Only the file, unless a text is meant to go with it: iOS saves a
+      // title or text as a second, text file.
+      await navigator.share(
+        options.text
+          ? { files: [file], text: options.text }
+          : { files: [file] },
+      );
       return 'shared';
     } catch (error) {
       if ((error as Error | null)?.name === 'AbortError') return 'cancelled';

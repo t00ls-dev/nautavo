@@ -9,6 +9,7 @@ import {
   smoothedSeries,
   zoneLimits,
   zoneRanges,
+  zoneShares,
   playedAt,
   playedLength,
   timeAtPlayed,
@@ -285,6 +286,26 @@ describe('activity charts and colorings (#156)', () => {
         ranges[i].kind === ranges[i - 1].kind &&
           ranges[i].from === ranges[i - 1].to,
       ).toBe(false);
+  });
+
+  it('shares the moving time between the zones, in whole percents (#45)', () => {
+    const activity = open(gpx(ride()));
+    const shares = zoneShares(
+      activity,
+      activity.values.hr!,
+      [124, 128, 132, 136],
+    )!;
+    expect(shares).toHaveLength(5);
+    expect(shares.reduce((a, b) => a + b, 0)).toBe(100);
+    // Heart rate 140 after the pause: the top zone has time.
+    expect(shares[4]).toBeGreaterThan(0);
+    expect(
+      zoneShares(
+        activity,
+        activity.values.hr!.map(() => null),
+        [1, 2, 3, 4],
+      ),
+    ).toBeNull();
   });
 
   it('averages a series over a time window, never across a pause', () => {

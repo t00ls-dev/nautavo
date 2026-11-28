@@ -179,7 +179,8 @@
               saved.
             </p>
             <div class="activity-actions">
-              <button id="activity-route" type="button">Use as route</button
+              <button id="activity-share" type="button">Share image</button
+              ><button id="activity-route" type="button">Use as route</button
               ><button id="activity-close" type="button">Close activity</button>
             </div>
           </section>
@@ -446,6 +447,7 @@
               Share GPX
             </button>
             <button id="share" type="button">Copy link</button>
+            <button id="share-image" type="button" disabled>Route image</button>
           </div>
           <div class="export-actions">
             <button id="activity-replay" class="primary" type="button" hidden>
@@ -770,6 +772,99 @@
         <button id="save-confirm" class="primary" type="submit">Save</button>
         <button id="save-cancel" type="button">Cancel</button>
       </form>
+    </dialog>
+    <dialog
+      id="share-image-dialog"
+      class="nav-notice share-image-dialog"
+      aria-labelledby="share-image-title"
+    >
+      <div class="share-image-head">
+        <h2 id="share-image-title">Share image</h2>
+        <button id="share-image-close" type="button"></button>
+      </div>
+      <div class="share-image-preview">
+        <img id="share-image-preview" alt="Preview of the image" hidden />
+        <p id="share-image-status" role="status"></p>
+      </div>
+      <fieldset class="share-image-format">
+        <legend class="sr-only">Format</legend>
+        <label
+          ><input
+            type="radio"
+            name="share-image-format"
+            value="feed"
+            checked
+          /><span>Feed 4:5</span></label
+        ><label
+          ><input type="radio" name="share-image-format" value="story" /><span
+            >Stories 9:16</span
+          ></label
+        >
+      </fieldset>
+      <label class="check share-image-option"
+        ><input id="share-image-day" type="checkbox" checked /><span
+          ><span>Day and departure</span
+          ><span class="hint"
+            >The departure and the expected arrival</span
+          ></span
+        ></label
+      >
+      <label class="check share-image-option"
+        ><input id="share-image-places" type="checkbox" checked /><span
+          ><span id="share-image-places-text">Start and destination</span
+          ><span id="share-image-places-hint" class="hint"></span></span
+      ></label>
+      <label class="check share-image-option"
+        ><input id="share-image-weather" type="checkbox" checked /><span
+          ><span>Weather on the way</span
+          ><span id="share-image-weather-hint" class="hint"></span></span
+      ></label>
+      <label class="check share-image-option"
+        ><input id="share-image-climbs" type="checkbox" checked /><span
+          ><span>Climbs</span
+          ><span id="share-image-climbs-hint" class="hint"></span></span
+      ></label>
+      <label class="check share-image-option"
+        ><input id="share-image-speed" type="checkbox" checked /><span
+          ><span>Speed</span
+          ><span class="hint"
+            >Time in each speed band and the top speed</span
+          ></span
+        ></label
+      >
+      <label class="check share-image-option"
+        ><input id="share-image-hr" type="checkbox" checked /><span
+          ><span>Heart rate</span
+          ><span class="hint"
+            >Health data: average, highest and time in each band</span
+          ></span
+        ></label
+      >
+      <label class="check share-image-option"
+        ><input id="share-image-cadence" type="checkbox" checked /><span
+          ><span>Cadence</span
+          ><span class="hint">Average and time in each band</span></span
+        ></label
+      >
+      <label class="check share-image-option"
+        ><input id="share-image-power" type="checkbox" checked /><span
+          ><span>Power</span
+          ><span class="hint">Average and time in each band</span></span
+        ></label
+      >
+      <label class="share-image-message"
+        ><span>Message sent with it</span
+        ><textarea id="share-image-message" rows="3"></textarea>
+      </label>
+      <p class="hint">
+        The image is made on this device. Only the map tiles of its view are
+        loaded; nothing else is sent.
+      </p>
+      <div class="share-image-actions">
+        <button id="share-image-share" class="primary" type="button">
+          Share</button
+        ><button id="share-image-download" type="button">Download</button>
+      </div>
     </dialog>
     <dialog
       id="favorite-dialog"

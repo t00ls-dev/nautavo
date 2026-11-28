@@ -87,6 +87,11 @@ const paths = {
   refresh: '<path d="M20 12a8 8 0 1 1-3-6.2M20 4v4h-4"/>',
   download: '<path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/>',
   upload: '<path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14"/>',
+  // Moving time on the share image (#45).
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  // The share image (#45): a picture with a mountain and the sun.
+  image:
+    '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="9.5" r="1.5"/><path d="m21 16-5-5-9 9"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1m2 3.7a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   share:
     '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5m-7.6 7 7.6 4.4"/>',

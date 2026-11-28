@@ -622,6 +622,52 @@ const pt: Record<string, string> = {
   Via: 'Passagem',
   // Recorded activities (#156).
   'Recorded activity': 'Atividade gravada',
+  // Share image (#45).
+  'Route image': 'Imagem da rota',
+  'The plan as a picture for messages and social media':
+    'O plano em imagem para mensagens e redes sociais',
+  'Share image': 'Compartilhar imagem',
+  'Preview of the image': 'Prévia da imagem',
+  Format: 'Formato',
+  'Day and departure': 'Dia e partida',
+  'The departure and the expected arrival': 'A partida e a chegada prevista',
+  'Start and destination': 'Início e destino',
+  'Start and end': 'Início e fim',
+  'The meeting point and where the route ends':
+    'O ponto de encontro e onde a rota termina',
+  'Hide them to keep the first and last 500 m private':
+    'Desmarque para não mostrar os primeiros e os últimos 500 m',
+  'Weather on the way': 'Clima no caminho',
+  'The forecast Weather shows for this departure':
+    'A previsão que o Clima mostra para esta partida',
+  'Open Weather with a departure to include it':
+    'Abra o Clima com uma partida para incluir',
+  Climbs: 'Subidas',
+  'Time in each speed band and the top speed':
+    'Tempo em cada faixa de velocidade e a velocidade máxima',
+  'Health data: average, highest and time in each band':
+    'Dado de saúde: média, máxima e tempo em cada faixa',
+  'Average and time in each band': 'Média e tempo em cada faixa',
+  'From the elevation profile': 'Do perfil de elevação',
+  'This route has no climbs to show': 'Esta rota não tem subidas para mostrar',
+  'Open Elevation to include them': 'Abra a Elevação para incluir',
+  'Message sent with it': 'Mensagem enviada junto',
+  'The image is made on this device. Only the map tiles of its view are loaded; nothing else is sent.':
+    'A imagem é feita neste aparelho. Só o mapa da área dela é carregado; nada mais é enviado.',
+  Share: 'Compartilhar',
+  Download: 'Baixar',
+  'Expected arrival': 'Chegada prevista',
+  'On the way': 'No caminho',
+  Invitation: 'Convite',
+  'no rain expected': 'sem chuva prevista',
+  'Avg. heart rate': 'FC média',
+  'Avg. power': 'Potência média',
+  'Avg. cadence': 'Cadência média',
+  'Avg. temperature': 'Temperatura média',
+  'time in each band': 'tempo em cada faixa',
+  'Making the image…': 'Fazendo a imagem…',
+  'The image could not be made.': 'Não foi possível fazer a imagem.',
+  'Image downloaded.': 'Imagem baixada.',
   'Moving time': 'Em movimento',
   'Heart rate': 'Frequência cardíaca',
   Cadence: 'Cadência',
@@ -679,6 +725,12 @@ const patterns: [RegExp, (...args: string[]) => string][] = [
     },
   ],
   [/^Stop (\d+)$/, (n) => `Parada ${n}`],
+  // The share image's weather line (#45).
+  [
+    /^rain possible around (.+)$/,
+    (time) => `chuva possível por volta das ${time}`,
+  ],
+  [/^headwind around (.+)$/, (time) => `vento contra por volta das ${time}`],
   // The sign at a maneuver (#135): its first destination and exit number.
   [/^toward (.+)$/, (place) => `em direção a ${place}`],
   [/^Exit ([0-9][0-9A-Za-z-]*)$/, (n) => `Saída ${n}`],

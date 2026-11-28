@@ -26,7 +26,7 @@ import { withUnit } from './units';
 const COLOR_WINDOW = 15_000;
 
 interface ZoneSource {
-  id: 'activity-speed' | 'activity-hr' | 'activity-power';
+  id: 'activity-speed' | 'activity-hr' | 'activity-cadence' | 'activity-power';
   label: string;
   icon: IconName;
   unit: () => string;
@@ -66,6 +66,49 @@ const SOURCES: ZoneSource[] = [
   },
 ];
 
+/**
+ * One zone coloring of an activity: its per-point series in display units
+ * and the limits between its zones (null when the readings barely vary), or
+ * null when the activity does not record it. Shared with the share image
+ * (#45), which draws the speed zones the map draws.
+ */
+/**
+ * Zones the share image (#45) also shows but Map layers does not color:
+ * cadence, averaged as power is (a stroke-by-stroke reading is too noisy).
+ */
+const IMAGE_SOURCES: ZoneSource[] = [
+  {
+    id: 'activity-cadence',
+    label: 'Cadence',
+    icon: 'cadence',
+    unit: () => 'rpm',
+    series: (activity) =>
+      activity.values.cadence
+        ? smoothedSeries(activity, activity.values.cadence, COLOR_WINDOW)
+        : null,
+  },
+];
+
+export function activityZones(
+  activity: Activity,
+  id: ZoneSource['id'],
+): {
+  series: (number | null)[];
+  limits: number[] | null;
+  label: string;
+  unit: string;
+} | null {
+  const source = [...SOURCES, ...IMAGE_SOURCES].find((s) => s.id === id)!;
+  const series = source.series(activity);
+  if (!series) return null;
+  return {
+    series,
+    limits: zoneLimits(series, movingPoints(activity)),
+    label: source.label,
+    unit: source.unit(),
+  };
+}
+
 export function activityColorings(deps: {
   activity: () => Activity | null;
   locale: () => string;
@@ -86,14 +129,16 @@ export function activityColorings(deps: {
       zones = new Map();
     }
     if (!zones.has(source.id)) {
-      const series = source.series(activity);
-      const limits = series && zoneLimits(series, movingPoints(activity));
+      const found = activityZones(activity, source.id);
       zones.set(
         source.id,
-        !series
+        !found
           ? null
-          : limits
-            ? { limits, ranges: zoneRanges(activity, series, limits) }
+          : found.limits
+            ? {
+                limits: found.limits,
+                ranges: zoneRanges(activity, found.series, found.limits),
+              }
             : 'flat',
       );
     }

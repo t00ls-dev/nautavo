@@ -576,6 +576,38 @@ export function zoneRanges(
 }
 
 /**
+ * Share of the moving time spent in each of the five zones, whole percents
+ * summing to 100 (largest remainders get the rounding), or null without a
+ * moving reading. A pause between two points counts in no zone.
+ */
+export function zoneShares(
+  activity: Activity,
+  series: (number | null)[],
+  limits: number[],
+): number[] | null {
+  const moving = movingPoints(activity);
+  const { times } = activity;
+  const spent = ZONES.map(() => 0);
+  for (let i = 0; i + 1 < times.length; i++) {
+    const value = series[i];
+    const dt = times[i + 1] - times[i];
+    if (value === null || !moving[i] || dt <= 0 || dt > PAUSE_GAP) continue;
+    spent[limits.filter((limit) => value >= limit).length] += dt;
+  }
+  const total = spent.reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  const exact = spent.map((v) => (v * 100) / total);
+  const shares = exact.map(Math.floor);
+  const left = 100 - shares.reduce((a, b) => a + b, 0);
+  exact
+    .map((v, i) => [v - Math.floor(v), i])
+    .sort((a, b) => b[0] - a[0])
+    .slice(0, left)
+    .forEach(([, i]) => shares[i]++);
+  return shares;
+}
+
+/**
  * A series averaged over the last `window` ms at each point (power is too
  * noisy to color point by point); never across a pause.
  */

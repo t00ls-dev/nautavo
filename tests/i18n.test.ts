@@ -121,6 +121,9 @@ describe('translation coverage', () => {
     // Required map attribution, kept as written.
     '© OpenStreetMap',
     'Language / Idioma',
+    // Instagram's names for its two image formats (#45).
+    'Feed 4:5',
+    'Stories 9:16',
     // Language codes in the help and What's new headers, and each language
     // named in itself in Settings.
     'EN',

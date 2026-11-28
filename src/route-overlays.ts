@@ -1,6 +1,6 @@
 import type { Activity } from './activity';
 import { meters, type Coord, type Route } from './core';
-import { byId as $, text } from './dom';
+import { byId as $, classVariable, text } from './dom';
 import { mapCorner } from './map-controls';
 import { lineFeature, RANK, type PlannerMap } from './planner-map';
 import { icon, type IconName } from './icons';
@@ -124,16 +124,10 @@ export function sliceByRanges(
 }
 
 /** A kind's color, from the stylesheet that also colors the legend. */
-function coloringColor(kind: string): string {
-  const probe = document.createElement('i');
-  probe.className = `route-coloring-${kind}`;
-  probe.hidden = true;
-  document.body.append(probe);
-  const color = getComputedStyle(probe)
-    .getPropertyValue('--route-coloring')
-    .trim();
-  probe.remove();
-  return color || '#7d8890';
+export function coloringColor(kind: string): string {
+  return (
+    classVariable(`route-coloring-${kind}`, '--route-coloring') || '#7d8890'
+  );
 }
 /** The overlay that draws the active coloring. */
 export const COLORING_OVERLAY = 'rg-coloring';
